@@ -2432,14 +2432,16 @@ const FLOWS = {
       await page.locator('.w-lens button', { hasText: '채팅' }).click()
       await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
       if (await composerField(page).inputValue() !== 'hi') bad('the draft was lost across the flip')
-      // main says the prompt row has text
-      await screenTo(page, id, 'idle-empty')
+      // main says the prompt row has text (1.6.2: as it now only does, typed text on the row, read as `typed` by its
+      // dim marks: the fixture is written in plain colour; the note quotes it)
+      await screenTo(page, id, 'typed')
       await chatScript(page, { send: { ok: false, reason: 'prompt-busy' } })
       await composerField(page).click()
       await page.keyboard.press('Enter')
       await sleep(250)
       if ((await callsOf(page, 'chat.send')).length !== 1) bad('prompt-busy: no single chat.send')
-      if (!(await note()).includes('터미널 입력란에 쓰던 글이 있어요')) bad(`prompt-busy: the note says ${JSON.stringify(await note())}`)
+      if ((await callsOf(page, 'chat.send'))[0]?.args[0]?.screen !== 'typed') bad(`prompt-busy: the row went as ${JSON.stringify((await callsOf(page, 'chat.send'))[0]?.args[0]?.screen)}, not typed`)
+      if (!(await note()).includes('터미널 입력란에 쓰던 글이 있어요: “add a mul function”')) bad(`prompt-busy: the note says ${JSON.stringify(await note())}`)
       if (await composerField(page).inputValue() !== 'hi') bad('prompt-busy: the draft was not kept')
       if (await page.locator('.chat-user.pending').count()) bad('prompt-busy: a bubble stayed')
       // the session waits on the user
@@ -5359,7 +5361,8 @@ async function composeDraft(page) {
 async function composeFail(page) {
   const id = await firstTerm(page)
   await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
-  await screenTo(page, id, 'idle-empty')
+  // (1.6.2: typed text on the terminal's row, which the note now quotes)
+  await screenTo(page, id, 'typed')
   await chatScript(page, { send: { ok: false, reason: 'prompt-busy' } })
   await composerField(page).click()
   await page.keyboard.type('테스트도 같이 돌려 주세요')
