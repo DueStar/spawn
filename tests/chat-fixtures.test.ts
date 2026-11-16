@@ -226,6 +226,8 @@ const SCREENS = [
   'real-placeholder-nbsp', 'real-idle-empty-nbsp', 'real-history-recall',
   // the owner's session after 1.5.1: a named session, a subagent running (tests/chat-real-owner-screens.test.ts)
   'real-named-session', 'real-agents-panel',
+  // the owner's own app (1.5.3's log): the prompt mark drawn as a plain >
+  'real-ascii-mark',
 ]
 
 describe('the composer fixtures', () => {

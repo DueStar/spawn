@@ -78,6 +78,8 @@ contextBridge.exposeInMainWorld('spawn', {
     }),
     // 7-48: one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
     redraw: (id) => ipcRenderer.invoke('chat:redraw', String(id)),
+    // 1.5.3: a send the page refused for its screen, logged with the screen's shape (letters and digits masked)
+    diag: (p) => ipcRenderer.send('chat:diag', { id: String(p?.id ?? '').slice(0, 200), why: String(p?.why ?? '').slice(0, 20), shape: String(p?.shape ?? '').slice(0, 3000) }),
     // link previews (Phase 5): one link's card for the view of terminal `id`, fetched by the chat worker (main answers
     // { ok: false } while off, and for a link that is not in that view's answers)
     preview: (p) => ipcRenderer.invoke('chat:preview', { id: String(p?.id ?? '').slice(0, 200), url: String(p?.url ?? '').slice(0, 4096) }),

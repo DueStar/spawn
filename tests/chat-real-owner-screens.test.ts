@@ -64,3 +64,21 @@ describe('a subagent running: the agents panel under the footer', () => {
     expect(promptRow(['x', R, '❯', R, '  footer', '', '  ● main', ' ❯ 1. Yes', '   2. No'].join('\n'))).toEqual({ kind: 'unknown', why: 'dialog' })
   })
 })
+
+describe('the prompt mark drawn as a plain > (the owner\'s own app, seen in 1.5.3\'s log)', () => {
+  it('is read as the prompt box: empty, typed, the echo of a send', () => {
+    const s = screen('real-ascii-mark')
+    expect(promptRow(s)).toEqual({ kind: 'empty' })
+    const typed = s.replace('>\u00a0', '>\u00a0안녕 채팅에서 보내요')
+    expect(promptRow(typed)).toEqual({ kind: 'text', text: '안녕 채팅에서 보내요' })
+    expect(echoState(typed, { head: '안녕 채팅에서 보내요', images: 0, long: false })).toBe('ok')
+  })
+  it('a numbered menu with a plain > is still a dialog (never typed into)', () => {
+    expect(promptRow(['x', R, '>\u00a0', R, '  footer', ' > 1. Yes', '   2. No'].join('\n'))).toEqual({ kind: 'unknown', why: 'dialog' })
+    expect(promptRow(['x', R, '>\u00a0', R, '> 1. Yes', '  2. No'].join('\n'))).toEqual({ kind: 'unknown', why: 'dialog' })
+  })
+  it('a > not at the first column, or a shell prompt, is not the prompt box', () => {
+    expect(promptRow(['x', R, ' > text', R, '  footer'].join('\n'))).toEqual({ kind: 'unknown', why: 'no-box' })
+    expect(promptRow(['x', R, '>\u00a0', R, 'PS C:\\Users\\user\\work>'].join('\n'))).toEqual({ kind: 'unknown', why: 'no-box' })
+  })
+})

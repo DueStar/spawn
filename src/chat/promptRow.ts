@@ -32,12 +32,15 @@ const DASHED = /╌{20,}/
  */
 const TOP_LABELLED = /^\s*─{2,}(?: [^─╌❯]+? ─+)+\s*$/
 const topLabelled = (l: string) => TOP_LABELLED.test(l) && (l.match(/─/g)?.length ?? 0) >= 20
+// The prompt and selection mark is ❯, or a plain > where Claude Code draws it so (the owner's own app, 1.5.3's log:
+// ">" and a no-break space under a named session's rule, where the trial copies drew ❯). A > counts as the
+// prompt only with that no-break space after it; either counts as a menu's selection mark
 /** a numbered menu line with the selection mark (a dialog), anywhere on its line */
-const MENU = /^\s*❯\s*\d+\.\s/
+const MENU = /^\s*[❯>]\s*\d+\.\s/
 /** the same, indented: never a prompt Claude Code echoed (those start at the first column) */
-const MENU_INDENTED = /^\s+❯\s*\d+\.\s/
+const MENU_INDENTED = /^\s+[❯>]\s*\d+\.\s/
 // (Claude Code 2.1.325 draws the mark with a no-break space after it: seen in the Phase 3 trial)
-const PROMPT = /^❯(?:[  ]|$)/
+const PROMPT = /^(?:❯(?:[  ]|$)|>(?: |$))/
 const INDENT = /^[  ]{2}/
 /** a shell's prompt (Claude Code gone): PowerShell, cmd, or a POSIX prompt ending in $ # % */
 const SHELL = /^(?:PS\s.*>|[A-Za-z]:\\.*>|\S+[$#%])\s*$/
@@ -59,6 +62,21 @@ function agentsPanel(footer: string[]): boolean {
   const panel = footer.slice(blank + 1)
   const first = panel.find(l => l.trim())
   return !!first && panel.length <= PANEL_MAX && PANEL_FIRST.test(first) && panel.every(l => !l.trim() || (/^\s+\S/.test(l) && !l.includes('❯')))
+}
+
+/**
+ * The shape of a screen's last lines for spawn.log (1.5.3: the owner's sends refused with no way to see why): every
+ * letter and digit masked as `a`, spaces shown as `·`, a run of 8 or more of one character folded (`─×120`), each
+ * line at most 160 characters. Never any text; the box's rules, marks and indentation stay.
+ */
+const KNOWN = new Set(['─', '╌', '❯', '●', '◯', '⏵', '·', '✻', '⎿', '…', '↓', '⚠'])
+export function screenShape(screen: string | null): string {
+  if (typeof screen !== 'string') return '(no terminal text)'
+  // (a no-break space shows as ⍽; any other symbol outside ASCII and the box's own marks by its code point)
+  const sym = (c: string) => c === ' ' ? '·' : c === ' ' ? '⍽' : (c >= '!' && c <= '~') || KNOWN.has(c) ? c : `{${c.codePointAt(0)!.toString(16)}}`
+  return lastLines(screen, 14)
+    .map(l => [...l.replace(/[\p{L}\p{N}]/gu, 'a')].map(sym).join('').replace(/(.)\1{7,}/gu, (m, c: string) => `${c}×${[...m].length}`).slice(0, 160))
+    .join('\n')
 }
 
 /** The last `n` lines of a text, without splitting all of it (a long buffer costs nothing) */

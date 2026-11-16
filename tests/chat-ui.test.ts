@@ -294,7 +294,10 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     // (the final review M8: an error only through errWord, a version only through versionWord; no err?.code, err?.name or
     // a raw `claude --version` line any more)
     const ALLOWED = new Set(['code', 'why', 'status', 'event', 'word', 'k.count', 'c.kind', 'c.state', "c.why ?? ''", 'versionWord(version)', 'number', 'verdict',
-      'errWord(err)'])
+      'errWord(err)',
+      // 1.5.3 (chatHost diag / refused): a screen's shape with every letter and digit masked twice (page and main;
+      // tests/chat-send-diag.test.ts), and a refusal's fixed reason word
+      'shape', 'kind', 'String(r.reason).slice(0, 30)'])
     const CALL = /\blogOnce\(|\blog\(|console\.\w+\(|\bmsg:\s*`|\bwrite\(`/g
     let lines = 0
     for (const f of files) {

@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.5.4
+- 채팅에서 보내기가 여전히 막히던 문제를 고쳤어요. 일부 환경에서는 Claude Code가 입력칸 앞 표시를 ❯ 대신 >로 그리는데, 이걸 입력칸으로 알아보지 못했어요.
+- 채팅에서 보내기가 막히면, 그 이유와 입력칸 주변 모양을 앱 기록(spawn.log)에 남겨요. 쓰신 글 내용은 남기지 않아요.
+
 ### 1.5.2
 - 채팅에서 보내기가 늘 "터미널이 지금 입력을 받을 수 있는지 확인하지 못했어요"로 막히던 문제를 고쳤어요. 이름을 붙인 세션(/rename)은 입력란 윗줄 오른쪽에 이름이 보이는데, 이걸 입력란으로 알아보지 못했어요. 하위 에이전트가 일하는 동안 입력란 아래에 생기는 에이전트 목록도 이제 알아봐요.
 - 왼쪽 패널의 "~에게 지시하기" 입력란을 없앴어요. 지시는 터미널이나 채팅에서 해요. 세션을 열지 못했을 때 같은 알림은 패널 아래에 따로 떠요.
@@ -409,6 +413,10 @@
 
 ## spawn (English)
 
+### 1.5.4
+- Sending from the chat works where it was still refused: on some setups Claude Code draws the input's mark as > instead of ❯, and it was not recognised as the input box.
+- When a send from the chat is refused, the app log (spawn.log) says why, with the shape of the lines around the input. What you wrote is never logged.
+
 ### 1.5.2
 - Sending from the chat no longer always stops at "Couldn't confirm the terminal can take input now". A named session (/rename) shows its name at the right end of the line above the input, and that line was not recognised as the input box. The agents list shown under the input while sub-agents work is recognised too.
 - The "Give … an instruction" box in the left panel is gone: give instructions in the terminal or the chat. Notes (a session that could not open, say) show on their own at the bottom of the panel.
@@ -675,6 +683,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.5.4
+- チャットから送れないままだった問題を直しました。環境によって Claude Code が入力欄の印を ❯ ではなく > で描くことがあり、それを入力欄として認識できていませんでした。
+- チャットからの送信が止められたときは、その理由と入力欄まわりの形をアプリのログ(spawn.log)に残します。書いた内容は残しません。
 
 ### 1.5.2
 - チャットから送ると必ず「ターミナルが入力を受け付けられるか確認できませんでした」で止まっていた問題を直しました。名前を付けたセッション(/rename)は入力欄の上の線の右端に名前が出ますが、それを入力欄として認識できていませんでした。サブエージェントの作業中に入力欄の下に出るエージェント一覧も認識します。

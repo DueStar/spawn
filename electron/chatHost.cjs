@@ -967,6 +967,25 @@ function createChatHost({
     post({ t: 'close', id })
   }
 
+  /**
+   * Why a send from the chat did not go, in spawn.log (1.5.3: the owner's sends were refused and nothing said why).
+   * The page's own refusal for its screen comes with the shape it read (masked there and again here: never any text);
+   * at most one line every 30 s per terminal.
+   */
+  const diagAt = new Map()
+  function diag(p) {
+    const id = String(p?.id ?? '').slice(0, 200)
+    if (!id || now() - (diagAt.get(id) ?? 0) < 30_000) return
+    diagAt.set(id, now())
+    const why = String(p?.why ?? '').replace(/[^a-z-]/g, '').slice(0, 20)
+    const shape = String(p?.shape ?? '').replace(/[\p{L}\p{N}]/gu, 'a').slice(0, 3000)
+    log('info', `chat send refused by the page (${why}); the screen's last lines, masked:\n${shape}`)
+  }
+  function refused(kind, r) {
+    if (r && r.ok === false && r.reason !== 'empty') log('info', `chat ${kind} refused (${String(r.reason).slice(0, 30)})`)
+    return r
+  }
+
   function registerIpc(ipcMain, guard) {
     const idOf = (v) => String(v ?? '')
     ipcMain.handle('chat:open', guard((id) => open(idOf(id))))
@@ -983,8 +1002,9 @@ function createChatHost({
       ...(typeof arg?.before === 'number' && Number.isFinite(arg.before) ? { before: arg.before } : {}),
     }, { ok: false, reason: 'gone' })))
     // the composer (Phase 3): plain values only, checked again in send / submit / interrupt
-    ipcMain.handle('chat:send', guard((arg) => send(arg && typeof arg === 'object' ? arg : {})))
-    ipcMain.handle('chat:submit', guard((arg) => submit(arg && typeof arg === 'object' ? arg : {})))
+    ipcMain.handle('chat:send', guard(async (arg) => refused('send', await send(arg && typeof arg === 'object' ? arg : {}))))
+    ipcMain.handle('chat:submit', guard(async (arg) => refused('submit', await submit(arg && typeof arg === 'object' ? arg : {}))))
+    ipcMain.on('chat:diag', guard((arg) => diag(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:interrupt', guard((id) => interrupt(idOf(id))))
     ipcMain.handle('chat:image', guard((arg) => image(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.on('chat:image-drop', guard((arg) => dropImage(arg && typeof arg === 'object' ? arg : {})))

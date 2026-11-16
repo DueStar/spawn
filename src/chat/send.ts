@@ -15,7 +15,7 @@
  * repeat). Nothing is ever retried. Bridge, screen and clock are injected (tests, the QA page).
  */
 
-import { echoState, promptRow, type EchoState } from './promptRow'
+import { echoState, promptRow, screenShape, type EchoState } from './promptRow'
 import type { Outbox, OutboxImage } from './outbox'
 import type { EchoVerdict, Expect, LensStatus, ScreenVerdict, SendRefusal, SubmitRefusal } from './types'
 
@@ -23,6 +23,8 @@ export interface SendDeps {
   bridge: {
     send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs?: number } | { ok: false; reason: SendRefusal }>
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
+    /** spawn.log only (1.5.3): why the page found no prompt box, and the masked shape it read */
+    diag?(p: { id: string; why: string; shape: string }): void
   }
   /** the terminal's last lines as text (src/termMetrics.ts termText) */
   readScreen(id: string): string | null
@@ -78,7 +80,10 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
   // (a card open for this session (Phase 4): it is answered first; Enter here never answers it)
   if (d.status?.state === 'waiting' || (d.status?.asks?.length ?? 0) > 0) return { ok: false, reason: 'waiting', leftOnPrompt: false }
   const row = promptRow(d.readScreen(id))
-  if (row.kind === 'unknown') return { ok: false, reason: 'screen', leftOnPrompt: false }
+  if (row.kind === 'unknown') {
+    try { d.bridge.diag?.({ id, why: row.why, shape: screenShape(d.readScreen(id)) }) } catch { /* only a log line */ }
+    return { ok: false, reason: 'screen', leftOnPrompt: false }
+  }
   busy.add(id)
   try {
     const sendId = d.newId()
