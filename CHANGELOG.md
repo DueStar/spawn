@@ -2,6 +2,13 @@
 
 ## spawn
 
+### 1.6.2
+- 채팅에서 무엇을 써도 "터미널 입력란에 쓰던 글이 있어요"라며 보내지지 않던 문제를 고쳤어요. Claude Code가 입력칸에 흐리게 띄우는 추천 문장을 쓰던 글로 잘못 알아봤어요. 이제 추천 문장만 있으면 그대로 보내고, 터미널에 정말 쓰던 글이 남아 있을 때만 그 글을 보여 주며 알려 줘요.
+- 세션 이름을 바꾼 뒤, 터미널에 쓰고 있던 문장 한가운데 이름 바꾸기 명령이 끼어들던 문제를 고쳤어요. 이제 입력칸이 비어 있을 때만 보내요. 셸 탭의 이름을 바꿀 때는 아예 보내지 않아요.
+- 아직 한 마디도 보내지 않은 세션도 앱을 다시 켜면 같은 폴더, 같은 포켓몬으로 돌아와요.
+- 세션 이름 줄의 글자가 포켓몬 그림과 같은 높이에 놓여요.
+- 왼쪽 패널에서 도감과 세션 목록 사이에 구분선이 생겼어요.
+
 ### 1.6.1
 - 왼쪽 위 로고 옆의 spawn 글자를 없앴어요. 몬스터볼을 누르면 지금처럼 패치노트가 열려요.
 - 업데이트 버튼이 아이콘이 됐어요. 업데이트 안내가 떠도 프로필 사진이 눌려 잘리지 않아요. 무엇을 하는 버튼인지는 마우스를 올리면 보여요.
@@ -424,6 +431,13 @@
 
 ## spawn (English)
 
+### 1.6.2
+- Fixed the chat refusing every message with "There's text in the terminal's input". It mistook the greyed suggestion Claude Code shows in its input for something you had typed. A suggestion alone no longer blocks a message, and when something you really typed is left in the terminal, the note shows it.
+- Fixed a session rename being typed into the middle of what you were writing in the terminal. It now goes only when the input is empty, and never into a shell tab.
+- A session you opened but never sent anything in now comes back after a restart, in the same folder with the same Pokémon.
+- In the session line, the name now sits level with the Pokémon picture.
+- The left panel has a dividing line between the Pokédex and the session list.
+
 ### 1.6.1
 - The spawn wordmark next to the logo at the top left is gone. The Poké Ball still opens the patch notes.
 - The update button is now an icon, so the profile picture is no longer squeezed when an update is offered. Hover it to see what it does.
@@ -705,6 +719,13 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.6.2
+- チャットで何を書いても「ターミナルの入力欄に書きかけの文があります」と送れなかった問題を直しました。Claude Code が入力欄に薄く表示する提案文を、書きかけの文と取り違えていました。提案文だけなら送れるようになり、ターミナルに本当に書きかけの文が残っているときはその文を見せてお知らせします。
+- セッション名を変えたあと、ターミナルで書いている途中の文に名前変更のコマンドが割り込む問題を直しました。入力欄が空のときだけ送ります。シェルのタブには送りません。
+- まだ何も送っていないセッションも、アプリを開き直すと同じフォルダ・同じポケモンで戻ってきます。
+- セッション名の行の文字が、ポケモンの絵と同じ高さに並びます。
+- 左のパネルで、図鑑とセッション一覧のあいだに区切り線が入りました。
 
 ### 1.6.1
 - 左上のロゴの横の spawn の文字をなくしました。モンスターボールを押すと、これまで通りパッチノートが開きます。
