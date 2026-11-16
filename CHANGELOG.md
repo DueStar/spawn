@@ -2,6 +2,9 @@
 
 ## spawn
 
+### 1.5.1
+- macOS 버전이 1.5.0의 내용(채팅으로 보기 미리보기)으로 나왔어요. Windows는 1.5.0과 같아요.
+
 ### 1.5.0
 - Claude Code 세션을 대화처럼 보는 "채팅으로 보기"를 미리보기로 넣었어요. 설정 › 세션 › 채팅으로 보기 (미리보기)를 켜면, 그 뒤에 여는 세션의 머리에 채팅 · 터미널 전환이 생겨요. 이미 열려 있던 세션은 다시 열면 돼요.
 - 채팅에는 보낸 말과 답, 파일 읽기·명령·수정 내용(바뀐 줄), 실패한 명령, 하위 에이전트, 허락을 기다리는 중이 대화처럼 보여요. 일하는 동안에 보낸 말도 그 자리에 나와요.
@@ -400,6 +403,9 @@
 
 ## spawn (English)
 
+### 1.5.1
+- spawn for macOS gets what 1.5.0 brought (the chat view preview). On Windows it is the same as 1.5.0.
+
 ### 1.5.0
 - A preview of "View sessions as chat": a Claude Code session shown as a conversation. Turn on Settings › Sessions › View sessions as chat (preview), and sessions opened after that get a Chat · Terminal switch in their header. A session that was already open needs to be opened again.
 - The chat shows your messages and the answers, files read, commands run and edits (with the changed lines), commands that failed, sub-agents, and when Claude is waiting for your permission. A message you send while Claude is working shows where Claude took it in.
@@ -657,6 +663,9 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.5.1
+- macOS 版にも 1.5.0 の内容(チャットで表示のプレビュー)が入りました。Windows は 1.5.0 と同じです。
 
 ### 1.5.0
 - Claude Code のセッションを会話として表示する「チャットで表示」をプレビューとして入れました。設定 › セッション › セッションをチャットで表示(プレビュー)をオンにすると、その後に開くセッションの見出しにチャット・ターミナルの切り替えが出ます。すでに開いていたセッションは開き直してください。

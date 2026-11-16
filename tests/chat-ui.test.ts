@@ -327,9 +327,15 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     for (const v of ['text', 42, null, undefined, {}]) expect(errWord(v)).toBe('error')
   })
 
-  it('package.json and the lock file are as at the Phase 5 base (d7d0c06; also release 1.4.0\'s): no new dependency', () => {
-    const sha = (f: string) => createHash('sha256').update(read(join(ROOT, f)).replace(/\r\n/g, '\n')).digest('hex')
-    expect(sha('package.json')).toBe('3fc92fdad19d8c01822e85d7d63a27eda3cfe789f8aa5800d442242a5e77b857')
-    expect(sha('package-lock.json')).toBe('a5f184fc107576560a5d8bfd107ef5b0b214d78cc93f5e5266fd45d660bc2ec8')
+  // The app's own version is left out: a release bumps it, and that is not a dependency
+  it('package.json and the lock file are as at release 1.4.0, the version aside: no new dependency', () => {
+    const sha = (f: string) => {
+      const j = JSON.parse(read(join(ROOT, f)))
+      delete j.version
+      if (j.packages?.['']) delete j.packages[''].version
+      return createHash('sha256').update(JSON.stringify(j)).digest('hex')
+    }
+    expect(sha('package.json')).toBe('ebe875e30cf0a08930f2fbddad0473f289739c43d11baecc2ff9bcdfd074bcd2')
+    expect(sha('package-lock.json')).toBe('8242b4e969055cc68b29cd6ddc265a637a86eb409ecfcccfbaf1c5d8ed6899e4')
   })
 })
