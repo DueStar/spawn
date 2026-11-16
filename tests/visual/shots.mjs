@@ -117,8 +117,9 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-long  2000 items: ≤ 300 rows in the page anywhere, one chat.older at the top, older rows
                               above keep the row in view, 새 메시지 3개 and its jump, scroll time
                    chat-off   no chat key: no flip, no chat code loaded, no chat call; session (both sizes),
-                              session-work (both) and session-mac equal 1.4.0's pixel for pixel (baselines in
-                              CHAT_OFF_BASELINE or <out>/../00-before/, made from a cff52ac build; missing = a failure):
+                              session-work (both) and session-mac equal the app's with the chat view off pixel for pixel (baselines in
+                              CHAT_OFF_BASELINE or <out>/../00-before/, made from a build of this version with features.json
+                              chatView false — not cff52ac any more: 1.5.2 removed the side panel's instruction box; missing = a failure):
                               another take (five at most) only when a take differs by the two known frame-noise
                               signatures (the blinking caret's cell, a corner of the instruction field), any other
                               difference fails at once; every differing take printed
@@ -141,9 +142,7 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-stop  멈추기 in the working line → one chat.interrupt; Esc in the composer → one more; waiting: no 멈추기
                    chat-image  a pasted PNG → one chat.image and a chip; the lightbox and Esc (the focus back); × →
                               chat.dropImage; a dropped .txt → the type note; a text paste → no chat.image
-                   chat-side-box  the side panel's box points to the composer at the same height; its own text kept
-                              across the flip; 입력란으로 focuses the composer
-                   chat-compose-focus  the flip to 채팅 focuses the composer; the side box of another session keeps the focus
+                   chat-compose-focus  the flip to 채팅 focuses the composer; rows arriving keep a composition
                               through a reset; a composition in the composer survives rows arriving
                    chat-compose-grow  at the bottom, a draft of 1 → 6 lines keeps the list at the bottom; past 8 lines it scrolls
                    chat-robust  open { ok: false } → banner (unarmed: its own words); nothing sent → 불러오는 중…; a
@@ -914,10 +913,10 @@ const FLOWS = {
         if (!(await menu.count())) bad('the middle button did not open the menu')
         else {
           const items = await menu.locator('.w-textsize-item').allTextContents()
-          if (items.join('|') !== '작게화면 11 · 터미널 12|보통화면 12 · 터미널 13|크게화면 13 · 터미널 15|아주 크게화면 14 · 터미널 17') bad(`the menu rows: ${items.join(' | ')}`)
+          if (items.join('|') !== '작게|보통|크게|아주 크게') bad(`the menu rows: ${items.join(' | ')}`)
           if ((await menu.locator('.w-textsize-item.on').textContent()).indexOf('보통') !== 0) bad('보통 is not the checked row')
           const mb = await menu.boundingBox(), term = await page.locator('.w-term').boundingBox()
-          if (mb.x + mb.width > term.x + term.width + 0.5 || mb.width !== 220) bad(`the menu is ${mb.width}px wide, ends at ${mb.x + mb.width} (card ${term.x + term.width})`)
+          if (mb.x + mb.width > term.x + term.width + 0.5 || mb.width !== 140) bad(`the menu is ${mb.width}px wide, ends at ${mb.x + mb.width} (card ${term.x + term.width})`)
           const top = await page.evaluate(() => { const m = document.querySelector('.w-textsize-menu').getBoundingClientRect(); const el = document.elementFromPoint(m.left + 20, m.bottom - 12); return !!el?.closest('.w-textsize-menu') })
           if (!top) bad('the menu is covered by something (the terminal?)')
           // A picture of the open menu, for the record
@@ -989,6 +988,10 @@ const FLOWS = {
         floor: [199, 34],
         why: 'at the plan\'s 300px default panel (ruling 1; pre-plan 328px) the row is 28px narrower; at 328 it is held to 207 above',
       },
+      'launcher side': {
+        floor: [30, 34],
+        why: 'the owner (2026-11-16): narrower, so the folder and resume icons read as one pair beside 새로운 세션 시작하기',
+      },
     }
     const NEW = ['list mode', 'list button', 'session header ×', 'text size', '간략 row ×',
       // the chat view (chat view phase 2)
@@ -996,7 +999,7 @@ const FLOWS = {
       'chat path chip', 'chat 답 복사',
       // the composer (chat view phase 3)
       'composer +', 'composer @', 'composer 보내기', 'composer chip picture', 'composer chip ×', 'composer 멈추기', 'composer note button',
-      'composer mention row', 'composer thumbnail', 'composer lightbox ×', 'side box 입력란으로']
+      'composer mention row', 'composer thumbnail', 'composer lightbox ×']
     const measure = (page, sel, { hitAfter = false } = {}) => page.evaluate(([s, after]) => {
       const els = [...document.querySelectorAll(s)].filter(el => { const r = el.getBoundingClientRect(); return r.width && r.height && getComputedStyle(el).visibility !== 'hidden' })
       if (!els.length) return null
@@ -1106,7 +1109,6 @@ const FLOWS = {
         await take(page, 'composer +', '.chat-cbar .chat-ib:not(.mono)')
         await take(page, 'composer @', '.chat-cbar .chat-ib.mono')
         await take(page, 'composer 보내기', '.chat-composer .chat-send')
-        await take(page, 'side box 입력란으로', '.w-input-to')
         await composerField(page).click()
         await pasteImage(page, 1)
         await page.waitForSelector('.chat-ichip', { timeout: 3000 })
@@ -2557,45 +2559,8 @@ const FLOWS = {
   },
 
   /**
-   * The side panel's box while the chat is shown: the pointer, at the terminal view's height to the pixel;
-   * the box's own text survives chat → terminal; 입력란으로 puts the focus in the composer.
-   */
-  'chat-side-box': async ({ browser }) => {
-    const problems = []
-    const bad = m => problems.push(m)
-    let app
-    try {
-      app = await openApp(browser, { chat: 'chat', chatMode: false })
-      const { page } = app
-      const lens = name => page.locator('.w-lens button', { hasText: name })
-      await page.waitForSelector('.w-term-body .xterm', { timeout: 15_000 })
-      const boxH = () => page.evaluate(() => { const r = document.querySelector('.w-compose')?.getBoundingClientRect(); return r ? { top: r.top, height: r.height } : null })
-      const plain = await boxH()
-      await page.locator('.w-compose textarea').click()
-      await page.keyboard.type('side text')
-      await lens('채팅').click()
-      await page.waitForSelector('.w-compose-pointer', { timeout: 10_000 })
-      const pointing = await boxH()
-      if (!plain || !pointing || Math.abs(plain.height - pointing.height) > 0 || Math.abs(plain.top - pointing.top) > 0) bad(`the box moved or changed size: ${JSON.stringify({ plain, pointing })}`)
-      if (!(await page.locator('.w-compose-pointer', { hasText: '채팅 아래 입력란에서 보내요' }).count())) bad('the pointer does not say where to send')
-      await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
-      await page.locator('.w-input-to').click()
-      await sleep(150)
-      if (!(await page.evaluate(() => !!document.activeElement?.closest('.chat-composer')))) bad('입력란으로 did not focus the composer')
-      await lens('터미널').click()
-      await sleep(300)
-      if (await page.locator('.w-compose-pointer').count()) bad('the pointer stayed in the terminal view')
-      if (await page.locator('.w-compose textarea').inputValue() !== 'side text') bad(`the box's own text did not survive: ${JSON.stringify(await page.locator('.w-compose textarea').inputValue())}`)
-      const back = await boxH()
-      if (Math.abs(back.height - plain.height) > 0) bad(`the box's height changed after the flip back: ${plain.height} → ${back.height}`)
-    } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close() }
-    return problems
-  },
-
-  /**
-   * The composer owns the focus by Phase 2's rules: the user's flip to 채팅 puts it in the composer; typing in
-   * another session's side box keeps it there through a reset of the chat; a composition in the composer
-   * survives rows arriving.
+   * The composer owns the focus by Phase 2's rules: the user's flip to 채팅 puts it in the composer; a
+   * composition in the composer survives rows arriving.
    */
   'chat-compose-focus': async ({ browser }) => {
     const problems = []
@@ -2622,14 +2587,6 @@ const FLOWS = {
         if (!f.inComposer || f.value !== '하') bad(`rows arriving moved the focus or the text: ${JSON.stringify(f)}`)
       }
       await field.evaluate(el => el.dispatchEvent(new CompositionEvent('compositionend', { bubbles: true, data: '하' })))
-      // another session in its terminal: its side box typed into; a reset of the first chat takes nothing
-      await page.locator('.w-party .w-row').nth(1).locator('.w-row-name').click()
-      await sleep(400)
-      await page.locator('.w-compose textarea').click()
-      await page.keyboard.type('다른 세션')
-      await page.evaluate(([i, o]) => window.__CHAT_PUSH__(i, o), [id, [{ op: 'reset', items: items.slice(0, 3), status: chatStatus() }]])
-      await sleep(400)
-      if (!(await page.evaluate(() => !!document.activeElement?.closest('.w-compose')))) bad('a reset of a chat not shown took the focus from the side box')
     } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close() }
     return problems
   },
@@ -4926,8 +4883,7 @@ const FLOWS = {
       await sleep(600)
       if (await page.locator('[aria-label="보기 방식"], .w-lens').count()) bad('a 채팅 / 터미널 flip with the chat view off')
       if (await page.locator('.chat, .w-chat-pane').count()) bad('a chat view with the chat view off')
-      if (await page.locator('.chat-composer, .w-compose-pointer, .w-input-pointer').count()) bad('a composer or the side box\'s pointer with the chat view off')
-      if (!(await page.locator('section.w-card.w-compose:not(.w-compose-pointer) .w-input textarea:not([readonly])').count())) bad('the side box is not the 1.4.0 box')
+      if (await page.locator('.chat-composer, .w-compose textarea').count()) bad('a composer or an instruction box with the chat view off')
       if ((await calls(page)).some(c => String(c.fn).startsWith('chat.'))) bad('a chat call with the chat view off')
       const loaded = await page.evaluate(() => performance.getEntriesByType('resource').map(e => e.name).filter(n => /ChatView|Composer/.test(n)))
       if (loaded.length || chatRequests.length) bad(`the chat view's code was loaded: ${[...loaded, ...chatRequests].join(', ')}`)
@@ -4937,7 +4893,7 @@ const FLOWS = {
       const dir = process.env.CHAT_OFF_BASELINE ?? join(opts.out, '..', '00-before')
       for (const [surface, size] of [['session', [1440, 900]], ['session', [1100, 720]], ['session-work', [1440, 900]], ['session-work', [1100, 720]], ['session-mac', [1440, 900]]]) {
         const base = join(dir, `${surface}-${size[0]}x${size[1]}.png`)
-        if (!existsSync(base)) { bad(`no 1.4.0 baseline ${base} (make it from a cff52ac build: see tests/visual/README.md)`); continue }
+        if (!existsSync(base)) { bad(`no baseline ${base} (make it from a build of this version with features.json chatView false)`); continue }
         // Another take only for the two known frame-noise signatures (re-review m-12; NOISE_AREAS: the blinking
         // caret's cell, a corner of the instruction field), measured in each take's own page. Any other
         // difference fails the surface at once: it cannot pass by retrying. A take that is noise is printed

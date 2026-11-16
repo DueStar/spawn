@@ -272,7 +272,7 @@ describe('the words', () => {
     '세션 닫기', '한 번 더 누르면 세션을 닫아요', '세션 이름 바꾸기', '더블클릭해서 세션 이름 바꾸기',
     '끌어서 폭 조절 · 두 번 누르면 기본', '왼쪽 패널 폭',
     '글자 크기', '작게', '보통', '크게', '아주 크게', '글자 작게', '글자 크게',
-    '글자 크기 · 목록·패널·터미널 함께 ({mod}+= 크게 · {mod}+- 작게 · {mod}+0 보통 · {mod}+휠)', '화면 {ui} · 터미널 {term}',
+    '글자 크기 ({mod}+= / {mod}+-)',
   ]
   it("the restyle's new words in the session UI: in ko / en / ja, none names the game", () => {
     for (const ko of NEW_SESSION_UI) {

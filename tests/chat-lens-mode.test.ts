@@ -144,24 +144,14 @@ describe('Widget.tsx: every terminal stays mounted', () => {
 // ---- the composer in the chat view (Phase 3, Task 3.9) -------------------------------------------------
 
 /** The side panel's instruction box as release 1.4.0 draws it (pinned before the composer came) */
-const SIDE_BOX_1_4_0 = "          <section className=\"w-card w-compose\">\n            {note && <div className=\"w-note\" role=\"status\" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>}\n            <div className=\"w-input\">\n              <textarea\n                value={text}\n                placeholder={chosen ? (workMode ? t('지시하기…') : askLine(chosen.name, askPick)) : t('새 세션을 열면 지시할 수 있어요')}\n                onChange={e => setText(e.target.value)}\n                onKeyDown={e => {\n                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() }\n                }}\n                disabled={!chosen}\n                rows={2}\n              />\n              <button className=\"w-send\" onClick={send} disabled={!chosen || !text.trim()} aria-label={t('보내기')} title={t('보내기 (Enter)')}>\n                <SendIcon size={15} />\n              </button>\n            </div>\n          </section>"
 
 describe('the composer in the chat view; the side panel\'s box', () => {
   const widget = readFileSync(join(ROOT, 'src', 'Widget.tsx'), 'utf8')
 
-  it('the side box in the terminal view, the widget and with the feature off: its 1.4.0 markup, byte for byte', () => {
-    expect(widget).toContain(SIDE_BOX_1_4_0)
-  })
-
-  it('the pointer to the composer only while the shown session is in 채팅 and the session view is up', () => {
-    const at = widget.indexOf('채팅 아래 입력란에서 보내요')
-    expect(at).toBeGreaterThan(0)
-    const cond = /const chatPointer = ([^\n]+)/.exec(widget)?.[1] ?? ''
-    expect(cond).toContain("lensMode === 'chat'")
-    expect(cond).toContain("view === 'terminal'")
-    expect(widget).toMatch(/\{chatPointer \? \(/)
-    // the pointer's box keeps the 1.4.0 box's field and button, hidden, so its size is the same
-    expect(widget).toMatch(/w-compose-pointer/)
+  it('no instruction box in the side panel (removed 2026-11-16 at the owner\'s request): a note keeps a card of its own', () => {
+    expect(widget).not.toMatch(/<textarea/)
+    expect(widget).not.toMatch(/w-compose-pointer|채팅 아래 입력란에서 보내요/)
+    expect(widget).toMatch(/\{note && \(\s*<section className="w-card w-compose">/)
   })
 
   it('the composer takes the focus only on the user\'s own flip or switch, never from something being typed into', () => {

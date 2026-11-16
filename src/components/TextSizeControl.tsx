@@ -8,7 +8,7 @@
  */
 
 import React, { useEffect, useRef, useState } from 'react'
-import { setTextStep, stepTextSize, TERM_PX, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, UI_PX, useTextStep } from '../textSize'
+import { setTextStep, stepTextSize, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, useTextStep } from '../textSize'
 import { t, tSense } from '../i18n'
 import { modCombo, modLabel } from '../platform'
 import { CheckIcon } from './Icons'
@@ -51,7 +51,7 @@ export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = fal
   }, [open])
   const at = TEXT_STEPS.indexOf(step)
   const name = tSense(TEXT_STEP_LABEL[step], TEXT_STEP_SENSE)
-  const tip = t('글자 크기 · 목록·패널·터미널 함께 ({mod}+= 크게 · {mod}+- 작게 · {mod}+0 보통 · {mod}+휠)', { mod: modLabel() })
+  const tip = t('글자 크기 ({mod}+= / {mod}+-)', { mod: modLabel() })
   return (
     <div className={`w-textsize${compact ? ' compact' : ''}`} ref={box}>
       {!compact && <button className="w-textsize-step" onClick={() => stepTextSize(-1)} disabled={at <= 0}
@@ -71,10 +71,8 @@ export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = fal
               onClick={() => { setTextStep(s); setOpen(false); cur.current?.focus() }}>
               <span className="w-textsize-ck"><CheckIcon size={12} /></span>
               <span className="w-textsize-item-name">{tSense(TEXT_STEP_LABEL[s], TEXT_STEP_SENSE)}</span>
-              <small>{t('화면 {ui} · 터미널 {term}', { ui: UI_PX[s], term: TERM_PX[s] })}</small>
             </button>
           ))}
-          <div className="w-textsize-foot">{modCombo('=')} · {modCombo('-')} · {modCombo('0')}</div>
         </div>
       )}
     </div>

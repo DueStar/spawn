@@ -125,7 +125,7 @@ describe('the text-size control (source checks)', () => {
     const { default: WIDGET } = await import('../src/locales/widget')
     const { default: DICTS } = await import('../src/locales')
     for (const lang of ['en', 'ja'] as const) {
-      for (const k of ['글자 크기', '작게', '보통#text-size', '크게', '아주 크게', '글자 작게', '글자 크게', '화면 {ui} · 터미널 {term}']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeTruthy()
+      for (const k of ['글자 크기', '작게', '보통#text-size', '크게', '아주 크게', '글자 작게', '글자 크게', '글자 크기 ({mod}+= / {mod}+-)']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeTruthy()
       for (const k of ['소', '중', '대', '글자 {size}', '글자 크기 {size}']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeUndefined()
     }
     // the merged dictionaries read the step names as the control does
