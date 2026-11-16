@@ -962,6 +962,31 @@ describe('the terminal manager and the chat composer (Phase 3)', () => {
     } finally { vi.useRealTimers() }
   })
 
+  it('1.6.2: a send asked notWhileTyping is refused (typing) within 1.5 s of a real key, nothing written; a report or a move does not count', async () => {
+    vi.useFakeTimers()
+    try {
+      const pty = recordingPty()
+      const userDataDir = tempDir()
+      const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {} })
+      const t = terms.create({})
+      terms.write(t.id, '다')
+      await vi.advanceTimersByTimeAsync(500)
+      expect(terms.sendInstruction(t.id, '/rename 로그인 수정', { notWhileTyping: true })).toEqual({ ok: false, reason: 'typing' })
+      await vi.advanceTimersByTimeAsync(300)
+      expect(pty.writes.map(w => w.data)).toEqual(['다'])
+      await vi.advanceTimersByTimeAsync(800)
+      // (a focus report and the cursor moving are not typing)
+      terms.write(t.id, '\x1b[I')
+      terms.write(t.id, '\x1b[D')
+      expect(terms.sendInstruction(t.id, '/rename 로그인 수정', { notWhileTyping: true })).toEqual({ ok: true })
+      await vi.advanceTimersByTimeAsync(300)
+      expect(pty.writes.map(w => w.data)).toEqual(['다', '\x1b[I', '\x1b[D', '/rename 로그인 수정', '\r'])
+      // without the option: as before, at once
+      terms.write(t.id, 'x')
+      expect(terms.sendInstruction(t.id, 'hi')).toEqual({ ok: true })
+    } finally { vi.useRealTimers() }
+  })
+
   it('review I-5: while a chat send is between its text and its Enter, the side box refuses (busy) and writes nothing; off or unarmed, busy is never asked', async () => {
     vi.useFakeTimers()
     try {

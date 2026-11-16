@@ -63,7 +63,8 @@ describe('I-5: the side panel while a chat send is in flight', () => {
   const widget = src('Widget.tsx')
   // (the side box that said why is gone: removed 2026-11-16 at the owner's request)
   it('a pending /rename refused as busy stays pending (never typed into that send)', () => {
-    expect(widget).toMatch(/res\.reason === 'busy' && !pendingRename\.current\.has\(id\)\) pendingRename\.current\.set\(id, name\)/)
+    // (1.6.2: and refused as typing, tests/rename-pending.test.ts)
+    expect(widget).toMatch(/res\.reason === 'busy' \|\| res\.reason === 'typing'\) && !pendingRename\.current\.has\(id\)\) pendingRename\.current\.set\(id, name\)/)
   })
 })
 

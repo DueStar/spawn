@@ -24,8 +24,10 @@ const crypto = require('crypto')
 const { adapterFor, createActivity } = require('./adapters.cjs')
 const { createCodexWatch } = require('./codexWatch.cjs')
 const { OTHER_TOOLS } = require('./features.cjs')
+const { isRealInput } = require('./chatInput.cjs')
 
 const MAX_BUFFER = 200_000 // characters of scrollback kept for a tab opened later
+const TYPING_MS = 1500 // a send asked notWhileTyping: refused this long after a real key in the terminal (1.6.2)
 const OUTPUT_BATCH_MS = 16 // a session's output goes to the window at most once a frame
 const REDRAW_RESTORE_MS = 150 // the chat's redraw nudge: its real size again this long after the one-row step
 
@@ -482,6 +484,8 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     const asked = !!t.asking || t.questionSeen === true
     t.pty.write(data)
     t.activity?.input()
+    // (1.6.2) when the owner last typed here: a key, not the terminal's own reports or the cursor moving
+    if (isRealInput(data)) t.lastKeyAt = Date.now()
     // An answer (Enter, or Esc to dismiss) clears the question
     if (/[\r\x1b]/.test(data)) {
       t.scan = ''
@@ -518,8 +522,10 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
    * An instruction from the widget: typed into the session as if at the
    * keyboard, then Enter. A multi-line instruction is sent as one paste
    * (bracketed paste) so Claude Code keeps it as a single prompt.
+   * `notWhileTyping` (1.6.2, the widget's /rename): refused (`typing`) while
+   * the owner types in this terminal, so it never lands inside their text.
    */
-  function sendInstruction(id, text) {
+  function sendInstruction(id, text, { notWhileTyping = false } = {}) {
     const t = terms.get(id)
     if (!t || t.status === 'exited') return { ok: false, reason: 'no-session' }
     const clean = String(text ?? '').replace(/\r\n?/g, '\n').trim()
@@ -527,6 +533,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     if (clean.length > 20_000) return { ok: false, reason: 'too-long' }
     // the chat view's send is between its text and its Enter: this one would merge into it (refused, said)
     if (chatBusy(t)) return { ok: false, reason: 'busy' }
+    if (notWhileTyping && typeof t.lastKeyAt === 'number' && Date.now() - t.lastKeyAt < TYPING_MS) return { ok: false, reason: 'typing' }
     t.activity?.input()
     if (clean.includes('\n')) t.pty.write(`\x1b[200~${clean}\x1b[201~`)
     else t.pty.write(clean)

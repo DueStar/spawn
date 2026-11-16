@@ -1233,7 +1233,8 @@ function registerTerminalIpc() {
     if (!w || !w.isVisible() || w.isMinimized()) return
     terminals.resize(String(id), Number(cols), Number(rows))
   }))
-  ipcMain.handle('terminals:send', guard(({ id, text } = {}) => terminals.sendInstruction(String(id), text)))
+  // (the page's only use is its /rename: never typed while the owner types there, 1.6.2)
+  ipcMain.handle('terminals:send', guard(({ id, text } = {}) => terminals.sendInstruction(String(id), text, { notWhileTyping: true })))
   ipcMain.handle('terminals:open-url', guard((url) => {
     try {
       const u = new URL(String(url))

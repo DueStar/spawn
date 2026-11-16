@@ -76,6 +76,8 @@ import type { SessionInfo } from './types'
 import { t, josa, nameOf, locale, lang } from './i18n'
 import { appShortcut, wheelFontStep } from './keys'
 import { isMac, modCombo, platformWord } from './platform'
+import { termDim, termText } from './termMetrics'
+import { promptRow, renameReady } from './chat/promptRow'
 
 
 type Mood = 'working' | 'idle' | 'needs-you' | 'error' | 'ended'
@@ -461,20 +463,27 @@ const Widget: React.FC = () => {
 
   const sendable = rows.filter(r => r.terminal && r.terminal.status === 'running')
   const isFree = (r: Row) => r.terminal?.status === 'running' && !r.terminal.asking && r.mood !== 'working' && r.mood !== 'needs-you'
+  // (1.6.2) /rename is Claude Code's command: a shell or another tool would run it as typed
+  const renames = (r: Row) => r.terminal?.tool === 'claude'
   const commitRename = (r: Row, value: string) => {
     if (!r.terminal) return
     const name = value.trim()
     if (name === (r.title ?? '')) return
     bridge?.terminals.rename(r.terminal.id, name)
-    if (!name) return
+    if (!name || !renames(r)) return
     if (isFree(r)) renameNow(r.terminal.id, name)
     else pendingRename.current.set(r.terminal.id, name)
   }
-  // (the chat view's send between its text and its Enter refuses it, `busy`: the rename stays pending,
-  // never typed into that send)
+  // (the chat view's send between its text and its Enter refuses it, `busy`, and so does a key in that terminal in
+  // the last 1.5 s, `typing`: the rename stays pending, never typed into that send or into the owner's text.
+  // 1.6.2: and it is typed only into an empty prompt row, or one with only a dim suggestion, read right before)
   const renameNow = (id: string, name: string) => {
+    if (!renameReady(promptRow(termText(id), termDim(id)))) {
+      if (!pendingRename.current.has(id)) pendingRename.current.set(id, name)
+      return
+    }
     void bridge?.terminals.send(id, `/rename ${name}`).then(res => {
-      if (res && !res.ok && res.reason === 'busy' && !pendingRename.current.has(id)) pendingRename.current.set(id, name)
+      if (res && !res.ok && (res.reason === 'busy' || res.reason === 'typing') && !pendingRename.current.has(id)) pendingRename.current.set(id, name)
     }, () => {})
   }
   useEffect(() => {

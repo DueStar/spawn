@@ -8,7 +8,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { dimMask, echoState, promptRow } from '../src/chat/promptRow'
+import { dimMask, echoState, promptRow, renameReady } from '../src/chat/promptRow'
 import { termDim, termText, trackTermMetrics, type TermMetrics } from '../src/termMetrics'
 import { maskOf } from './dim-mask'
 
@@ -101,6 +101,20 @@ describe('promptRow with the dim mask (1.6.2: a greyed suggestion is not typed t
     expect(promptRow(e, maskOf(e))).toEqual({ kind: 'empty' })
     const d = screen('dialog-trust')
     expect(promptRow(d, maskOf(d))).toEqual({ kind: 'unknown', why: 'dialog' })
+  })
+})
+
+describe('renameReady (1.6.2: the widget types /rename only into an empty row)', () => {
+  it('an empty row, or one with only a dim suggestion: ready; typed text, text whose marks are unknown, no box: not', () => {
+    const e = screen('idle-empty')
+    expect(renameReady(promptRow(e, maskOf(e)))).toBe(true)
+    const s = screen('after-turn-suggestion')
+    expect(renameReady(promptRow(s, maskOf(s, true)))).toBe(true)
+    const t = screen('typed')
+    expect(renameReady(promptRow(t, maskOf(t)))).toBe(false)
+    expect(renameReady(promptRow(s))).toBe(false)
+    expect(renameReady(promptRow(screen('dialog-trust')))).toBe(false)
+    expect(renameReady(promptRow(null))).toBe(false)
   })
 })
 

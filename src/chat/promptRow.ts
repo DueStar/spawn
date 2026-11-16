@@ -181,6 +181,14 @@ export function promptRow(screen: string | null, dim?: string | null): RowVerdic
   return { kind: 'text', text, typed }
 }
 
+/**
+ * (1.6.2) Whether the widget may type its `/rename` (with Enter) now: the row is empty, or holds only a dim
+ * suggestion, which typing replaces. Typed text, text whose marks are unknown, a dialog or no box: not now.
+ */
+export function renameReady(row: RowVerdict): boolean {
+  return row.kind === 'empty' || (row.kind === 'text' && row.typed === false)
+}
+
 const collapse = (s: string) => s.replace(/\s+/g, ' ').trim()
 const IMAGE = /\[Image #\d+\]/g
 
