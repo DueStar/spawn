@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.5.2
+- 채팅에서 보내기가 늘 "터미널이 지금 입력을 받을 수 있는지 확인하지 못했어요"로 막히던 문제를 고쳤어요. 이름을 붙인 세션(/rename)은 입력란 윗줄 오른쪽에 이름이 보이는데, 이걸 입력란으로 알아보지 못했어요. 하위 에이전트가 일하는 동안 입력란 아래에 생기는 에이전트 목록도 이제 알아봐요.
+- 왼쪽 패널의 "~에게 지시하기" 입력란을 없앴어요. 지시는 터미널이나 채팅에서 해요. 세션을 열지 못했을 때 같은 알림은 패널 아래에 따로 떠요.
+- 글자 크기 메뉴를 간단하게 했어요: 작게 · 보통 · 크게 · 아주 크게만 보여요.
+- 새로운 세션 시작하기 옆 두 버튼(폴더 · 이어하기)을 좁혀서 한 쌍처럼 붙어 보여요. 도감과 파티 사이를 조금 넓혔어요.
+
 ### 1.5.1
 - macOS 버전이 1.5.0의 내용(채팅으로 보기 미리보기)으로 나왔어요. Windows는 1.5.0과 같아요.
 
@@ -403,6 +409,12 @@
 
 ## spawn (English)
 
+### 1.5.2
+- Sending from the chat no longer always stops at "Couldn't confirm the terminal can take input now". A named session (/rename) shows its name at the right end of the line above the input, and that line was not recognised as the input box. The agents list shown under the input while sub-agents work is recognised too.
+- The "Give … an instruction" box in the left panel is gone: give instructions in the terminal or the chat. Notes (a session that could not open, say) show on their own at the bottom of the panel.
+- A simpler text size menu: just Small · Normal · Large · Extra large.
+- The two buttons beside New session (folder · resume) are narrower and read as one pair. A little more room between the Pokédex and the party.
+
 ### 1.5.1
 - spawn for macOS gets what 1.5.0 brought (the chat view preview). On Windows it is the same as 1.5.0.
 
@@ -663,6 +675,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.5.2
+- チャットから送ると必ず「ターミナルが入力を受け付けられるか確認できませんでした」で止まっていた問題を直しました。名前を付けたセッション(/rename)は入力欄の上の線の右端に名前が出ますが、それを入力欄として認識できていませんでした。サブエージェントの作業中に入力欄の下に出るエージェント一覧も認識します。
+- 左パネルの「〜に指示する」入力欄をなくしました。指示はターミナルかチャットから行います。セッションを開けなかったときなどのお知らせは、パネルの下に別に表示されます。
+- 文字サイズのメニューを簡単にしました: 小さく・標準・大きく・特大だけです。
+- 「新しいセッション」の横の二つのボタン(フォルダ・続きから)を細くして、一組に見えるようにしました。図鑑とパーティーの間を少し広げました。
 
 ### 1.5.1
 - macOS 版にも 1.5.0 の内容(チャットで表示のプレビュー)が入りました。Windows は 1.5.0 と同じです。
