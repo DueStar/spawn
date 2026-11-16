@@ -3,7 +3,7 @@
 
 import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
-import { OTHER_TOOLS, settingsSections, sessionTools, shownCodexLimits } from '../src/features'
+import { CHAT_VIEW, OTHER_TOOLS, chatViewOn, settingsSections, sessionTools, shownCodexLimits } from '../src/features'
 
 const require = createRequire(import.meta.url)
 
@@ -56,5 +56,49 @@ describe('the default follows the switch', () => {
     expect(settingsSections(SECTIONS).some(([k]) => k === 'tools')).toBe(OTHER_TOOLS)
     expect(sessionTools(STORED).defaultTool).toBe(OTHER_TOOLS ? 'codex' : 'claude')
     expect(shownCodexLimits(CODEX)).toBe(OTHER_TOOLS ? CODEX : undefined)
+  })
+})
+
+// The chat view (Phase 2, a preview): its own switch in the same file, on for the
+// owner's test build (Task 18), and a 설정 switch that stays off by default. Both must be on for any of it.
+describe('the chat view switch', () => {
+  it('is on in features.json for the test build (the 설정 switch stays off by default)', () => {
+    expect(require('../electron/features.json').chatView).toBe(true)
+  })
+
+  it('the chat view is on only when the switch and the setting are both on', () => {
+    expect(chatViewOn({ session: { chatView: true } }, false)).toBe(false)
+    expect(chatViewOn({ session: { chatView: true } }, true)).toBe(true)
+    expect(chatViewOn({ session: { chatView: false } }, true)).toBe(false)
+  })
+
+  it('the page and the main process agree when no development override is set', () => {
+    if (process.env.SPAWN_CHAT_VIEW || process.env.VITE_SPAWN_CHAT_VIEW) return
+    expect(CHAT_VIEW).toBe(require('../electron/features.cjs').CHAT_VIEW)
+    expect(CHAT_VIEW).toBe(true)
+  })
+})
+
+// review M21: in the app, the page follows main's switch (a build made with VITE_SPAWN_CHAT_VIEW set
+// cannot show a 설정 row main does not serve), and nothing calls chat:* while it is off
+describe('the page follows main\'s chat view switch', () => {
+  it('main\'s answer wins over the build\'s; without one (a plain browser, the harness) the build\'s', async () => {
+    const { chatViewFlag } = await import('../src/features')
+    expect(chatViewFlag(false, true)).toBe(false)
+    expect(chatViewFlag(true, false)).toBe(true)
+    expect(chatViewFlag(undefined, true)).toBe(true)
+    expect(chatViewFlag(undefined, false)).toBe(false)
+    expect(chatViewFlag('yes', false)).toBe(false)
+  })
+
+  it('main answers the preload synchronously, always (off too); the preload passes it on', () => {
+    const { readFileSync } = require('node:fs') as typeof import('node:fs')
+    const { join } = require('node:path') as typeof import('node:path')
+    const main = readFileSync(join(__dirname, '..', 'electron', 'main.cjs'), 'utf8')
+    expect(main).toMatch(/ipcMain\.on\('features:chat-view', \(event\) => \{ event\.returnValue = CHAT_VIEW === true \}\)/)
+    const preload = readFileSync(join(__dirname, '..', 'electron', 'preload.cjs'), 'utf8')
+    expect(preload).toContain("ipcRenderer.sendSync('features:chat-view') === true")
+    const store = readFileSync(join(__dirname, '..', 'src', 'chat', 'store.ts'), 'utf8')
+    expect(store).toContain('createChatStore(CHAT_VIEW ? bridge?.chat ?? null : null)')
   })
 })

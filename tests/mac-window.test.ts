@@ -261,7 +261,8 @@ describe('the wiring (main.cjs, the page)', () => {
 
   it("the new controls in the window's drag areas still take a press: the panel's edge and the text size are no-drag", () => {
     const css = readFileSync(join(ROOT, 'src/styles/widget-expanded.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const sel of ['.w-side-resize', '.w-textsize']) {
+    // (and the chat view's 채팅 / 터미널 flip in the session header, and its buttons)
+    for (const sel of ['.w-side-resize', '.w-textsize', '.w-lens', '.w-lens button']) {
       const esc = sel.replace(/[.]/g, '\\.')
       const rule = css.match(new RegExp(`(?:^|\\})\\s*${esc}\\s*\\{([^}]*)\\}`))
       expect(rule, `${sel}'s own rule`).not.toBeNull()
@@ -269,5 +270,33 @@ describe('the wiring (main.cjs, the page)', () => {
     }
     // the bar they sit in is the window's drag region (so the rule above is what lets them work)
     expect(css).toMatch(/\.w-term-tabs\s*\{[^}]*-webkit-app-region:\s*drag/)
+  })
+})
+
+describe('the chat view on a Mac', () => {
+  it("its buttons are never a window drag region, and nothing of it sits in the traffic lights' corner", () => {
+    const css = readFileSync(join(ROOT, 'src/styles/chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(css).toMatch(/\.chat button\s*\{[^}]*-webkit-app-region:\s*no-drag/)
+    expect(css).not.toMatch(/-webkit-app-region:\s*drag/)
+    // the view lives in the terminal's place (below the session bar), not in the window's top corner
+    expect(css).not.toMatch(/position:\s*fixed/)
+    const widget = readFileSync(join(ROOT, 'src/Widget.tsx'), 'utf8')
+    expect(widget).toMatch(/<div className="w-term-body"[^]*?<div className="w-chat-pane">/)
+  })
+
+  it('(Phase 6) the Phase 5 controls take a press on a Mac: the header\'s chat tools, the panel, its edge and find are no-drag; ⌘F reaches find through appShortcut; its tooltip names the key through modCombo', () => {
+    const chat = readFileSync(join(ROOT, 'src/styles/chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const app = readFileSync(join(ROOT, 'src/styles/widget-expanded.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = (css: string, sel: string) => css.match(new RegExp(`(?:^|[}\\s])${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[1] ?? ''
+    expect(rule(app, '.w-chat-tools'), '.w-chat-tools').toMatch(/-webkit-app-region:\s*no-drag/)
+    expect(rule(chat, '.chat-changes button'), '.chat-changes button').toMatch(/-webkit-app-region:\s*no-drag/)
+    expect(rule(chat, '.chat-ch-rz'), '.chat-ch-rz').toMatch(/-webkit-app-region:\s*no-drag/)
+    expect(rule(chat, '.chat-find'), '.chat-find').toMatch(/-webkit-app-region:\s*no-drag/)
+    const view = readFileSync(join(ROOT, 'src/components/ChatView.tsx'), 'utf8')
+    expect(view).toMatch(/appShortcut\(e\) !== 'find'/)
+    expect(view).not.toMatch(/e\.ctrlKey\s*&&\s*e\.key\s*===\s*'f'/i)
+    const bar = readFileSync(join(ROOT, 'src/components/chat/FindBar.tsx'), 'utf8')
+    expect(bar).toMatch(/modCombo\('F'\)/)
+    expect(bar).not.toMatch(/'Ctrl\+F'/)
   })
 })

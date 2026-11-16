@@ -31,3 +31,6 @@ public/sprites/balls/
 
 # The screenshot harness's own server home (tests/visual/shots.mjs)
 tests/visual/.home/
+
+# The chat view spike (the final review M10: never committed; it was kept out by .git/info/exclude only)
+spike/

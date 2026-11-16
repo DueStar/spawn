@@ -1,0 +1,1001 @@
+{
+ "_about": "buildRows of Phase 2 (before Task 5.5), dayLabel = ISO date; the default density must give exactly these (changes.jsonl left out: its outside path is written with forward slashes, which the fixture guard does not take)",
+ "rows": {
+  "tools.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-13",
+    "label": "2026-11-13"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000000201",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000201",
+     "order": 0,
+     "at": 1794559260000,
+     "kind": "user",
+     "text": "Read src/math.js, look for sub, list the js files, run node, then add mul(a, b) after sub and write src/notes.md.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture01",
+    "at": 1794559262000
+   },
+   {
+    "row": "group",
+    "key": "toolu_fixture01",
+    "items": [
+     {
+      "id": "toolu_fixture01",
+      "order": 485,
+      "at": 1794559262000,
+      "kind": "tool",
+      "tool": "Read",
+      "input": {
+       "file": "src/math.js"
+      },
+      "state": "done",
+      "output": {
+       "text": "",
+       "lines": 10,
+       "truncated": false,
+       "error": false
+      }
+     },
+     {
+      "id": "toolu_fixture02",
+      "order": 2057,
+      "at": 1794559264000,
+      "kind": "tool",
+      "tool": "Grep",
+      "input": {
+       "pattern": "sub",
+       "path": "src"
+      },
+      "state": "done",
+      "output": {
+       "text": "Found 1 file\nsrc\\math.js",
+       "lines": 2,
+       "truncated": false,
+       "error": false
+      }
+     },
+     {
+      "id": "toolu_fixture03",
+      "order": 3329,
+      "at": 1794559265000,
+      "kind": "tool",
+      "tool": "Glob",
+      "input": {
+       "pattern": "src/**/*.js"
+      },
+      "state": "done",
+      "output": {
+       "text": "C:\\Users\\user\\work\\demo\\src\\math.js",
+       "lines": 1,
+       "truncated": false,
+       "error": false
+      }
+     }
+    ],
+    "files": 1,
+    "searches": 2
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture04",
+    "item": {
+     "id": "toolu_fixture04",
+     "order": 4582,
+     "at": 1794559267000,
+     "kind": "tool",
+     "tool": "Bash",
+     "input": {
+      "command": "node -e \"console.log(6*7)\"",
+      "description": "Run node to print 6*7"
+     },
+     "state": "done",
+     "output": {
+      "text": "42",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture05",
+    "item": {
+     "id": "toolu_fixture05",
+     "order": 5970,
+     "at": 1794559271000,
+     "kind": "tool",
+     "tool": "Bash",
+     "input": {
+      "command": "node missing.js",
+      "description": "Run a script that is not there"
+     },
+     "state": "failed",
+     "output": {
+      "text": "Exit code 1\nError: Cannot find module 'missing.js'",
+      "lines": 2,
+      "truncated": false,
+      "error": true
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture06",
+    "item": {
+     "id": "toolu_fixture06",
+     "order": 7370,
+     "at": 1794559273000,
+     "kind": "tool",
+     "tool": "Edit",
+     "input": {
+      "file": "src/math.js"
+     },
+     "state": "failed",
+     "output": {
+      "text": "<tool_use_error>String to replace not found in file.\nString: return a - b;\n}</tool_use_error>",
+      "lines": 3,
+      "truncated": false,
+      "error": true
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture07",
+    "item": {
+     "id": "toolu_fixture07",
+     "order": 9195,
+     "at": 1794559275000,
+     "kind": "tool",
+     "tool": "Edit",
+     "input": {
+      "file": "src/math.js"
+     },
+     "state": "done",
+     "output": {
+      "text": "The file C:\\Users\\user\\work\\demo\\src\\math.js has been updated successfully.",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "diff": {
+      "file": "src/math.js",
+      "kind": "edit",
+      "added": 4,
+      "removed": 1,
+      "hunks": [
+       {
+        "oldStart": 6,
+        "newStart": 6,
+        "lines": [
+         {
+          "t": " ",
+          "old": 6,
+          "new": 6,
+          "text": "  return a - b"
+         },
+         {
+          "t": " ",
+          "old": 7,
+          "new": 7,
+          "text": "}"
+         },
+         {
+          "t": " ",
+          "old": 8,
+          "new": 8,
+          "text": ""
+         },
+         {
+          "t": "-",
+          "old": 9,
+          "new": null,
+          "text": "module.exports = { add, sub }"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 9,
+          "text": "function mul(a, b) {"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 10,
+          "text": "  return a * b"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 11,
+          "text": "}"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 12,
+          "text": "module.exports = { add, sub, mul }"
+         }
+        ]
+       }
+      ],
+      "hidden": 0
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture08",
+    "item": {
+     "id": "toolu_fixture08",
+     "order": 12159,
+     "at": 1794559286000,
+     "kind": "tool",
+     "tool": "Write",
+     "input": {
+      "file": "src/notes.md"
+     },
+     "state": "done",
+     "output": {
+      "text": "File created successfully at: C:\\Users\\user\\work\\demo\\src\\notes.md",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "diff": {
+      "file": "src/notes.md",
+      "kind": "create",
+      "added": 5,
+      "removed": 0,
+      "hunks": [
+       {
+        "oldStart": 0,
+        "newStart": 1,
+        "lines": [
+         {
+          "t": "+",
+          "old": null,
+          "new": 1,
+          "text": "# Notes"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 2,
+          "text": ""
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 3,
+          "text": "alpha"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 4,
+          "text": "beta"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 5,
+          "text": "gamma"
+         }
+        ]
+       }
+      ],
+      "hidden": 0
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000000221",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000221",
+     "order": 13748,
+     "at": 1794559288000,
+     "kind": "text",
+     "text": "I read `src/math.js`, ran node (it printed `42`), added `mul(a, b)` after `sub` and wrote `src/notes.md`."
+    }
+   }
+  ],
+  "thinking.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-14",
+    "label": "2026-11-14"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000001302",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001302",
+     "order": 0,
+     "at": 1794628800000,
+     "kind": "user",
+     "text": "Which river is the longest? Think first.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000001304",
+    "at": 1794628805000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001304",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001304",
+     "order": 1228,
+     "at": 1794628805000,
+     "kind": "text",
+     "text": "The Nile is usually named the longest river, at about 6,650 km."
+    }
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000001307",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001307",
+     "order": 2364,
+     "at": 1794628820000,
+     "kind": "user",
+     "text": "And the second longest?",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000001309",
+    "at": 1794628823000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001309",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001309",
+     "order": 3608,
+     "at": 1794628823000,
+     "kind": "text",
+     "text": "The Amazon comes second, though some measurements put it first."
+    }
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-00000000130c",
+    "item": {
+     "id": "00000000-0000-4000-8000-00000000130c",
+     "order": 4744,
+     "at": 1794628840000,
+     "kind": "user",
+     "text": "Name a river in Korea.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-00000000130e",
+    "at": 1794628842000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-00000000130e",
+    "item": {
+     "id": "00000000-0000-4000-8000-00000000130e",
+     "order": 6017,
+     "at": 1794628842000,
+     "kind": "text",
+     "text": "The Han River flows through Seoul."
+    }
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000001311",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001311",
+     "order": 7124,
+     "at": 1794628860000,
+     "kind": "user",
+     "text": "Why is the Amazon so wide?",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000001313",
+    "at": 1794628866000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001313",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001313",
+     "order": 8511,
+     "at": 1794628866000,
+     "kind": "text",
+     "text": "It drains the largest river basin on Earth, under heavy rain, so in the wet season it floods far beyond its banks."
+    }
+   }
+  ],
+  "basic.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-13",
+    "label": "2026-11-13"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000000101",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000101",
+     "order": 442,
+     "at": 1794559200000,
+     "kind": "user",
+     "text": "Without using any tools, write a markdown table of three Greek letters with their names, then a numbered list of three rivers.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000000108",
+    "at": 1794559213000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000000108",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000108",
+     "order": 4133,
+     "at": 1794559213000,
+     "kind": "text",
+     "text": "Here are three Greek letters:\n\n| Letter | Name |\n|--------|------|\n| α | alpha |\n| β | beta |\n| γ | gamma |\n\nAnd three rivers:\n\n1. The Nile flows north through eleven countries into the Mediterranean Sea.\n2. The Amazon carries more water than any other river on Earth.\n3. The Danube passes through four capital cities on its way to the Black Sea."
+    }
+   }
+  ],
+  "agent.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-13",
+    "label": "2026-11-13"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000000401",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000401",
+     "order": 0,
+     "at": 1794559740000,
+     "kind": "user",
+     "text": "Use a sub-agent to count the lines in notes.txt.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture41",
+    "at": 1794559751000
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture41",
+    "item": {
+     "id": "toolu_fixture41",
+     "order": 420,
+     "at": 1794559751000,
+     "kind": "tool",
+     "tool": "Agent",
+     "input": {
+      "description": "Count lines in notes.txt",
+      "agentType": "general-purpose"
+     },
+     "state": "done",
+     "output": {
+      "text": "Async agent launched successfully. The agent is working in the background; you will be notified when it finishes.",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "agentId": "afixture01"
+    },
+    "children": []
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000000404",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000404",
+     "order": 2472,
+     "at": 1794559753000,
+     "kind": "text",
+     "text": "I started a sub-agent to count the lines. I will tell you the number when it finishes."
+    }
+   },
+   {
+    "row": "notice",
+    "key": "00000000-0000-4000-8000-000000000406",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000406",
+     "order": 3491,
+     "at": 1794559821000,
+     "kind": "notice",
+     "notice": "agent-done"
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000000407",
+    "at": 1794559823000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000000407",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000407",
+     "order": 4045,
+     "at": 1794559823000,
+     "kind": "text",
+     "text": "The sub-agent counted 3 lines in `notes.txt`."
+    }
+   }
+  ],
+  "turns.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-14",
+    "label": "2026-11-14"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000001402",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001402",
+     "order": 0,
+     "at": 1794625800000,
+     "kind": "user",
+     "text": "Add mul(a, b) to src/math.js and run the tests.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture_t11",
+    "at": 1794625802000
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t11",
+    "item": {
+     "id": "toolu_fixture_t11",
+     "order": 520,
+     "at": 1794625802000,
+     "kind": "tool",
+     "tool": "Read",
+     "input": {
+      "file": "src/math.js"
+     },
+     "state": "done",
+     "output": {
+      "text": "",
+      "lines": 5,
+      "truncated": false,
+      "error": false
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t12",
+    "item": {
+     "id": "toolu_fixture_t12",
+     "order": 2287,
+     "at": 1794625806000,
+     "kind": "tool",
+     "tool": "Edit",
+     "input": {
+      "file": "src/math.js"
+     },
+     "state": "done",
+     "output": {
+      "text": "The file C:\\Users\\user\\work\\demo\\src\\math.js has been updated successfully.",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "diff": {
+      "file": "src/math.js",
+      "kind": "edit",
+      "added": 4,
+      "removed": 0,
+      "hunks": [
+       {
+        "oldStart": 2,
+        "newStart": 2,
+        "lines": [
+         {
+          "t": " ",
+          "old": 2,
+          "new": 2,
+          "text": "  return a + b"
+         },
+         {
+          "t": " ",
+          "old": 3,
+          "new": 3,
+          "text": "}"
+         },
+         {
+          "t": " ",
+          "old": 4,
+          "new": 4,
+          "text": ""
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 5,
+          "text": "function mul(a, b) {"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 6,
+          "text": "  return a * b"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 7,
+          "text": "}"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 8,
+          "text": ""
+         },
+         {
+          "t": " ",
+          "old": 5,
+          "new": 9,
+          "text": "module.exports = { add }"
+         }
+        ]
+       }
+      ],
+      "hidden": 0
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t13",
+    "item": {
+     "id": "toolu_fixture_t13",
+     "order": 4588,
+     "at": 1794625810000,
+     "kind": "tool",
+     "tool": "Bash",
+     "input": {
+      "command": "node test.js",
+      "description": "Run the tests"
+     },
+     "state": "done",
+     "output": {
+      "text": "2 tests passed",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001409",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001409",
+     "order": 6199,
+     "at": 1794625815000,
+     "kind": "text",
+     "text": "I added `mul(a, b)` to `src/math.js`, and both tests pass."
+    }
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-00000000140c",
+    "item": {
+     "id": "00000000-0000-4000-8000-00000000140c",
+     "order": 7331,
+     "at": 1794625920000,
+     "kind": "user",
+     "text": "Write docs/rivers.md with three rivers, and export mul.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture_t21",
+    "at": 1794625923000
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t21",
+    "item": {
+     "id": "toolu_fixture_t21",
+     "order": 7893,
+     "at": 1794625923000,
+     "kind": "tool",
+     "tool": "Write",
+     "input": {
+      "file": "docs/rivers.md"
+     },
+     "state": "done",
+     "output": {
+      "text": "File created successfully at: C:\\Users\\user\\work\\demo\\docs\\rivers.md",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "diff": {
+      "file": "docs/rivers.md",
+      "kind": "create",
+      "added": 5,
+      "removed": 0,
+      "hunks": [
+       {
+        "oldStart": 0,
+        "newStart": 1,
+        "lines": [
+         {
+          "t": "+",
+          "old": null,
+          "new": 1,
+          "text": "# Rivers"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 2,
+          "text": ""
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 3,
+          "text": "- Nile"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 4,
+          "text": "- Amazon"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 5,
+          "text": "- Yangtze"
+         }
+        ]
+       }
+      ],
+      "hidden": 0
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-00000000140f",
+    "item": {
+     "id": "00000000-0000-4000-8000-00000000140f",
+     "order": 10258,
+     "at": 1794625923700,
+     "kind": "user",
+     "text": "Also, which river is the longest?",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture_t22",
+    "at": 1794625926000
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t22",
+    "item": {
+     "id": "toolu_fixture_t22",
+     "order": 11078,
+     "at": 1794625926000,
+     "kind": "tool",
+     "tool": "Edit",
+     "input": {
+      "file": "src/math.js"
+     },
+     "state": "done",
+     "output": {
+      "text": "The file C:\\Users\\user\\work\\demo\\src\\math.js has been updated successfully.",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     },
+     "diff": {
+      "file": "src/math.js",
+      "kind": "edit",
+      "added": 1,
+      "removed": 1,
+      "hunks": [
+       {
+        "oldStart": 6,
+        "newStart": 6,
+        "lines": [
+         {
+          "t": " ",
+          "old": 6,
+          "new": 6,
+          "text": "  return a * b"
+         },
+         {
+          "t": " ",
+          "old": 7,
+          "new": 7,
+          "text": "}"
+         },
+         {
+          "t": " ",
+          "old": 8,
+          "new": 8,
+          "text": ""
+         },
+         {
+          "t": "-",
+          "old": 9,
+          "new": null,
+          "text": "module.exports = { add }"
+         },
+         {
+          "t": "+",
+          "old": null,
+          "new": 9,
+          "text": "module.exports = { add, mul }"
+         }
+        ]
+       }
+      ],
+      "hidden": 0
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001412",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001412",
+     "order": 13332,
+     "at": 1794625930000,
+     "kind": "text",
+     "text": "I wrote `docs/rivers.md` and exported `mul`.\n\nThe Nile is the longest river, with the Amazon close behind."
+    }
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000001415",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001415",
+     "order": 14515,
+     "at": 1794626100000,
+     "kind": "user",
+     "text": "Write thirty numbered lines about rivers.",
+     "images": 0
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:toolu_fixture_t31",
+    "at": 1794626102000
+   },
+   {
+    "row": "tool",
+    "key": "toolu_fixture_t31",
+    "item": {
+     "id": "toolu_fixture_t31",
+     "order": 15063,
+     "at": 1794626102000,
+     "kind": "tool",
+     "tool": "Glob",
+     "input": {
+      "pattern": "docs/*.md"
+     },
+     "state": "done",
+     "output": {
+      "text": "C:\\Users\\user\\work\\demo\\docs\\rivers.md",
+      "lines": 1,
+      "truncated": false,
+      "error": false
+     }
+    },
+    "children": []
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000001418",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001418",
+     "order": 16629,
+     "at": 1794626106000,
+     "kind": "text",
+     "text": "1. Rivers begin as small streams high in the hills.\n2. Over many years, flowing water carves deep valleys into rock.\n3. The longest rivers cross several countries",
+     "partial": true
+    }
+   },
+   {
+    "row": "notice",
+    "key": "00000000-0000-4000-8000-000000001419",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000001419",
+     "order": 17440,
+     "at": 1794626106500,
+     "kind": "notice",
+     "notice": "interrupted"
+    }
+   }
+  ],
+  "image.jsonl": [
+   {
+    "row": "day",
+    "key": "day:2026-11-13",
+    "label": "2026-11-13"
+   },
+   {
+    "row": "user",
+    "key": "00000000-0000-4000-8000-000000000601",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000601",
+     "order": 0,
+     "at": 1794559620000,
+     "kind": "user",
+     "text": "[Image #1] What colour is this square?",
+     "images": 1
+    }
+   },
+   {
+    "row": "turn-head",
+    "key": "head:00000000-0000-4000-8000-000000000605",
+    "at": 1794559623000
+   },
+   {
+    "row": "text",
+    "key": "00000000-0000-4000-8000-000000000605",
+    "item": {
+     "id": "00000000-0000-4000-8000-000000000605",
+     "order": 2126,
+     "at": 1794559623000,
+     "kind": "text",
+     "text": "It is a solid green square."
+    }
+   }
+  ]
+ }
+}

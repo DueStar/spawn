@@ -1,0 +1,9 @@
+ ▐▛███▜▌   Claude Code v2.1.325
+▝▜█████▛▘  Sonnet 5.5
+  ▘▘ ▝▝    ~\work\demo
+
+────────────────────────────────────────
+❯ please add a mul function after sub
+  and export it from the module
+────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts

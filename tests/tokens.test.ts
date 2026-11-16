@@ -91,6 +91,119 @@ describe('tokens.css', () => {
     }
   })
 
+  it('the chat view\'s tokens: the reading column, and diff rows tinted so the text keeps its contrast', () => {
+    expect(root['--read-w']).toBe('840px')
+    expect(root['--add-bg']).toBe('rgba(116, 214, 139, 0.07)')
+    expect(root['--del-bg']).toBe('rgba(255, 100, 100, 0.07)')
+    // a tint over the code ground (--term-bg), as the diff block draws it
+    const over = (tint: string, bg: string) => {
+      const m = tint.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)!
+      const [r, g, b, a] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+      const base = rgb(bg)
+      return '#' + [r, g, b].map((v, i) => Math.round(v * a + base[i] * (1 - a)).toString(16).padStart(2, '0')).join('')
+    }
+    const add = over(root['--add-bg'], resolve('--term-bg'))
+    const del = over(root['--del-bg'], resolve('--term-bg'))
+    expect(contrast(resolve('--ink'), add)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(resolve('--ink-2'), del)).toBeGreaterThanOrEqual(3)
+    // the numbers and signs on them too
+    for (const fg of ['--ink-3', '--green']) expect(contrast(resolve(fg), add), fg).toBeGreaterThanOrEqual(3)
+    for (const fg of ['--ink-3', '--red-text']) expect(contrast(resolve(fg), del), fg).toBeGreaterThanOrEqual(3)
+  })
+
+  it('the 변경 사항 panel (on --side-bg): its diff rows keep --ink-2 at 3:1, the selected file reads at 4.5:1', () => {
+    const over = (tint: string, bg: string) => {
+      const m = tint.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)!
+      const [r, g, b, a] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+      const base = rgb(bg)
+      return '#' + [r, g, b].map((v, i) => Math.round(v * a + base[i] * (1 - a)).toString(16).padStart(2, '0')).join('')
+    }
+    const side = resolve('--side-bg')
+    for (const tint of ['--add-bg', '--del-bg']) {
+      const bg = over(root[tint], side)
+      expect(contrast(resolve('--ink-2'), bg), `--ink-2 on ${tint}`).toBeGreaterThanOrEqual(3)
+      expect(contrast(resolve('--ink'), bg), `--ink on ${tint}`).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(resolve('--ink-3'), bg), `--ink-3 on ${tint}`).toBeGreaterThanOrEqual(3)
+    }
+    expect(contrast(resolve('--green'), over(root['--add-bg'], side))).toBeGreaterThanOrEqual(3)
+    expect(contrast(resolve('--red-text'), over(root['--del-bg'], side))).toBeGreaterThanOrEqual(3)
+    // the selected file (and the pressed header button): --ink on the quiet selection grey, never yellow
+    const sel = over(root['--sel-bg'], side)
+    expect(contrast(resolve('--ink'), sel)).toBeGreaterThanOrEqual(4.5)
+    expect(contrast(resolve('--ink-2'), sel)).toBeGreaterThanOrEqual(3)
+    expect(contrast(resolve('--ink'), over(root['--sel-bg'], resolve('--bg')))).toBeGreaterThanOrEqual(4.5)
+    // the panel's rules: the selection on --sel-bg, no accent anywhere in them
+    const css = readFileSync(join(ROOT, 'src', 'styles', 'chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    expect(css).toMatch(/\.chat-ch-tn\[aria-selected="true"\][^{]*\{[^}]*background:\s*var\(--sel-bg\)/)
+    for (const m of css.matchAll(/([^{}]*\.chat-ch[^{}]*)\{([^}]*)\}/g)) expect(m[2], m[1]).not.toMatch(/--accent/)
+  })
+
+  it('find in the conversation (Phase 5): grey highlights over prose, bubbles, code and diff rows keep the text readable', () => {
+    expect(root['--find-bg']).toBe('rgba(255, 255, 255, 0.12)')
+    expect(root['--find-now-bg']).toBe('rgba(255, 255, 255, 0.28)')
+    const over = (tint: string, bg: string) => {
+      const m = tint.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)!
+      const [r, g, b, a] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+      const base = rgb(bg)
+      return '#' + [r, g, b].map((v, i) => Math.round(v * a + base[i] * (1 - a)).toString(16).padStart(2, '0')).join('')
+    }
+    const term = resolve('--term-bg')
+    // what a match can sit on: the page (prose, tool rows, notices), a user's bubble, a code block, inline code,
+    // a diff's added and removed rows, a sub-agent's rows (the same page)
+    const grounds: Record<string, string> = {
+      page: resolve('--bg'), bubble: resolve('--card-2'), code: term, inline: over('rgba(255, 255, 255, 0.06)', resolve('--bg')),
+      added: over(root['--add-bg'], term), removed: over(root['--del-bg'], term),
+    }
+    for (const [name, ground] of Object.entries(grounds)) {
+      // every match: the text keeps its own colour (--ink and --ink-2 at the body's 4.5:1)
+      const hit = over(root['--find-bg'], ground)
+      for (const fg of ['--ink', '--ink-2']) expect(contrast(resolve(fg), hit), `${fg} on chat-find over ${name}`).toBeGreaterThanOrEqual(4.5)
+      // (the quiet grey of a thinking row's text, on the page only: 3:1, as secondary text)
+      if (name === 'page') expect(contrast(resolve('--ink-3'), hit), '--ink-3 on chat-find over the page').toBeGreaterThanOrEqual(3)
+      // the current one: --ink on the stronger grey
+      expect(contrast(resolve('--ink'), over(root['--find-now-bg'], ground)), `--ink on chat-find-now over ${name}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
+  it('a link preview card (Phase 5): its title 4.5:1, its description and site line 3:1, at rest and hovered; hairline, no fill, no yellow', () => {
+    const over = (tint: string, bg: string) => {
+      const m = tint.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)!
+      const [r, g, b, a] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
+      const base = rgb(bg)
+      return '#' + [r, g, b].map((v, i) => Math.round(v * a + base[i] * (1 - a)).toString(16).padStart(2, '0')).join('')
+    }
+    const chat = readFileSync(join(ROOT, 'src', 'styles', 'chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = (sel: string) => { const m = chat.match(new RegExp(`(?:^|[}\\s])${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`)); if (!m) throw new Error(`no ${sel}`); return m[1] }
+    const hover = rule('.chat-og:hover').match(/background:\s*(rgba\([^)]*\))/)![1]
+    for (const ground of [resolve('--bg'), over(hover, resolve('--bg'))]) {
+      expect(contrast(resolve('--ink'), ground)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(resolve('--ink-2'), ground)).toBeGreaterThanOrEqual(4.5)
+      expect(contrast(resolve('--ink-3'), ground)).toBeGreaterThanOrEqual(3)
+    }
+    // the parts read those colours
+    expect(rule('.chat-og-title')).toMatch(/color:\s*var\(--ink\)/)
+    expect(rule('.chat-og-desc')).toMatch(/color:\s*var\(--ink-2\)/)
+    expect(rule('.chat-og-site')).toMatch(/color:\s*var\(--ink-3\)/)
+    // a hairline box, the lab's sizes
+    expect(rule('.chat-prose a.chat-og')).toMatch(/border:\s*1px solid var\(--line\)/)
+    expect(rule('.chat-prose a.chat-og')).toMatch(/max-width:\s*480px/)
+    for (const m of chat.matchAll(/([^{}]*\.chat-og[^{}]*)\{([^}]*)\}/g)) expect(m[2], m[1]).not.toMatch(/--accent/)
+  })
+
+  it('(Phase 6) the turn summary, the thinking rows, the new-version note and the 채팅 보기 help: only the three greys, on surfaces that hold them', () => {
+    const chat = readFileSync(join(ROOT, 'src', 'styles', 'chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const app = readFileSync(join(ROOT, 'src', 'styles', 'widget-expanded.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const colours = (css: string, sel: RegExp) => [...css.matchAll(/([^{}]*)\{([^}]*)\}/g)].filter(m => sel.test(m[1])).flatMap(m => [...m[2].matchAll(/(?:^|;)\s*color:\s*var\((--[\w-]+)\)/g)].map(x => x[1]))
+    const used = [...colours(chat, /\.chat-(foot|think|note)/), ...colours(app, /\.set-help/)]
+    expect(used.length).toBeGreaterThan(5)
+    for (const c of used) expect(['--ink', '--ink-2', '--ink-3'], c).toContain(c)
+    // the grounds they sit on: the page (the chat), the card (설정's modal)
+    for (const bg of ['--bg', '--card']) {
+      expect(contrast(resolve('--ink-3'), resolve(bg)), `--ink-3 on ${bg}`).toBeGreaterThanOrEqual(3)
+      expect(contrast(resolve('--ink-2'), resolve(bg)), `--ink-2 on ${bg}`).toBeGreaterThanOrEqual(4.5)
+    }
+  })
+
   it('every tier colour is 3:1 on the page, the card and the toast', () => {
     const tiers = ['common', 'rare', 'sub', 'legendary', 'mythical']
     for (const tier of tiers) {
@@ -206,7 +319,9 @@ describe('the guards: what the calm look allows', () => {
   })
 
   // (exact names; .qa- is the QA page's prefix: any class under it)
-  const HEADINGS = ['.w-brand', '.set-title', '.set-body h3', '.dex-card-name', '.w-toast-title', '.resume-head', '.w-setup-title', '.w-notes-body h3']
+  const HEADINGS = ['.w-brand', '.set-title', '.set-body h3', '.dex-card-name', '.w-toast-title', '.resume-head', '.w-setup-title', '.w-notes-body h3',
+    // the chat view's markdown headings (src/styles/chat.css)
+    '.chat-prose h1', '.chat-prose h2', '.chat-prose h3', '.chat-prose h4']
   const isHeading = (p: string) => HEADINGS.some(h => names(p, h)) || /\.qa-[\w-]/.test(p)
   it('(b) weights are 380 / 400 / 500 / 600 or a token; 600 only on the wordmark and headings', () => {
     const seen: string[] = []
@@ -245,7 +360,7 @@ describe('the guards: what the calm look allows', () => {
   })
 
   // (each matched exactly: .picked, not .picked-x)
-  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-send', ':focus-visible']
+  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-send', '.chat-send', ':focus-visible']
   it('(d) yellow only on the chosen session, the picked cell (and its drop / insert marks), send and focus rings', () => {
     let uses = 0
     for (const r of RULES) {
@@ -274,5 +389,23 @@ describe('the guards: what the calm look allows', () => {
       for (const p of parts(r.sel)) expect(reduced.has(p), `${r.file}: ${p} animates (${anim[0]}) with no reduced-motion rule`).toBe(true)
     }
     expect(animated).toBeGreaterThanOrEqual(6)
+  })
+
+  it('(f) the chat view\'s one animation: a wild Pokémon met while watching, in chat-game.css, none under reduced motion; chat.css has none', () => {
+    const game = SHEETS.find(s => s.file === 'chat-game.css')!
+    expect(game, 'chat-game.css').toBeTruthy()
+    const rules = rulesOf(game.file, game.text)
+    const moving = rules.filter(r => !r.at?.startsWith('@keyframes') && !r.at?.includes('prefers-reduced-motion') && values(r, 'animation(?:-name)?').some(v => v !== 'none'))
+    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon'])
+    // the lab's wildIn (app.css 273–274): 0.5 s, once
+    expect(values(moving[0], 'animation')[0]).toMatch(/^chat-wild-in \.5s cubic-bezier\(\.2, \.8, \.2, 1\) both$/)
+    expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in'])
+    const stop = rules.filter(r => r.at?.includes('prefers-reduced-motion') && /animation\s*:\s*none/.test(r.body))
+    expect(stop.flatMap(r => parts(r.sel))).toContain('.chat-wild.appear .chat-wild-mon')
+    // nothing else of the chat moves
+    for (const f of ['chat.css']) {
+      const s = SHEETS.find(x => x.file === f)!
+      expect(s.text, f).not.toMatch(/animation|@keyframes/)
+    }
   })
 })

@@ -172,3 +172,86 @@ describe('UI fonts on a Mac (.is-mac rules)', () => {
     }
   })
 })
+
+// The chat view's 설정 switch (Phase 2, a preview): stored off, shown only behind the
+// features.json switch (electron/features.cjs CHAT_VIEW / src/features.ts)
+describe('the chat view setting', () => {
+  it('is off by default; only a real boolean is kept', () => {
+    expect(sanitize(null).session.chatView).toBe(false)
+    expect(DEFAULTS.session.chatView).toBe(false)
+    expect(sanitize({ session: { chatView: 'yes' } }).session.chatView).toBe(false)
+    expect(sanitize({ session: { chatView: 1 } }).session.chatView).toBe(false)
+    expect(sanitize({ session: { chatView: true } }).session.chatView).toBe(true)
+  })
+
+  it('a patch turns it on and off and leaves the rest alone', () => {
+    const on = applyPatch(sanitize(null), { session: { chatView: true } })
+    expect(on.session.chatView).toBe(true)
+    expect(on.session.restoreOnStart).toBe(true)
+    expect(applyPatch(on, { session: { chatView: false } }).session.chatView).toBe(false)
+  })
+
+  it('the page has the same default', async () => {
+    const { DEFAULT_SETTINGS } = await import('../src/settingsStore')
+    expect(DEFAULT_SETTINGS.session.chatView).toBe(false)
+    expect(DEFAULT_SETTINGS.session).toEqual(DEFAULTS.session)
+  })
+
+  it('설정 shows the switch only while the features.json switch is on', () => {
+    const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
+    const at = view.indexOf("t('채팅으로 보기 (미리보기)')")
+    expect(at).toBeGreaterThan(0)
+    expect(view.indexOf("t('채팅으로 보기 (미리보기)')", at + 1)).toBe(-1)
+    // the row is one expression on one line: {CHAT_VIEW && <Toggle … />}
+    const line = view.slice(view.lastIndexOf('\n', at) + 1, view.indexOf('\n', at))
+    expect(line.trim()).toMatch(/^\{CHAT_VIEW && <Toggle label=\{t\('채팅으로 보기 \(미리보기\)'\)\}.*\/>\}$/)
+  })
+
+  it('link previews (Phase 5): off by default, only a real boolean kept, the page has the same default', async () => {
+    expect(DEFAULTS.session.linkPreviews).toBe(false)
+    expect(sanitize(null).session.linkPreviews).toBe(false)
+    for (const v of ['yes', 1, 'true', null, {}]) expect(sanitize({ session: { linkPreviews: v } }).session.linkPreviews).toBe(false)
+    expect(sanitize({ session: { linkPreviews: true } }).session.linkPreviews).toBe(true)
+    const on = applyPatch(sanitize(null), { session: { linkPreviews: true } })
+    expect(on.session).toMatchObject({ linkPreviews: true, chatView: false })
+    expect(applyPatch(on, { session: { linkPreviews: false } }).session.linkPreviews).toBe(false)
+    const { DEFAULT_SETTINGS } = await import('../src/settingsStore')
+    expect(DEFAULT_SETTINGS.session.linkPreviews).toBe(false)
+    // (the harness's fake bridge starts from the same defaults)
+    expect(readFileSync(join(__dirname, 'visual', 'fake-bridge.js'), 'utf8')).toMatch(/chatView: false, linkPreviews: false/)
+  })
+
+  it('설정 shows 링크 미리보기 only with the features.json switch, right under 채팅으로 보기, disabled while that is off', async () => {
+    const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
+    const chat = view.indexOf("t('채팅으로 보기 (미리보기)')")
+    const at = view.indexOf("t('링크 미리보기 (채팅)')")
+    expect(at).toBeGreaterThan(chat)
+    expect(view.indexOf("t('링크 미리보기 (채팅)')", at + 1)).toBe(-1)
+    const lineOf = (i: number) => view.slice(view.lastIndexOf('\n', i) + 1, view.indexOf('\n', i))
+    // the next line after the chat view's row
+    expect(view.indexOf('\n', chat) + 1).toBe(view.lastIndexOf('\n', at) + 1)
+    const line = lineOf(at).trim()
+    expect(line).toMatch(/^\{CHAT_VIEW && <Toggle label=\{t\('링크 미리보기 \(채팅\)'\)\}.*\/>\}$/)
+    expect(line).toContain('on={s.session.linkPreviews}')
+    expect(line).toContain('disabled={!s.session.chatView}')
+    expect(line).toContain("onChange={v => set('session', { linkPreviews: v })}")
+    const hint = '채팅에 나온 링크의 제목과 그림을 가져와 보여 줘요. 가져올 때 링크 주소 전체가 그 사이트로 가서, 누군가 그 링크를 열었다는 것도 알려져요. 물음표나 긴 값이 붙은 주소, 내 PC나 사내망 주소는 가져오지 않아요'
+    expect(line).toContain(`hint={t('${hint}')}`)
+    const { default: settingsLocale } = await import('../src/locales/settings')
+    expect(settingsLocale.en['링크 미리보기 (채팅)']).toBe('Link previews (chat)')
+    expect(settingsLocale.ja['링크 미리보기 (채팅)']).toBe('リンクプレビュー(チャット)')
+    expect(settingsLocale.en[hint]).toBe('Shows the title and picture of links in the chat. Fetching one sends the whole address of the link to that site, which also learns someone looked at it. Addresses with a question mark or a long value in them, and addresses on this PC or a private network, are never fetched.')
+    expect(settingsLocale.ja[hint]).toBe('チャットに出たリンクのタイトルと画像を表示します。取得するとリンクのアドレス全体がそのサイトに送られ、誰かがリンクを開いたことも伝わります。疑問符や長い値を含むアドレス、このPCや社内ネットワークのアドレスは取得しません。')
+  })
+
+  it('the label and the hint are in English and Japanese', async () => {
+    const { default: settingsLocale } = await import('../src/locales/settings')
+    const hint = 'Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요'
+    for (const key of ['채팅으로 보기 (미리보기)', hint]) {
+      expect(settingsLocale.en[key], key).toBeTruthy()
+      expect(settingsLocale.ja[key], key).toBeTruthy()
+    }
+    const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
+    expect(view).toContain(`t('${hint}')`)
+  })
+})

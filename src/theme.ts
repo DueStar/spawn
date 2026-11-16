@@ -111,6 +111,12 @@ export function sessionSprite(sessionId: string): string {
   return iconUrl(cast[sessionId]?.dex ?? 0)
 }
 
+/** The session's Pokémon as its large picture (the chat view's empty state); the ball while it has none */
+export function sessionArt(sessionId: string): string {
+  const c = cast[sessionId]
+  return spriteUrl(c?.dex ?? 0, !!c?.shiny)
+}
+
 /** The name a session goes by: its Pokémon's (✨ when shiny), or `fallback` while it is a ball. */
 export function sessionName(sessionId: string, fallback: string): string {
   const c = cast[sessionId]

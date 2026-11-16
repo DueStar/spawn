@@ -2,7 +2,7 @@
  * QaPage (?qa) — every design that only shows up in a particular moment,
  * laid out at once for design QA: each kind of catch notification, flees,
  * evolutions, level-ups, the widget's question panel and update button, the session
- * rows in every mood (상세 and 간략) and the text-size control.
+ * rows in every mood (상세 and 간략), the chat view (src/qaChat.tsx) and the text-size control.
  * "띄우기" sends the same event to the real notification window.
  */
 
@@ -19,6 +19,7 @@ import { ToastCard } from './Toast'
 import TodayLog from './components/TodayLog'
 import { TextSizeControl } from './components/TextSizeControl'
 import { hpTone } from './sessionList'
+import QaChat, { QaAnswers, QaComposer } from './qaChat'
 import type { DexEvent, Tier } from './pokedexStore'
 
 const at = Date.now()
@@ -149,6 +150,18 @@ const QaPage: React.FC = () => (
         <div className="qa-label"><b>간략</b><span>한 줄: 이름, 컨텍스트 눈금, 상태 점</span></div>
         <QaRows compact />
       </div>
+    </Section>
+
+    <Section title="채팅 (읽기 전용 보기)">
+      <QaChat />
+    </Section>
+
+    <Section title="채팅 › 입력란">
+      <QaComposer />
+    </Section>
+
+    <Section title="채팅 › 답하기">
+      <QaAnswers />
     </Section>
 
     <Section title="글자 크기">

@@ -29,8 +29,9 @@ const {
 } = require('./helpers.cjs')
 const { createTray } = require('./tray.cjs')
 const { createTerminalManager, gitBranch } = require('./terminals.cjs')
+const { claudeCommand } = require('./adapters.cjs')
 const { listHistory } = require('./history.cjs')
-const { checkPrereqs, LINKS: PREREQ_LINKS } = require('./prereqs.cjs')
+const { checkPrereqs, claudeVersion, LINKS: PREREQ_LINKS } = require('./prereqs.cjs')
 const { mergeLoginEnv } = require('./shellEnv.cjs')
 const { createStartGate } = require('./startGate.cjs')
 const { createUpdater } = require('./updater.cjs')
@@ -43,11 +44,13 @@ const { createSettingsStore, toastAllowed, claudeArgs } = require('./settings.cj
 const { createLog, teeConsole } = require('./logs.cjs')
 const { t, useLanguage } = require('./i18n.cjs')
 const { menuTemplate } = require('./menu.cjs')
-const { resolveRef, vscodeUrl } = require('./links.cjs')
+const { resolveRef, vscodeUrl, openFromChat } = require('./links.cjs')
 const { envVar, adoptLegacyEnv, migrateRuntimeDir } = require('../server/runtime-dir.cjs')
 const { migrateUserData } = require('./userDataMigration.cjs')
 const { refreshShortcutIcons } = require('./shortcutIcon.cjs')
 const { macWindowOptions, fillWorkArea, isFilled, restore: restoreFilled, applyMode: applyMacMode, noteMode, dockFor, quitCapMs, refillOnWorkAreaChange } = require('./macWindow.cjs')
+// The chat view (a preview): only behind features.json chatView; off, nothing of it is loaded or built
+const { CHAT_VIEW } = require('./features.cjs')
 // Settings made under the old name (CLAUDEX_PORT=…) keep working; the server and terminals inherit them
 adoptLegacyEnv(process.env)
 // A dev run (`electron .`) keeps its own window state, session names and page
@@ -152,6 +155,8 @@ useLanguage(() => appSettings().app.language, () => app.getLocale()) // 설정 �
 ipcMain.on('settings:work-mode', (event) => {
   try { event.returnValue = appSettings().app.workMode === true } catch { event.returnValue = false }
 })
+// The chat view's switch for the page (src/features.ts CHAT_VIEW follows main's), answered the same way
+ipcMain.on('features:chat-view', (event) => { event.returnValue = CHAT_VIEW === true })
 let toastWin = null  // catch notifications (?toast)
 // The toast page says when it listens (toast:ready); events before that wait here.
 // Sent at did-finish-load they were lost (the page loads its code after that), and
@@ -160,6 +165,7 @@ let toastReady = false
 let toastPending = []
 let qaWin = null     // the design QA page (?qa)
 let terminals = null
+let chatHost = null // the chat view's host (electron/chatHost.cjs): only while features.json chatView is on
 let pageUrl = null // the page URL the windows load (with the token fragment)
 let tray = null
 // The server child this app spawned (helpers.cjs childSlot): the one stopServer stops
@@ -467,6 +473,13 @@ function changeSettings(patch) {
   if (next.app.language !== before.app.language) refreshMenus()
   // 업무 모드 on: a catch card on screen, and those waiting for the card page, go now (never replayed)
   if (next.app.workMode && !before.app.workMode) { toastPending = []; hideToast() }
+  // 설정 › 세션 › 채팅으로 보기 (only with features.json chatView): its hooks for sessions opened from now on
+  if (CHAT_VIEW && chatHost && next.session.chatView !== before.session.chatView) {
+    if (next.session.chatView) chatHost.enable()
+    else chatHost.disable()
+  }
+  // 링크 미리보기: the chat's worker hears it (off: its caches emptied, its queue dropped)
+  if (CHAT_VIEW && chatHost && next.session.linkPreviews !== before.session.linkPreviews) chatHost.setPreviews()
   for (const w of [widgetWin, toastWin]) if (w && !w.isDestroyed()) w.webContents.send('settings:changed', next)
   return next
 }
@@ -717,6 +730,17 @@ function buildAppWindow(mode, { hidden = false, near = null } = {}) {
   win.on('query-session-end', keepSessions)
   win.on('session-end', keepSessions)
   win.on('hide', refreshMenus)
+  // The chat view: whether the app window is seen (a question is answered from the chat only while it is),
+  // and no chat shown once its page is gone or reloading
+  // (review I3: only the app window of now speaks for the window; a page going clears only what it showed)
+  if (CHAT_VIEW) {
+    const chatSeen = () => { if (win !== widgetWin) return; if (chatHost) chatHost.setWindowVisible(!win.isDestroyed() && win.isVisible() && !win.isMinimized()) }
+    for (const ev of ['show', 'hide', 'minimize', 'restore']) win.on(ev, chatSeen)
+    const page = win.webContents.id
+    const chatGone = () => { if (chatHost) chatHost.pageGone(page) }
+    win.on('closed', chatGone)
+    win.webContents.on('did-start-loading', chatGone)
+  }
   const remember = () => {
     // macOS: a window filling the work area (fullscreen) keeps the place it had before
     if (process.platform === 'darwin' && isFilled(win)) return
@@ -1127,8 +1151,34 @@ function registerTerminalIpc() {
       saveState()
     },
   }
+  // The chat view (features.json chatView on): its host, told every terminal list; enabled by 설정 below
+  if (CHAT_VIEW) chatHost = require('./chatHost.cjs').createChatHost({
+    terminals: {
+      list: () => terminals?.list() ?? [], refreshSettings: () => terminals?.refreshSettings(), armedCount: () => terminals?.armedCount() ?? 0,
+      // the composer's only way into a terminal (an armed Claude Code session), and the side panel's 확인 필요 cleared (Phase 4)
+      typeForChat: (id, data) => terminals?.typeForChat(id, data) ?? false, clearAsking: (id) => terminals?.clearAsking(id),
+      // 7-48: the one-row resize nudge for a shown chat's hidden terminal (chatHost.cjs redraw decides; a resize only)
+      redrawForChat: (id) => terminals?.redrawForChat(id) ?? false,
+    },
+    send: sendToWindows, userDataDir: app.getPath('userData'),
+    // the version gate asks about the binary the sessions run, and remembers the verdict with that binary
+    // (`hint`: the file found last time, looked at alone when a session starts)
+    claudeVersion: () => claudeVersion({ binary: claudeCommand() }), binaryStamp: (hint) => require('./chatHost.cjs').binaryStamp(hint || claudeCommand()),
+    cacheFile: path.join(app.getPath('userData'), 'chat-version.json'),
+    log: (level, msg) => (level === 'error' ? console.error : console.log)(`[chat] ${msg}`),
+    sweep: true,
+    // the composer's pasted images: this app instance's own folder under the OS temp folder
+    imageRoot: require('./chatImages.cjs').imageRoot(app.getPath('temp'), app.getPath('userData')),
+    // development only: the buttons' hold times shortened for a trial (SPAWN_CHAT_HOLD_S, 5–300 s); a packaged build never reads it
+    holdLimits: !app.isPackaged && process.env.SPAWN_CHAT_HOLD_S ? require('./chatHolds.cjs').shortHolds(process.env.SPAWN_CHAT_HOLD_S) : undefined,
+    // link previews (설정 › 세션 › 링크 미리보기, off by default, only with 채팅으로 보기 on): asked at every request
+    previewsOn: () => appSettings().session.chatView === true && appSettings().session.linkPreviews === true,
+    // development only: the previews' test switch (loopback addresses, any port); a packaged build never reads it
+    preview: { allowLoopback: !app.isPackaged && process.env.SPAWN_PREVIEW_LOOPBACK === '1' },
+  })
+  const sendTerminals = CHAT_VIEW ? (channel, payload) => { sendToWindows(channel, payload); if (channel === 'terminals:list') chatHost?.onTerminals(payload) } : sendToWindows
   terminals = createTerminalManager({
-    repoRoot: REPO_ROOT, userDataDir: app.getPath('userData'), send: sendToWindows, onExit: postSessionEnded, titles,
+    repoRoot: REPO_ROOT, userDataDir: app.getPath('userData'), send: sendTerminals, onExit: postSessionEnded, titles,
     // 설정 › 세션: the folder a session opens in when none is picked, and claude's model / permission mode
     defaultCwd: () => appSettings().session.defaultCwd || app.getPath('documents'),
     extraArgs: () => claudeArgs(appSettings().session),
@@ -1137,8 +1187,13 @@ function registerTerminalIpc() {
     emit: (event) => { void serverPost('/event', event) },
     // A Codex tab's context and usage limits (from its session log), as a status line would
     postStatus: (body) => { void serverPost('/status', body) },
+    // The chat view: whether new Claude Code sessions get its hooks (off without the host: as 1.4.0)
+    // and, for its composer, what reaches an armed session's input besides the chat (none of it while off)
+    // (and whether a chat send is between its text and its Enter: the side box's send then waits, said)
+    chat: { state: () => chatHost?.state() ?? { on: false }, onInput: CHAT_VIEW ? (...a) => chatHost?.onInput(...a) : undefined, busy: CHAT_VIEW ? (id) => chatHost?.busy(id) === true : undefined },
   })
   const guard = (fn) => (event, arg) => (fromOurWindow(event) ? fn(arg, event) : undefined)
+  chatHost?.registerIpc(ipcMain, guard)
   ipcMain.handle('settings:get', guard(() => appSettings()))
   ipcMain.handle('settings:set', guard((patch) => (patch && typeof patch === 'object' ? changeSettings(patch) : appSettings())))
   ipcMain.handle('data:export', guard(() => exportBackup()))
@@ -1157,13 +1212,20 @@ function registerTerminalIpc() {
   ipcMain.handle('terminals:branches', guard((dirs) => Object.fromEntries((Array.isArray(dirs) ? dirs : []).filter(d => typeof d === 'string' && d).slice(0, 24).map(d => [d, gitBranch(d)]))))
   // Taken either way, so turning the setting on later does not reopen an old list
   ipcMain.handle('terminals:restorable', guard(() => { const open = terminals.takeRestorable(); return appSettings().session.restoreOnStart ? open : [] }))
-  ipcMain.handle('terminals:create', guard((opts) => {
+  const createTerminal = (opts) => {
     try {
       return terminals.create({ cwd: typeof opts?.cwd === 'string' ? opts.cwd : undefined, resume: typeof opts?.resume === 'string' ? opts.resume : undefined, sessionId: typeof opts?.sessionId === 'string' ? opts.sessionId : undefined, tool: typeof opts?.tool === 'string' ? opts.tool : undefined })
     } catch (err) {
       console.error('[main] Could not start a terminal:', err.message)
       return { error: err.message }
     }
+  }
+  ipcMain.handle('terminals:create', guard((opts) => {
+    // The chat view on: a changed Claude Code is looked at again in the background (never waited for)
+    chatHost?.noteCreate()
+    // The chat view on: wait (3 s at most) until its hooks are ready, so a session restored at start is armed
+    if (chatHost?.state().on) return Promise.race([chatHost.ready(), new Promise((resolve) => setTimeout(resolve, 3000))]).then(() => createTerminal(opts))
+    return createTerminal(opts)
   }))
   ipcMain.handle('terminals:pick-folder', guard(async () => {
     const parent = widgetWin && !widgetWin.isDestroyed() ? widgetWin : undefined
@@ -1197,8 +1259,13 @@ function registerTerminalIpc() {
   // with the file's default app. A page, PDF or picture named without a line goes to its
   // default app (the browser, the image viewer): that is what Ctrl+click on one means.
   const VIEW_IN_DEFAULT_APP = new Set(['.html', '.htm', '.xhtml', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico'])
-  ipcMain.handle('terminals:open-path', guard(async ({ id, file, line, col } = {}) => {
+  ipcMain.handle('terminals:open-path', guard(async ({ id, file, line, col, from } = {}) => {
     const term = terminals.list().find(t => t.id === String(id))
+    // from the chat view: its own checks before any file system call (no UNC or device path is ever
+    // looked up), then the code editor, else the file shown in its folder; never run (links.cjs openFromChat)
+    if (from === 'chat') {
+      return openFromChat(term, file, { line, col, hasScheme: (scheme) => !!app.getApplicationNameForProtocol(`${scheme}://`), openExternal: (url) => shell.openExternal(url), showItemInFolder: (abs) => shell.showItemInFolder(abs) })
+    }
     if (!term || typeof file !== 'string' || file.length > 1024) return false
     const abs = resolveRef(term.cwd, file)
     try { if (!fs.statSync(abs).isFile()) return false } catch { return false }
@@ -1349,6 +1416,8 @@ if (lockWaits < 0) {
       }
     }
     registerTerminalIpc()
+    // The chat view on (switch and 설정): ready before the window restores its sessions, so they start armed
+    if (CHAT_VIEW && appSettings().session.chatView) chatHost?.enable()
     // Updates: a look at GitHub Releases shortly after start, then every 30 minutes
     // (a small file: latest.json is a plain download, no API rate limit). The app
     // stays open for days, so 6 hours meant a release went unseen until the next morning.
@@ -1406,6 +1475,8 @@ if (lockWaits < 0) {
     timer.mark('quit-start')
     const near = widgetWin && !widgetWin.isDestroyed() ? widgetWin.getBounds() : (state.widgetBounds ?? null)
     for (const w of BrowserWindow.getAllWindows()) { try { w.hide() } catch {} }
+    // the chat view's held requests go back to the sessions' own dialogs before the sessions end
+    if (chatHost) { try { chatHost.releaseHolds('quit') } catch {} }
     if (updating) {
       const lang = cardLang(appSettings().app.language, app.getLocale())
       try { openStatusCard({ BrowserWindow, screen, near, step: 'updating', lang }) } catch {}
@@ -1443,6 +1514,8 @@ if (lockWaits < 0) {
       .catch((err) => console.error('[main] quit sequence:', err?.message ?? err))
       .finally(() => {
         try { if (tray) { tray.dispose(); tray = null } } catch {}
+        // the chat view's worker and hook endpoint (the sessions have ended by now)
+        try { void chatHost?.close() } catch {}
         try { stopServer() } catch {}
         timer.mark('server-stopped')
         quitSequence = 'done'

@@ -37,6 +37,33 @@ export function trackTermMetrics(id: string, read: () => TermMetrics): () => voi
   return () => { if (readers.get(id) === read) readers.delete(id) }
 }
 
+/**
+ * The last lines of one terminal's buffer as text (its registered reader's `text`), or null when no
+ * terminal of that id is on the page or reading it fails. Read only: the chat composer reads Claude
+ * Code's prompt row with it (src/chat/promptRow.ts) before it types anything, and the echo after.
+ */
+export function termText(id: string): string | null {
+  const read = readers.get(id)
+  if (!read) return null
+  try {
+    const text = read().text
+    return typeof text === 'string' ? text : null
+  } catch { return null }
+}
+
+/**
+ * One terminal's columns and rows as its xterm has them now (its registered reader's), or null when no
+ * terminal of that id is on the page. Read only (src/chat/termWarm.ts: has the warm terminal mounted).
+ */
+export function termSize(id: string): { cols: number; rows: number } | null {
+  const read = readers.get(id)
+  if (!read) return null
+  try {
+    const { cols, rows } = read()
+    return typeof cols === 'number' && typeof rows === 'number' ? { cols, rows } : null
+  } catch { return null }
+}
+
 export function termMetrics(): TermMetrics[] {
   const out: TermMetrics[] = []
   for (const read of readers.values()) { try { out.push(read()) } catch { /* a terminal going away */ } }

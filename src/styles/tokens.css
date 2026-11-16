@@ -30,6 +30,10 @@
   --side-w: 300px;            /* resizable 240–420, remembered (src/sideWidth.ts) */
   --row-gap: 4px;  --row-gap-compact: 2px;
   --row-mon: 24px;  --row-mon-compact: 20px;  --strip-mon: 21px;
+  /* the chat view: its reading column, and a diff's added / removed rows (a tint, the text keeps its contrast) */
+  --read-w: 840px;  --add-bg: rgba(116, 214, 139, 0.07);  --del-bg: rgba(255, 100, 100, 0.07);
+  /* find in the conversation: every match a light grey, the current one a stronger grey (never yellow) */
+  --find-bg: rgba(255, 255, 255, 0.12);  --find-now-bg: rgba(255, 255, 255, 0.28);
   /* type, 보통 (the default step) */
   --t-micro: 10px;  --t-meta: 11px;  --t-ui: 12px;  --t-name: 12px;  --t-prose: 13px;
   --t-num: 12px;  --t-head: 14px;  --t-big: 15px;  --t-code: 12px;

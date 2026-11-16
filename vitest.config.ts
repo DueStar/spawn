@@ -9,6 +9,8 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['tests/**/*.test.ts'],
+    // The system language is Korean in every file, whatever the machine's (tests/setup-language.ts)
+    setupFiles: ['tests/setup-language.ts'],
     // One worker per file: each file imports its own copy of server/index.js
     // with its own SPAWN_HOME temp dir (see tests/helpers.ts).
     pool: 'forks',

@@ -4,7 +4,7 @@
  * tests/visual/shots.mjs with page.addInitScript before the app's code runs.
  *
  * It reads window.__SHOT__ = { mode, workMode, terminals, board, branches,
- * history, transcript, shellTranscript, version, update } (set by an earlier init script) and
+ * history, transcript, shellTranscript, version, update, chat, chatAgent } (set by an earlier init script) and
  * answers every bridge call from it. Nothing touches the network or a disk; no
  * pty. Calls that would change something (terminals.move / close / rename /
  * create / send / write / resize) do nothing but are recorded, in order, in
@@ -18,14 +18,16 @@
   const noop = () => {}
   const off = () => noop
 
-  // DEFAULT_SETTINGS in src/settingsStore.ts, with 업무 모드 from the shot
+  // DEFAULT_SETTINGS in src/settingsStore.ts, with 업무 모드 from the shot and shot.settings laid over it
+  // (e.g. { session: { chatView: true, linkPreviews: true } } for the link preview cards)
   let settings = {
     notify: { catch: true, flee: true, evolve: true, levelup: true, rareOnly: false, duration: 'normal', quiet: false, quietFrom: '23:00', quietTo: '08:00', sound: true, sessions: true },
     privacy: { hidePrompts: false },
-    session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude' },
+    session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false },
     app: { openAtLogin: false, startHidden: false, widgetOnTop: true, language: 'auto', workMode: !!shot.workMode },
     terminal: { scrollback: 5000, font: 'default' },
   }
+  for (const k of Object.keys(shot.settings || {})) if (settings[k]) settings[k] = Object.assign({}, settings[k], shot.settings[k])
   const settingsListeners = new Set()
 
   const terminals = (shot.terminals || []).map(t => Object.assign({}, t))
@@ -33,9 +35,140 @@
   const modeListeners = new Set()
   // shot.update: an update on offer (e.g. { status: 'available', latest: '9.9.9' }) for the header's button
   const update = Object.assign({ status: 'idle', current: shot.version || '0.0.0', latest: null, notes: '', progress: 0, error: null, needsFull: false, page: '' }, shot.update || {})
+  // Terminal output after the replay, for a flow: window.__TERM_PUSH__(id, data) sends a batch
+  // (numbered after the replay's seq 1, as main numbers them)
+  const dataListeners = new Set()
+  const seqOf = {}
+  window.__TERM_PUSH__ = (id, data) => { seqOf[id] = (seqOf[id] || 1) + 1; dataListeners.forEach(fn => fn({ id, data, seq: seqOf[id] })) }
+
+  // The chat view (shot.chat: terminal id -> the reset chat.open answers with, from chatFixture.mjs;
+  // shot.chatAgent: Agent row id -> its sub-agent's items). Updates go out on a later tick, as
+  // main's would. window.__CHAT_PUSH__(id, ops) sends the next rev (a flow's own update). The
+  // calls are recorded as chat.open / chat.close / chat.older / chat.reload / chat.resync / chat.agent.
+  const chatListeners = new Set()
+  const chatRev = {}
+  const chatSend = (u) => { setTimeout(() => chatListeners.forEach(fn => fn(JSON.parse(JSON.stringify(u)))), 0) }
+  window.__CHAT_PUSH__ = (id, ops) => { chatRev[id] = (chatRev[id] || 0) + 1; chatSend({ id, rev: chatRev[id], ops }) }
+  // shot.chatOpts: { openFails } open answers { ok: false } (no reader; a string: with that reason, e.g. 'unarmed');
+  // { olderFails } older answers { ok: false };
+  // { silent } open answers ok and sends nothing (a reset that never comes)
+  const chatOpts = shot.chatOpts || {}
+
+  // The composer (chat view phase 3): chat.send / submit / interrupt / image / dropImage / files are
+  // recorded (an image as its size and first bytes) and answered from window.__CHAT_SCRIPT__ (a value,
+  // or a function of the call's argument), else as main would answer a send that goes through. The
+  // fake screen: window.__SCREEN__(termId, name) writes a fixture screen (shot.screens, from
+  // tests/fixtures/chat/screens) into that terminal's real xterm, sized to its columns as Claude Code
+  // draws: the rules as wide as the terminal, long lines wrapped with a two-space indent.
+  const script = (name, arg, fallback) => {
+    const s = (window.__CHAT_SCRIPT__ || {})[name]
+    const v = typeof s === 'function' ? s(arg) : s
+    if (v === 'hang') return new Promise(() => {})
+    return Promise.resolve(JSON.parse(JSON.stringify(v === undefined ? fallback : v)))
+  }
+  const headOf = (text) => {
+    const t = String(text || '')
+    const lead = /^[!#@]/.test(t) || (/^\//.test(t) && !/^\/[A-Za-z][\w:.-]{0,63}(?:[ \t]|$)/.test(t)) ? ' ' : ''
+    return Array.from((lead + t).split('\n')[0].replace(/\s+/g, ' ').trim()).slice(0, 24).join('').trimEnd()
+  }
+  const sizes = {}
+  window.__SCREEN__ = (id, name) => {
+    const text = (shot.screens || {})[name]
+    if (typeof text !== 'string') throw new Error(`no screen ${name}`)
+    // (a terminal never fitted, hidden under the chat from the start, has xterm's own 80 columns)
+    const cols = (sizes[id] && sizes[id].cols) || 80
+    const out = []
+    for (const line of text.replace(/\n$/, '').split('\n')) {
+      if (/^\s*[─╌]{20,}\s*$/.test(line)) { const ch = line.trim()[0]; const lead = line.match(/^\s*/)[0]; out.push(lead + ch.repeat(Math.max(20, cols - lead.length))); continue }
+      let rest = Array.from(line)
+      while (rest.length > cols) { out.push(rest.slice(0, cols).join('')); rest = Array.from('  ').concat(rest.slice(cols)) }
+      out.push(rest.join(''))
+    }
+    window.__TERM_PUSH__(id, '\x1b[2J\x1b[3J\x1b[H' + out.join('\r\n'))
+  }
 
   window.spawn = {
     isDesktop: true,
+    // main's chat view switch, as the preload passes it (src/features.ts follows it): on when the shot
+    // has a conversation or a session carrying the chat key, off otherwise (the 1.4.0 surfaces)
+    features: { chatView: !!shot.chat || terminals.some(t => t.chat !== undefined) },
+    chat: {
+      open: (id) => {
+        record('chat.open', [id])
+        if (chatOpts.openFails) return Promise.resolve(typeof chatOpts.openFails === 'string' ? { ok: false, reason: chatOpts.openFails } : { ok: false })
+        const u = (shot.chat || {})[id]
+        if (u && !chatOpts.silent) { chatRev[id] = u.rev; chatSend(u) }
+        return ok()
+      },
+      close: (id) => record('chat.close', [id]),
+      older: (id) => { record('chat.older', [id]); return chatOpts.olderFails ? Promise.resolve({ ok: false, loaded: 0 }) : ok({ loaded: 0 }) },
+      reload: (id) => { record('chat.reload', [id]); return ok() },
+      // a lost update: the conversation again as it was opened (a reset with the next rev)
+      resync: (id) => {
+        record('chat.resync', [id])
+        const u = (shot.chat || {})[id]
+        if (u) { chatRev[id] = (chatRev[id] || 0) + 1; chatSend(Object.assign({}, u, { rev: chatRev[id] })) }
+        return ok()
+      },
+      agent: (id, toolId) => {
+        record('chat.agent', [id, toolId])
+        const items = (shot.chatAgent || {})[toolId]
+        if (items) window.__CHAT_PUSH__(id, [{ op: 'upsert', items }])
+        return ok()
+      },
+      onUpdate: (fn) => { chatListeners.add(fn); return () => chatListeners.delete(fn) },
+      send: (p) => {
+        record('chat.send', [p])
+        const command = /^\/[A-Za-z][\w:.-]{0,63}(?:[ \t]|$)/.test(p.text) && !/[\n\t]/.test(p.text) && !p.images.length
+        return script('send', p, { ok: true, expect: { head: command ? p.text : headOf(p.text), images: p.images.length, long: /\n/.test(p.text) || p.text.length > 200 }, command, minEnterMs: 150 + 250 * p.images.length })
+      },
+      // (as main: Enter only for an echo seen; 'hang' in the script: an answer that never comes)
+      submit: (p) => { record('chat.submit', [p]); return script('submit', p, p.echo === 'ok' ? { ok: true } : { ok: false, reason: 'no-echo' }) },
+      interrupt: (id) => { record('chat.interrupt', [id]); return script('interrupt', id, { ok: true }) },
+      image: (p) => {
+        const b = p.bytes || new Uint8Array(0)
+        record('chat.image', [{ id: p.id, size: b.length, head: Array.from(b.slice(0, 8)) }])
+        const token = Array.from({ length: 24 }, (_, i) => '0123456789abcdef'[(calls.length * 7 + i * 5) % 16]).join('')
+        return script('image', p, { ok: true, token, type: 'png' })
+      },
+      dropImage: (p) => record('chat.dropImage', [p]),
+      files: (p) => { record('chat.files', [p]); return script('files', p, { ok: true, files: ['src/lib/safe-redirect.ts', 'src/middleware.ts', 'README.md'].filter(f => f.toLowerCase().includes(String(p.query || '').toLowerCase())) }) },
+      stranded: (id) => { record('chat.stranded', [id]); return script('stranded', id, { stranded: false }) },
+      // the buttons (phase 4): which chat is shown, and an answer card's choice (answered from the script, else ok)
+      visible: (id) => record('chat.visible', [id]),
+      answer: (p) => { record('chat.answer', [p]); return script('answer', p, { ok: true }) },
+      // 7-48: the redraw nudge for a shown chat's hidden terminal (recorded; answered from the script, else ok)
+      redraw: (id) => { record('chat.redraw', [id]); return script('redraw', id, { ok: true }) },
+      // the 변경 사항 panel (phase 5): shot.changes[id] = { list, pages } from chatFixture.mjs changes() (the real
+      // electron/chatChanges.cjs over changes.jsonl); recorded, answered from the script first, else from the shot
+      changes: (id) => {
+        record('chat.changes', [id])
+        const c = (shot.changes || {})[id]
+        return script('changes', id, c ? Object.assign({ ok: true }, c.list) : { ok: false })
+      },
+      // link previews (phase 5): recorded; answered from the script first, else shot.previews[url] (a card whose image
+      // bytes are a plain array of numbers in the shot, handed on as a Uint8Array as main does), else shot.previewAll
+      // (a made-up card for any https://*.example/ link: a long session's flow), else { ok: false }
+      preview: (p) => {
+        record('chat.preview', [p])
+        const url = String((p && p.url) || '')
+        const made = (shot.previews || {})[url] || (shot.previewAll && /^https:\/\/[a-z0-9.-]+\.example\//.test(url)
+          ? { url, site: new URL(url).hostname, via: null, title: `Notes ${url.split('/').pop()}`, description: 'A page about rivers.', image: null } : null)
+        return script('preview', p, made ? { ok: true, card: made } : { ok: false }).then(r => {
+          if (r && r.ok && r.card && r.card.image && Array.isArray(r.card.image.bytes)) r.card.image.bytes = Uint8Array.from(r.card.image.bytes)
+          return r
+        })
+      },
+      changeFile: (p) => {
+        record('chat.changeFile', [p])
+        const c = (shot.changes || {})[p && p.id]
+        const page = c && c.pages[String((p && p.file) || '').replace(/\\/g, '/').toLowerCase()]
+        if (!page) return script('changeFile', p, c ? { ok: false, reason: 'unknown' } : { ok: false, reason: 'gone' })
+        // (before: the edits older than that order, as the lens pages them; the fixture's files have at most 4)
+        const edits = typeof p.before === 'number' ? page.edits.filter(e => e.order < p.before) : page.edits
+        return script('changeFile', p, Object.assign({ ok: true }, page, { edits, more: typeof p.before === 'number' ? 0 : page.more }))
+      },
+    },
     terminals: {
       list: () => Promise.resolve(terminals.map(t => Object.assign({}, t))),
       create: (opts) => { record('create', [opts]); return Promise.resolve({ error: 'harness: no pty' }) },
@@ -48,7 +181,7 @@
         return Promise.resolve({ data: (t && t.tool === 'shell' ? shot.shellTranscript : shot.transcript) || '', seq: 1 })
       },
       write: (id, data) => record('write', [id, data]),
-      resize: (id, cols, rows) => record('resize', [id, cols, rows]),
+      resize: (id, cols, rows) => { sizes[id] = { cols, rows }; record('resize', [id, cols, rows]) },
       send: (id, text) => { record('send', [id, text]); return ok() },
       close: (id) => { record('close', [id]); return Promise.resolve() },
       rename: (id, title) => { record('rename', [id, title]); return Promise.resolve(true) },
@@ -56,7 +189,7 @@
       pathForFile: () => '',
       openUrl: () => Promise.resolve(),
       openPath: () => Promise.resolve(false),
-      onData: off,
+      onData: (fn) => { dataListeners.add(fn); return () => dataListeners.delete(fn) },
       onList: off,
     },
     cloud: {

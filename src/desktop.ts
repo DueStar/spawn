@@ -5,6 +5,7 @@
  */
 
 import { useSyncExternalStore } from 'react'
+import type { AnswerChoice, AnswerRefusal, ChangeEdit, ChangeFile, ChangeSummary, ChatUpdate, EchoVerdict, Expect, ImageRefusal, InterruptRefusal, LinkCardData, RedrawRefusal, ScreenVerdict, SendRefusal, SubmitRefusal } from './chat/types'
 
 export interface TerminalInfo {
   id: string
@@ -23,6 +24,12 @@ export interface TerminalInfo {
   toolName?: string
   /** Only Claude Code sessions resume by id */
   canResume?: boolean
+  /**
+   * The chat view (present only while it is on, and only on a Claude Code session): 'armed' when
+   * the session was launched with its hooks; otherwise why not ('unarmed': opened before it was
+   * turned on; 'version': a Claude Code version not checked; 'starting': getting ready)
+   */
+  chat?: 'armed' | 'unarmed' | 'version' | 'starting' | 'failed'
 }
 
 /** Another AI tool a session can run (설정 › 세션 › AI 도구) */
@@ -62,9 +69,53 @@ interface spawnBridge {
     pathForFile(file: File): string
     openUrl(url: string): Promise<void>
     /** A file named in a session's output, at a line: opened in the code editor (Ctrl+click) */
-    openPath(id: string, file: string, line?: number, col?: number): Promise<boolean>
+    /** opts.from 'chat': a path chip in the chat view — opened in the code editor or shown in its folder, never run */
+    openPath(id: string, file: string, line?: number, col?: number, opts?: { from: 'chat' }): Promise<boolean>
     onData(fn: (p: { id: string; data: string; seq: number }) => void): () => void
     onList(fn: (list: TerminalInfo[]) => void): () => void
+  }
+  /** The chat view of a Claude Code session (electron/chatHost.cjs; the event model in src/chat/types.ts) */
+  chat: {
+    /** Start showing a session as chat: a `reset` follows on onUpdate */
+    open(id: string): Promise<{ ok: true } | { ok: false; reason: 'off' | 'not-claude' | 'unarmed' | 'version' }>
+    /** The view is gone (the reading stops a minute later unless opened again) */
+    close(id: string): void
+    /** The page before the first item: items arrive as an upsert */
+    older(id: string): Promise<{ ok: boolean; loaded: number }>
+    /** Read again from the start (다시 읽기): banners re-judged, a `reset` follows */
+    reload(id: string): Promise<{ ok: boolean }>
+    /** Send the view again as it is (after a lost update): a `reset` with the same banners follows */
+    resync(id: string): Promise<{ ok: boolean }>
+    /** A sub-agent's items, under its Agent row (`parent: toolId`), as an upsert */
+    agent(id: string, toolId: string): Promise<{ ok: boolean }>
+    /** The changes panel: every file this conversation changed (the worker's index of the whole transcript) */
+    changes(id: string): Promise<{ ok: true; summary: ChangeSummary; files: ChangeFile[]; agentsUnread: number } | { ok: false }>
+    /** One file's edits, newest last (at most 20 with their diffs, read again from the transcript); `more` older ones */
+    changeFile(p: { id: string; file: string; before?: number }): Promise<{ ok: true; file: ChangeFile; edits: ChangeEdit[]; more: number } | { ok: false; reason: 'unknown' | 'gone' }>
+    onUpdate(fn: (u: ChatUpdate) => void): () => void
+    /** The composer, step one: the text typed into the terminal without Enter (src/chat/send.ts) */
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
+    /** Step two: Enter, once, only when the page saw the echo (`echo: 'ok'`) */
+    submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
+    /** 멈추기: one Esc while the session works */
+    interrupt(id: string): Promise<{ ok: true } | { ok: false; reason: InterruptRefusal }>
+    /** An image's bytes: main checks them by their first bytes and keeps the file; the page gets a token */
+    image(p: { id: string; bytes: Uint8Array }): Promise<{ ok: true; token: string; type: 'png' | 'jpeg' | 'gif' | 'webp' } | { ok: false; reason: ImageRefusal }>
+    /** A chip removed before sending: its file goes */
+    dropImage(p: { id: string; token: string }): void
+    /** The @ mention: file names from the session's own folder that match (names only) */
+    files(p: { id: string; query: string }): Promise<{ ok: true; files: string[] } | { ok: false }>
+    /** Whether a send of this session ended without Enter because its page went away (asked once, as the composer opens) */
+    stranded(id: string): Promise<{ stranded: boolean }>
+    /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */
+    visible(id: string | null): void
+    /** An answer card's choice: main checks it and builds what is sent (never the page) */
+    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
+    /** 7-48: one resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
+    redraw(id: string): Promise<{ ok: true } | { ok: false; reason: RedrawRefusal }>
+    /** Link previews (Phase 5): one link's card for the view of terminal `id`, fetched by the chat worker under the preview
+     *  policy; { ok: false } at once while off, and for a link that is not in that view's answers */
+    preview(p: { id: string; url: string }): Promise<{ ok: true; card: LinkCardData } | { ok: false; again?: true }>
   }
   cloud: {
     signIn(): Promise<{ ok: boolean; reason?: string }>
@@ -171,7 +222,7 @@ export type Lang = 'ko' | 'en' | 'ja'
 export interface AppSettings {
   notify: { catch: boolean; flee: boolean; evolve: boolean; levelup: boolean; rareOnly: boolean; duration: 'short' | 'normal' | 'long'; quiet: boolean; quietFrom: string; quietTo: string; sound: boolean; sessions: boolean }
   privacy: { hidePrompts: boolean }
-  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string }
+  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string; chatView: boolean; linkPreviews: boolean }
   /** workMode: 업무 모드 (src/workMode.ts) */
   app: { openAtLogin: boolean; startHidden: boolean; widgetOnTop: boolean; language: 'auto' | Lang; workMode: boolean }
   terminal: { scrollback: 1000 | 5000 | 10000; font: TerminalFont }

@@ -69,6 +69,10 @@ const en: Record<string, string> = {
   '끄면 × 한 번으로 바로 닫혀요': 'When off, one click on × closes it',
   '시작할 때 세션 다시 열기': 'Reopen sessions at start',
   '앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요': 'Sessions that were open when the app closed open again next time',
+  '채팅으로 보기 (미리보기)': 'View sessions as chat (preview)',
+  'Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요': 'Shows a Claude Code session as a conversation. The terminal keeps running; switch with Chat · Terminal in the session header. Works for sessions opened after you turn it on.',
+  '링크 미리보기 (채팅)': 'Link previews (chat)',
+  '채팅에 나온 링크의 제목과 그림을 가져와 보여 줘요. 가져올 때 링크 주소 전체가 그 사이트로 가서, 누군가 그 링크를 열었다는 것도 알려져요. 물음표나 긴 값이 붙은 주소, 내 PC나 사내망 주소는 가져오지 않아요': 'Shows the title and picture of links in the chat. Fetching one sends the whole address of the link to that site, which also learns someone looked at it. Addresses with a question mark or a long value in them, and addresses on this PC or a private network, are never fetched.',
 
   // 앱
   '언어': 'Language',
@@ -110,6 +114,13 @@ const en: Record<string, string> = {
   '시작 시 {tray}로 최소화': 'Start minimized to the {tray}',
   '창을 띄우지 않고 시작해요. {tray}의 몬스터볼로 열 수 있어요': 'Starts without a window. Open it from the Poké Ball in the {tray}',
   '앱을 보고 있지 않을 때 세션이 일을 마치거나 확인이 필요하면 알림을 띄우고 Dock 아이콘을 튀겨요': 'When the app is not in front and a session finishes or needs you, show a notification and bounce the Dock icon',
+  // 설정 › 세션 › 채팅 보기란? (Phase 6)
+  '채팅 보기란?': 'What is the chat view?',
+  '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요': 'The session still runs in the terminal; the chat shows the same session as a conversation.',
+  '보낸 말은 터미널 입력란에 그대로 들어가요. 확실하지 않으면 보내지 않고 알려 줘요': "What you send goes into the terminal's prompt. When the app isn't sure, it doesn't send and tells you.",
+  '변경 사항은 기록에 남은 수정만 보여 줘요. 명령으로 바꾼 파일은 터미널에서 확인해 주세요': 'The changes panel shows only edits in the record. Check files changed by commands in the terminal.',
+  '링크 미리보기는 켜야만 가져와요. 가져올 때 그 사이트는 누군가 링크를 열었다는 걸 알 수 있어요': 'Link previews are fetched only when turned on; fetching tells that site someone looked.',
+  '확인하지 않은 Claude Code 버전에서는 버튼이 꺼지고, 이상하면 터미널로 보면 돼요': 'With an unchecked Claude Code version the buttons are off; if something looks wrong, use the terminal.',
 }
 const ja: Record<string, string> = {
   // sections
@@ -181,6 +192,10 @@ const ja: Record<string, string> = {
   '끄면 × 한 번으로 바로 닫혀요': 'オフにすると × を一度押すだけで閉じます',
   '시작할 때 세션 다시 열기': '起動時にセッションを再開',
   '앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요': 'アプリを閉じたときに開いていたセッションを、次の起動時に再び開きます',
+  '채팅으로 보기 (미리보기)': 'セッションをチャットで表示(プレビュー)',
+  'Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요': 'Claude Code のセッションを会話として表示します。ターミナルはそのまま動き、セッション見出しのチャット・ターミナルで切り替えます。オンにした後に開くセッションから使えます。',
+  '링크 미리보기 (채팅)': 'リンクプレビュー(チャット)',
+  '채팅에 나온 링크의 제목과 그림을 가져와 보여 줘요. 가져올 때 링크 주소 전체가 그 사이트로 가서, 누군가 그 링크를 열었다는 것도 알려져요. 물음표나 긴 값이 붙은 주소, 내 PC나 사내망 주소는 가져오지 않아요': 'チャットに出たリンクのタイトルと画像を表示します。取得するとリンクのアドレス全体がそのサイトに送られ、誰かがリンクを開いたことも伝わります。疑問符や長い値を含むアドレス、このPCや社内ネットワークのアドレスは取得しません。',
 
   // 앱
   '언어': '言語',
@@ -222,5 +237,12 @@ const ja: Record<string, string> = {
   '시작 시 {tray}로 최소화': '起動時に{tray}へ最小化',
   '창을 띄우지 않고 시작해요. {tray}의 몬스터볼로 열 수 있어요': 'ウィンドウを表示せずに起動します。{tray}のモンスターボールから開けます',
   '앱을 보고 있지 않을 때 세션이 일을 마치거나 확인이 필요하면 알림을 띄우고 Dock 아이콘을 튀겨요': 'アプリを見ていないときにセッションが作業を終えたり確認が必要になったりすると、通知を出してDockアイコンを弾ませます',
+  // 설정 › 세션 › 채팅 보기란? (Phase 6)
+  '채팅 보기란?': 'チャット表示とは?',
+  '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요': 'セッションはそのままターミナルで動き、チャットは同じセッションを会話として表示します。',
+  '보낸 말은 터미널 입력란에 그대로 들어가요. 확실하지 않으면 보내지 않고 알려 줘요': '送った内容はターミナルの入力欄に入ります。確かでないときは送らずにお知らせします。',
+  '변경 사항은 기록에 남은 수정만 보여 줘요. 명령으로 바꾼 파일은 터미널에서 확인해 주세요': '変更パネルは記録にある編集だけを表示します。コマンドで変えたファイルはターミナルで確認してください。',
+  '링크 미리보기는 켜야만 가져와요. 가져올 때 그 사이트는 누군가 링크를 열었다는 걸 알 수 있어요': 'リンクプレビューはオンのときだけ取得します。取得するとそのサイトに伝わります。',
+  '확인하지 않은 Claude Code 버전에서는 버튼이 꺼지고, 이상하면 터미널로 보면 돼요': '未確認のClaude Codeバージョンではボタンがオフになります。おかしければターミナルで見てください。',
 }
 export default { en, ja }

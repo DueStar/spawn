@@ -2,6 +2,42 @@
 
 ## spawn
 
+### Unreleased
+- Claude Code 세션을 대화처럼 보는 "채팅으로 보기"를 미리보기로 넣었어요. 설정 › 세션 › 채팅으로 보기 (미리보기)를 켜면, 그 뒤에 여는 세션의 머리에 채팅 · 터미널 전환이 생겨요. 이미 열려 있던 세션은 다시 열면 돼요.
+- 채팅에는 보낸 말과 답, 파일 읽기·명령·수정 내용(바뀐 줄), 실패한 명령, 하위 에이전트, 허락을 기다리는 중이 대화처럼 보여요. 일하는 동안에 보낸 말도 그 자리에 나와요.
+- 채팅 아래에 입력란이 생겼어요. 여러 줄로 쓰고 Enter로 보내요(줄 바꿈은 Shift+Enter, 한글 조합 중의 Enter는 보내지 않아요). 이미지는 붙여넣기·끌어 놓기·+ 버튼으로 붙이고, @로 이 세션 폴더의 파일을 고를 수 있어요. 보낸 말은 바로 말풍선으로 보이고, 대화 기록에 나오면 그것으로 바뀌어요.
+- 보낼 때는 터미널 입력란이 비어 있는지 먼저 보고 글을 넣은 뒤, 화면에 그대로 들어간 것을 확인한 다음에만 Enter를 눌러요. 확인이 안 되면 보내지 않고 이유와 함께 터미널로 보기를 권해요. 한 번 보낸 말이 두 번 가는 일은 없어요.
+- Claude가 일하는 동안 보낸 말은 입력란 위에 "대기 중"으로 보이고, 일하는 줄의 멈추기(또는 Esc)로 작업을 멈출 수 있어요. 입력란 아래에는 모델·권한 모드·HP(업무 모드에선 컨텍스트)·사용량이 조용히 보여요(바꾸는 건 터미널에서).
+- 채팅을 보는 동안 왼쪽 입력란은 같은 자리·크기로 "채팅 아래 입력란에서 보내요"를 보여 줘요. 거기 쓰던 글은 터미널로 돌아가면 그대로 있어요. 터미널은 뒤에서 그대로 돌아가서, 언제든 터미널로 돌아갈 수 있어요.
+- 대화를 제대로 읽고 있는지 확실하지 않으면 채팅 위에 알려 주고 터미널로 보기를 권해요. 설정을 끄면 1.4.0과 똑같이 동작해요.
+- 실제 Claude Code 세션으로 입력란을 시험하고 고쳤어요: 경로처럼 `\`로 끝나는 글도 보내져요(전엔 줄 바꿈만 됐어요). 긴 붙여넣기가 채팅에 태그째 보이거나 "기록에서 아직 보이지 않아요"로 남지 않아요. 다른 세션이 허락을 물어도 이 세션에서는 그대로 보낼 수 있어요. 채팅을 안 보는 동안 터미널에서 허락을 거절한 세션이 "허락을 기다려요"로 남지 않아요.
+- 터미널에서 ↑로 불러온 글처럼 입력란 상태를 알 수 없을 때는 "터미널에서 입력란을 비우거나 한 번 보내면 다시 보낼 수 있어요"라고 알려 줘요. 기록에 안 보이는 말풍선에는 "터미널에서 확인하기 · 지우기"가 붙어요. 채팅이 보내는 중일 때 왼쪽 입력란에서 보내면 잠시 뒤 다시 보내 달라고 말해요(섞여 보내지지 않아요).
+- 허락·질문에 채팅에서 바로 답할 수 있어요. 입력란 위에 카드가 떠서 Claude가 하려는 일(명령 전체, 파일과 바뀌는 줄, 주소)을 그대로 보여 주고, 허용 · 항상 허용(이 세션 동안만, Claude Code가 제안한 규칙) · 거부를 눌러 답해요. 거부하면 Claude에게 알려서 다른 방법을 찾게 해요. 터미널의 대화상자도 그대로 열려 있어서 먼저 답한 쪽이 이기고, 터미널에서 키를 누르면 채팅 카드는 바로 물러나요. 5분 안에 답하지 않으면 터미널에 넘겨요.
+- 카드는 버튼을 누르거나, 버튼에 초점을 둔 채 Enter·Space로만 답해요. 숫자 단축키나 입력란의 Enter로는 답하지 않고, 카드가 떠도 쓰던 글과 커서는 그대로예요. 카드가 열려 있는 동안 입력란은 "위 카드에서 먼저 답해 주세요"라고 알려 줘요.
+- 하나만 고르는 질문은 그 세션의 채팅을 보고 있을 때만 채팅에서 답해요(터미널로 넘기면 터미널에 바로 질문이 떠요). 여러 개를 고르는 질문, 계획 승인, 수정의 "항상 허용"은 아직 터미널에서 해요(계획은 읽기만 하는 카드로 보여요). 확인된 Claude Code 버전에서만 이렇게 동작하고, 더 새 버전에선 지금처럼 터미널에서 답해요.
+- 허락 카드는 허용이 승인하는 것을 모두 보여 줘요. 긴 파일 경로와 바뀌는 줄은 잘리지 않고 줄을 바꿔 끝까지 보이고, 격리 환경(sandbox) 밖 실행·백그라운드 실행·시간 제한·실행 폴더·Claude의 설명이 각각 한 줄로 보여요. 카드가 보여 줄 수 없는 항목이 있으면 버튼 없이 터미널에서 답하게 해요. 이미 있는 파일을 새로 쓰려 하면 "이 파일을 덮어써도 될까요?"로 물어요. 보이지 않는 글자는 표시하고, 다른 글자로 꾸민 주소는 실제 주소(xn--…)를 옆에 보여 줘요.
+- 길어서 스크롤되는 명령이나 바뀌는 줄은 끝까지 내려 본 뒤에야 허용·항상 허용을 누를 수 있어요(이유가 함께 보여요). 카드가 뜬 직후나 창을 다시 앞으로 가져온 직후 0.8초 안의 클릭은 답으로 치지 않아요. 항상 허용은 그 도구의 구체적인 규칙일 때만 나오고, 격리 환경 밖 실행에는 나오지 않아요. 위젯과 창을 오간 뒤에도 카드로 답할 수 있어요. 카드가 터미널에서만 답할 수 있을 때는 입력란도 터미널을 가리켜요.
+- 채팅 머리에 "변경 사항"이 생겼어요. 누르면 오른쪽에 이 대화에서 Claude가 Edit·Write로 바꾼 파일이 폴더 나무로 보이고(파일마다 +N −N), 파일을 고르면 그 파일의 수정이 일어난 순서대로 하나씩 보여요. 여러 수정을 하나로 합쳐 보여 주지 않는 건, 그러려면 기록에 없는 중간 내용을 지어내야 하기 때문이에요. 내용이 기록에 없는 수정은 없다고 말하고, 명령으로 바뀐 파일은 나오지 않아요(패널 아래에 그렇게 적혀 있어요). 보조 에이전트의 수정은 그렇다고 표시돼요. 채팅의 diff에서 +N −N을 누르면 패널이 그 수정에서 열려요. 패널 폭은 왼쪽 가장자리를 끌어 바꾸고 기억해요. 창이 좁으면 패널을 연 동안만 왼쪽 패널이 접혀요.
+- 링크 미리보기를 넣었어요. 기본은 꺼져 있어요. 설정 › 세션 › 링크 미리보기 (채팅)을 켜면 Claude의 답에 나온 링크 아래에 제목·설명·그림 카드가 생겨요. 꺼 둔 이유는, 미리보기를 가져오는 순간 그 사이트가 누군가 링크를 열어 봤다는 걸 알 수 있기 때문이에요. 내 PC나 사내망 주소는 절대 가져오지 않고, 쿠키나 로그인 정보도 보내지 않으며, 가져온 것은 메모리에만 둬요. 화면에 보이는 링크만 가져오고, 코드·명령 출력·내가 보낸 말 속의 링크는 가져오지 않아요. 카드에는 늘 링크의 실제 주소가 보여요.
+- 끝난 턴마다 아래에 요약 줄이 조용히 붙어요: 걸린 시간 · 도구 n회 · 파일 n개 바꿈 · 답 복사. 채팅을 보는 동안 끝난 턴에는 파트너가 그 턴에 걸은 걸음도 보여요(정확히 셀 수 있을 때만).
+- 세션 중에 만난 야생 포켓몬이 대화 속 그 자리에 한 줄로 나와요("야생의 꼬렛이 나타났다 → 잡았다 · Lv.6"). 보고 있는 동안 만난 포켓몬만 짧게 한 번 나타나는 움직임이 있어요(동작 줄이기 설정이면 없음). 업무 모드에서는 야생 포켓몬 줄과 걸음이 나오지 않아요.
+- 채팅 머리에서 보기 정도를 고를 수 있어요: 기본 / 생각 포함 / 전부. 생각 포함은 답하기 전에 생각한 시간을 보여 줘요(지금 Claude Code는 생각한 내용을 기록에 남기지 않아서 "기록에 남지 않았어요"로 나와요). 전부는 읽은 파일과 출력까지 모두 펼쳐요. 실패와 질문은 어느 단계에서나 펼쳐져 있어요. 고른 단계는 기억해요.
+- 채팅에서 Ctrl+F(Mac은 ⌘F)로 대화에서 찾을 수 있어요. 몇 개인지 알려 주고, Enter·Shift+Enter로 오가며, 접힌 줄 안에 있으면 펼쳐서 보여 줘요. 찾은 곳은 회색으로 칠해요. 지금 불러온 대화 안에서만 찾아요(찾기 칸 아래에 그렇게 적혀 있어요).
+- 위젯과 창을 오가거나 화면을 새로 고친 뒤, 채팅으로 보던 세션의 터미널이 작은 크기로 깨져 그려지고 채팅 입력란이 "터미널이 지금 입력을 받을 수 있는지 확인하지 못했어요"로 막히던 문제를 고쳤어요. 이제 뒤에 있는 터미널도 처음부터 제 크기에 맞춰지고, 그래도 필요하면 Claude Code가 화면을 한 번 다시 그리게 해요(터미널 입력란에는 아무것도 쓰지 않아요).
+- 긴 세션에서도 가벼워요: 오래 스트리밍하면 채팅 화면이 지난 화면들을 메모리에 계속 쥐고 있던 문제를 고쳤어요(한 시간 분량에 170MB 넘게 → 2MB 남짓). 5,000개 항목·300MB 기록·한 시간 스트리밍의 예산을 재는 시험을 넣었어요.
+- 새 폴더에서 처음 연 세션의 신뢰 질문("Yes, I trust this folder")에 터미널에서 답한 뒤, 채팅 입력란의 첫 보내기가 "터미널 입력란 상태를 알 수 없어요"로 막히던 것을 고쳤어요.
+- 확인하지 않은 새 Claude Code 버전일 때 채팅 위 안내에 "자세히"가 생겼어요: 이 버전에서는 허락·질문 버튼이 꺼지고 터미널에서 답한다는 것과, 설정 › 세션의 "채팅 보기란?" 도움말로 가는 길을 알려 줘요.
+- 설정 › 세션에 "채팅 보기란?" 도움말이 생겼어요(세션은 터미널에서 그대로 돌고, 보낸 말이 어디로 가는지, 변경 사항이 무엇을 보여 주는지, 링크 미리보기가 사이트에 알리는 것, 확인하지 않은 버전에서 꺼지는 것).
+- 영어에서 "1 files changed" 같은 복수형을 바로잡았어요. 좁은 창(560px, 왼쪽 패널 열림)에서 입력란 아래 줄이 넘치지 않고 주간·5시간 사용량부터 줄여 보여 줘요. 왼쪽 입력란의 "채팅 아래 입력란에서 보내요"가 잘리지 않고 줄을 바꿔요.
+- 키보드만으로 채팅과 변경 사항 패널을 오가기 쉽게 다듬었어요: 패널 폭 손잡이가 22px로 넓어졌고, 목록의 "위 내용 더 보기" 자리에 초점이 오면 보여요.
+- 디스크가 가득 차서 이미지를 저장하지 못하면 "이미지를 저장하지 못했어요"라고 알려 주고 반쯤 쓴 파일을 남기지 않아요. 채팅 보기를 준비하지 못하면 3초 안에 "채팅 보기를 준비하지 못했어요"라고 알려 줘요(설정을 껐다 켜면 다시 시도). 보는 중에 세션 기록 파일이 지워지면 변경 사항 패널이 옛 목록 대신 "세션 기록 파일을 찾지 못했어요"라고 해요.
+- 세션 폴더 밖 파일의 경로가 채팅의 수정 내용과 변경 사항 패널에 같은 모양(기록된 그대로)으로 보여요.
+- 앱을 켜 둔 채 Claude Code가 확인하지 않은 새 버전으로 스스로 업데이트되면, 열려 있는 채팅에도 바로 안내 줄이 나와요(전엔 버튼만 조용히 사라졌어요). 이미지를 저장하지 못했다는 안내는 다음 이미지가 붙으면 사라져요.
+- 링크 미리보기를 더 조심스럽게 했어요. 주소에 물음표(?)가 붙었거나, 아이디·비밀번호나 포트가 들어 있거나, 경로가 길거나 값처럼 보이는(긴 영숫자·16진수·base64 같은) 링크는 카드를 만들지 않고 보통 링크로 둬요. 미리보기를 가져오면 링크 주소 전체가 그 사이트로 가기 때문이에요(설정의 안내 문구에도 그렇게 적었어요). 그 세션의 Claude 답에 나온 링크만 가져와요.
+- 링크 미리보기를 끄거나 채팅을 닫거나 앱을 끄면, 가져오던 것도 그 자리에서 멈춰요. 끈 뒤에는 그림이나 다음 주소로 넘어가는 요청도 더는 가지 않아요.
+- Claude Code가 확인하지 않은 새 버전으로 업데이트돼도, 이미 떠 있던 허락 카드는 답하거나 물러날 때까지 그대로 쓸 수 있어요. 새로 오는 허락·질문부터 터미널에서 답해요.
+- 설정이나 그림 크게 보기가 열려 있을 때 Ctrl+F(⌘F)를 눌러도 그 아래에 채팅 찾기가 열리지 않아요. 변경 사항 패널은 `..`가 든 경로를 실제 위치로 따져서 세션 폴더 밖이면 밖이라고 보여 주고, Mac에서는 대소문자만 다른 경로를 한 파일로 묶어요. 채팅이 터미널 화면을 다시 그리게 한 직후 1초 동안은 보내지 않고 다시 보내 달라고 해요(쓰던 글은 그대로예요).
+
 ### 1.4.0
 - macOS 버전이 나왔어요(Apple Silicon·Intel). 처음 열 때 한 번만 시스템 설정 › 개인정보 보호 및 보안에서 "그래도 열기"를 눌러 주세요. Mac에서는 단축키의 Ctrl 대신 ⌘를 써요.
 - 앱 전체가 차분한 모습으로 바뀌었어요. 글자가 한 단계 작아지고, 노란색은 지금 고른 세션·칸과 보내기 버튼에만 남았어요. 상태는 작은 점과 글자로 보여요. 포켓몬, 등급 색, 알림 카드의 NEW는 그대로예요.
@@ -364,6 +400,38 @@
 
 ## spawn (English)
 
+### Unreleased
+- A preview of "View sessions as chat": a Claude Code session shown as a conversation. Turn on Settings › Sessions › View sessions as chat (preview), and sessions opened after that get a Chat · Terminal switch in their header. A session that was already open needs to be opened again.
+- The chat shows your messages and the answers, files read, commands run and edits (with the changed lines), commands that failed, sub-agents, and when Claude is waiting for your permission. A message you send while Claude is working shows where Claude took it in.
+- A message box under the chat: write on several lines and press Enter to send (Shift+Enter for a new line; Enter while a Korean or Japanese IME is composing never sends). Attach images by pasting, dropping or the + button, and pick a file of the session's folder with @. What you send shows at once as a bubble, replaced by the session record's own line.
+- Before sending, the app checks that the terminal's input is empty, types the text, and presses Enter only after it sees the text there as typed. When it cannot be sure, it sends nothing, says why, and suggests the terminal. A message is never sent twice.
+- A message sent while Claude works shows above the box as "queued", and Stop in the working line (or Esc) stops the work. Under the box: the model, the permission mode, HP (Context in work mode) and usage, quietly (change them in the terminal).
+- While the chat shows, the box on the left keeps its place and size and points to the box under the chat; what you wrote in it is still there when you go back to the terminal. The terminal keeps running behind it, and you can switch back at any time.
+- When the chat is not sure it is reading the conversation right, it says so above the chat and suggests the terminal. With the setting off, the app works exactly like 1.4.0.
+- The message box was tried on a real Claude Code session and fixed: text ending in `\` (a folder path) is sent (it only made a new line before); a long paste no longer shows its tags in the chat or stays "Not in the session record yet"; another session asking for permission no longer stops this one from sending; a session whose permission was refused in the terminal while its chat was not shown no longer stays "waiting for permission".
+- When the terminal's input cannot be read for sure (a prompt recalled with ↑), the chat says to clear it or send once from the terminal. A bubble the record does not show offers "Check in the terminal · Dismiss". Sending from the left box while the chat is sending says to try again in a moment (the two never mix).
+- Answer permission requests and questions from the chat. A card above the message box shows exactly what Claude wants to do (the whole command, the file and its changed lines, the address), with Allow · Always allow (for this session only, the rule Claude Code itself suggests) · Deny. Deny tells Claude so it can try another way. The terminal's own dialog stays open too: whichever is answered first wins, and a key pressed in the terminal makes the card step back at once. Not answered within 5 minutes, it goes back to the terminal.
+- A card is answered only by a click, or Enter or Space on its focused button: no number shortcut, and Enter in the message box never answers it. A card appearing leaves your text and cursor where they are. While a card is open, the message box says to answer the card first.
+- A single-choice question is answered from the chat only while that session's chat is shown (switch to the terminal and the question shows there at once). Multiple-choice questions, plan approval and "always allow" for edits are still answered in the terminal (a plan shows as a read-only card). This works with the checked Claude Code versions; newer ones are answered in the terminal as before.
+- A permission card shows everything Allow approves. Long file paths and changed lines wrap instead of being cut, and running outside the sandbox, in the background, a time limit, the folder it runs in and Claude's description each get a line of their own. When a request has anything the card cannot show, the card has no buttons and points to the terminal. Writing over a file that is already there asks "Allow overwriting this file?". Invisible characters are marked, and an address dressed up in look-alike letters shows its real form (xn--…) next to it.
+- A long command or change that scrolls must be scrolled to its end before Allow and Always allow can be pressed (the card says why). A click within 0.8 s of a card appearing, or of the window coming back to the front, does not count as an answer. Always allow is offered only for a specific rule of the same tool, and never for a run outside the sandbox. Cards can be answered after switching between the widget and the window. When a card can only be answered in the terminal, the message box points there too.
+- A Changes button in the chat's header. It opens a panel on the right with the files Claude changed with Edit and Write in this conversation, as a folder tree (+N −N for each); pick a file to see its edits one by one, in the order they happened. They are never merged into one diff: that would mean making up in-between contents the record does not hold. An edit whose content is not in the record says so, and files changed by commands do not show (the panel's foot says so). A sub-agent's edits are marked as such. The +N −N of a diff in the chat opens the panel at that edit. Drag the panel's left edge to change its width (remembered); in a narrow window the left panel folds while the changes panel is open.
+- Link previews, off by default. Turn on Settings › Sessions › Link previews (chat) and links in Claude's answers get a card with their title, description and picture. They are off by default because fetching a preview tells that site someone looked at the link. Addresses on this PC or a private network are never fetched, no cookies or sign-in details are sent, and what is fetched stays in memory only. Only links on screen are fetched, never links in code, command output or your own messages. A card always shows the link's real address.
+- Each finished turn ends in a quiet summary line: time · tool calls · files changed · Copy answer. A turn that ends while you watch the chat also shows the steps your partner took during it (only when they can be counted exactly).
+- A wild Pokémon met during the session shows as one line where it happened in the conversation ("A wild Rattata appeared → Caught · Lv.6"). Only one met while you watch has a short entry movement (none with reduced motion). In work mode neither wild Pokémon lines nor steps show.
+- Choose how much the chat shows from its header: Default / With thinking / Everything. With thinking shows how long Claude thought before answering (Claude Code does not keep the thinking itself in the record now, and the chat says so). Everything opens every file read and every output. Failures and questions are open at every level. The level is remembered.
+- Find in the conversation with Ctrl+F (⌘F on a Mac) in the chat: it counts the matches, Enter and Shift+Enter move between them, and a match inside a folded row opens it. Matches are painted grey. It searches only the part of the conversation that is loaded (it says so under the field).
+- Fixed: after switching between the widget and the window, or a reload, the terminal of a session shown as chat was drawn too small and garbled, and the chat's message box refused to send ("Couldn't confirm the terminal can take input now"). The terminal behind the chat now gets its real size from the start, and when that is not enough, Claude Code is asked to redraw once (nothing is typed into the terminal).
+- Long sessions stay light: the chat no longer holds on to every earlier screen while a session streams (an hour of streaming went from more than 170 MB to about 2 MB). Tests now measure the budgets for 5,000 items, a 300 MB record and an hour of streaming.
+- After answering a new folder's trust question ("Yes, I trust this folder") in the terminal, the chat composer's first send is no longer refused with "Couldn't tell what's in the terminal's input".
+- With an unchecked newer Claude Code, the note above the chat has "Details": with that version the permission and question buttons are off (answer in the terminal), and a way to the "What is the chat view?" help in Settings › Sessions.
+- Settings › Sessions has a short "What is the chat view?" help: the session keeps running in the terminal, where what you send goes, what the changes panel shows, what a link preview tells a site, and what is off for an unchecked version.
+- English plurals fixed ("1 file changed", not "1 files changed"). In a narrow window (560 px with the left panel open) the row under the composer no longer runs out: the weekly, then the 5-hour usage give way first. The side box's "Send from the box under the chat" wraps instead of being cut.
+- Easier with the keyboard alone: the changes panel's resize grip is 22 px wide, and the list's "show more above" stop becomes visible when it has the focus.
+- A full disk when saving a pasted image: "Couldn't save the image", and no half-written file is left. If the chat view can't get ready (no port), it says so within 3 seconds ("Couldn't get the chat view ready"; turning the setting off and on tries again). If the session's record is deleted while you watch, the changes panel says "Couldn't find the session record" instead of keeping the old list.
+- A file outside the session folder is named the same way (as recorded) in the chat's edits and in the changes panel.
+- If Claude Code updates itself to an unchecked newer version while the app runs, open chats show the note right away (before, the buttons just went quiet). The "Couldn't save the image" note goes once the next image attaches.
+
 ### 1.4.0
 - spawn for macOS is here (Apple Silicon and Intel). The first time you open it, choose "Open Anyway" once under System Settings › Privacy & Security. On a Mac the shortcuts use ⌘ instead of Ctrl.
 - The whole app has a calmer look. Text is a step smaller, and yellow is left only on the chosen session or cell and the send button. Status shows as a small dot and a word. Pokémon, tier colours and the NEW on catch cards are as they were.
@@ -589,6 +657,38 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### Unreleased
+- Claude Code のセッションを会話として表示する「チャットで表示」をプレビューとして入れました。設定 › セッション › セッションをチャットで表示(プレビュー)をオンにすると、その後に開くセッションの見出しにチャット・ターミナルの切り替えが出ます。すでに開いていたセッションは開き直してください。
+- チャットには送ったメッセージと返事、ファイルの読み込み・コマンド・編集(変わった行)、失敗したコマンド、サブエージェント、許可を待っている状態が会話として表示されます。作業中に送ったメッセージも、その位置に表示されます。
+- チャットの下に入力欄ができました。複数行で書いて Enter で送ります(改行は Shift+Enter、日本語・韓国語の変換中の Enter では送りません)。画像は貼り付け・ドロップ・+ ボタンで添付でき、@ でこのセッションのフォルダのファイルを選べます。送ったメッセージはすぐ吹き出しで表示され、会話の記録に出るとそれに置き換わります。
+- 送るときは、ターミナルの入力欄が空かを先に確かめて文を入れ、画面にそのまま入ったのを確認してから Enter を押します。確かめられないときは送らずに理由を伝え、ターミナルでの表示をすすめます。同じメッセージが二度送られることはありません。
+- Claude の作業中に送ったメッセージは入力欄の上に「待機中」として表示され、作業中の行の停止(または Esc)で作業を止められます。入力欄の下にはモデル・権限モード・HP(業務モードではコンテキスト)・使用量が控えめに表示されます(変更はターミナルで)。
+- チャットを表示している間、左の入力欄は同じ場所・大きさのまま「チャットの下の入力欄から送ります」と案内します。書きかけの文はターミナルに戻るとそのまま残っています。ターミナルは裏でそのまま動いているので、いつでもターミナルに戻れます。
+- 会話を正しく読めているか確かでないときは、チャットの上でお知らせしてターミナルでの表示をすすめます。設定をオフにすると 1.4.0 とまったく同じに動きます。
+- 実際の Claude Code セッションで入力欄を試して直しました: パスのように `\` で終わる文も送れます(以前は改行になっていました)。長い貼り付けがタグ付きで表示されたり「まだセッション記録に見当たりません」のまま残ったりしません。別のセッションが許可を求めても、このセッションからはそのまま送れます。チャットを見ていない間にターミナルで許可を拒否したセッションが「許可を待っています」のまま残りません。
+- ↑ で呼び出した文のように入力欄の状態が分からないときは、ターミナルで入力欄を空にするか一度送るよう案内します。記録に見当たらない吹き出しには「ターミナルで確認・消す」が付きます。チャットの送信中に左の入力欄から送ると、少し待ってから送るよう案内します(混ざって送られることはありません)。
+- 許可と質問にチャットから直接答えられます。入力欄の上にカードが出て、Claude がしようとしていること(コマンド全体、ファイルと変わる行、アドレス)をそのまま表示し、許可 · 常に許可(このセッションだけ、Claude Code が提案したルール) · 拒否で答えます。拒否すると Claude に伝わり、別の方法を探します。ターミナルのダイアログも開いたままなので先に答えた方が有効になり、ターミナルでキーを押すとチャットのカードはすぐに引き下がります。5分以内に答えないとターミナルに任せます。
+- カードに答えるのはクリックか、ボタンにフォーカスを置いての Enter・Space だけです。数字のショートカットや入力欄の Enter では答えず、カードが出ても書きかけの文とカーソルはそのままです。カードが開いている間、入力欄は「先に上のカードで答えてください」と案内します。
+- 一つだけ選ぶ質問は、そのセッションのチャットを表示しているときだけチャットで答えます(ターミナルに切り替えるとすぐターミナルに質問が出ます)。複数選択の質問、計画の承認、編集の「常に許可」はまだターミナルで行います(計画は読むだけのカードで表示します)。確認済みの Claude Code のバージョンだけで動き、より新しいバージョンではこれまで通りターミナルで答えます。
+- 許可カードは「許可」が認める内容をすべて表示します。長いファイルパスや変わる行は切らずに折り返し、サンドボックス外での実行・バックグラウンド実行・制限時間・実行フォルダ・Claude の説明をそれぞれ1行で表示します。カードで表示できない項目があるときはボタンを出さず、ターミナルで答えるよう案内します。既にあるファイルへの書き込みは「このファイルを上書きしてもいいですか?」と尋ねます。見えない文字は印を付け、似た文字で装ったアドレスは実際の形(xn--…)を横に表示します。
+- スクロールする長いコマンドや変更は、最後までスクロールしてからでないと許可・常に許可を押せません(理由も表示します)。カードが出た直後やウィンドウを前面に戻した直後 0.8 秒以内のクリックは回答として扱いません。常に許可は同じツールの具体的なルールのときだけ表示し、サンドボックス外での実行には出しません。ウィジェットとウィンドウを切り替えた後もカードで答えられます。カードがターミナルでしか答えられないときは、入力欄もターミナルを案内します。
+- チャットの見出しに「変更」ができました。押すと右側に、この会話で Claude が Edit・Write で変えたファイルがフォルダのツリーで表示され(ファイルごとに +N −N)、ファイルを選ぶとその編集が起きた順に一つずつ表示されます。複数の編集を一つにまとめて表示しないのは、そうするには記録にない途中の内容を作り出す必要があるからです。内容が記録にない編集はそう伝え、コマンドで変わったファイルは表示されません(パネルの下にそう書いてあります)。サブエージェントの編集はそれと分かるように表示します。チャットの diff の +N −N を押すと、パネルがその編集の位置で開きます。パネルの幅は左端をドラッグして変えられ、覚えておきます。ウィンドウが狭いときは、パネルを開いている間だけ左のパネルが折りたたまれます。
+- リンクプレビューを入れました。初期状態はオフです。設定 › セッション › リンクプレビュー(チャット)をオンにすると、Claude の返事に出たリンクの下にタイトル・説明・画像のカードが出ます。オフにしてあるのは、プレビューを取得するとそのサイトに誰かがリンクを見たことが伝わるからです。このPCや社内ネットワークのアドレスは決して取得せず、Cookie やログイン情報も送らず、取得したものはメモリにだけ置きます。画面に表示されているリンクだけを取得し、コード・コマンドの出力・自分が送ったメッセージの中のリンクは取得しません。カードには常にリンクの実際のアドレスが表示されます。
+- 終わったターンごとに、控えめな要約の行が付きます: かかった時間・ツール n 回・ファイル n 個を変更・回答をコピー。チャットを見ている間に終わったターンには、そのターンにパートナーが歩いた歩数も表示されます(正確に数えられるときだけ)。
+- セッション中に出会った野生のポケモンが、会話の中のその位置に1行で表示されます(「野生のコラッタが現れた → 捕まえた · Lv.6」)。見ている間に出会ったポケモンだけに、短く一度だけ現れる動きがあります(OS で動きを減らす設定にしているときはなし)。業務モードでは野生のポケモンの行も歩数も表示されません。
+- チャットの見出しで表示の詳しさを選べます: 基本 / 思考を含む / すべて。思考を含むは、回答前に考えた時間を表示します(今の Claude Code は思考の内容を記録に残さないため、そう表示されます)。すべては読んだファイルと出力まですべて展開します。失敗と質問はどの段階でも展開されています。選んだ段階は覚えておきます。
+- チャットで Ctrl+F(Mac は ⌘F)で会話内を検索できます。件数を表示し、Enter・Shift+Enter で移動し、折りたたまれた行の中にあれば展開して表示します。見つかった箇所は灰色で塗ります。今読み込んでいる会話の中だけを検索します(検索欄の下にそう書いてあります)。
+- ウィジェットとウィンドウを切り替えたり再読み込みしたりした後、チャットで表示していたセッションのターミナルが小さいサイズで崩れて描かれ、チャットの入力欄が「ターミナルが入力を受け付けられるか確認できませんでした」で送れなくなる問題を直しました。裏にあるターミナルも最初から正しいサイズに合わせ、それでも必要なときは Claude Code に一度だけ描き直してもらいます(ターミナルの入力欄には何も書き込みません)。
+- 長いセッションでも軽くなりました:ストリーミングが続くあいだチャット画面が過去の画面をメモリに持ち続けていた問題を直しました(1時間分で170MB超 → 約2MB)。5,000項目・300MBの記録・1時間のストリーミングの予算を測るテストを入れました。
+- 新しいフォルダで初めて開いたセッションの信頼の質問("Yes, I trust this folder")にターミナルで答えたあと、チャット入力欄の最初の送信が「ターミナルの入力欄の状態が分かりません」で止まっていたのを直しました。
+- 未確認の新しい Claude Code のとき、チャット上の案内に「詳細」ができました:このバージョンでは許可・質問ボタンがオフになりターミナルで答えること、設定 › セッションの「チャット表示とは?」への道。
+- 設定 › セッションに「チャット表示とは?」の説明(5行)ができました。
+- 英語の複数形を直しました("1 files changed" → "1 file changed")。狭いウィンドウ(560px、左パネルを開いた状態)で入力欄の下の行がはみ出さず、週間・5時間の使用量から順に省きます。左の入力欄の案内文が切れずに折り返します。
+- キーボードだけでチャットと変更パネルを行き来しやすくしました:パネル幅のつまみを22pxに広げ、リストの「上の内容をさらに表示」にフォーカスが来ると見えるようにしました。
+- ディスクがいっぱいで画像を保存できないときは「画像を保存できませんでした」と伝え、書きかけのファイルを残しません。チャット表示を準備できないときは3秒以内に「チャット表示を準備できませんでした」と伝えます(設定をオフ→オンで再試行)。表示中にセッションの記録ファイルが消えたら、変更パネルは古い一覧の代わりに「セッション記録が見つかりません」と表示します。
+- セッションフォルダの外のファイルのパスが、チャットの編集内容と変更パネルで同じ形(記録どおり)で表示されます。
+- アプリを開いたまま Claude Code が未確認の新しいバージョンに自動更新されたら、開いているチャットにもすぐ案内が出ます(以前はボタンが黙って消えていました)。「画像を保存できませんでした」は次の画像が添付されると消えます。
 
 ### 1.4.0
 - macOS 版ができました(Apple Silicon・Intel)。最初に開くときだけ、システム設定 › プライバシーとセキュリティで「このまま開く」を押してください。Mac ではショートカットの Ctrl の代わりに ⌘ を使います。

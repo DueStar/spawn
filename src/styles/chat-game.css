@@ -1,0 +1,28 @@
+/* src/styles/chat-game.css — the game's lively bits in the chat view (Phase 5), on the 차분하게 2 tokens: the turn
+   summary's step count (the paw glyph, the lab's `.turn-foot .steps`, calm-lab app.css 661) and the wild Pokémon met
+   in the flow (the lab's `.wild`, app.css 264–274). Imported by src/components/ChatView.tsx. None of it is drawn in
+   업무 모드 (the components leave it out), and chat.css keeps its "nothing animates" rule: the one allowed animation
+   (a wild Pokémon met while the view is open, Decision 12) lives here and stops under prefers-reduced-motion. */
+
+/* the step count: the paw glyph and {n}걸음, in the foot's own quiet colour */
+.chat-steps { display: inline-flex; align-items: center; gap: 4px; }
+.chat-steps svg { flex: none; }
+
+/* a wild Pokémon, in passing: the picture, the meeting, → the ball and the result; a hairline tag, no fill */
+.chat-wild { display: flex; align-items: center; min-height: 34px; padding: 0 4px; margin: 2px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; }
+.chat-wild-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
+.chat-wild-mon { width: 34px; height: 34px; margin: -4px -2px -4px -6px; flex: none; object-fit: contain; }
+.chat-wild b { color: var(--ink-2); font-weight: var(--w-name); }
+.chat-wild-arrow { color: var(--ink-3); }
+.chat-wild-got { color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.chat-wild-ball { width: 14px; height: 14px; flex: none; }
+.chat-wild-tag { font-size: var(--t-micro); color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 0 5px; white-space: nowrap; }
+/* a rare-or-above one's tier: the dot and the word in the tier's colour (tokens.css .tier-*) */
+.chat-wild-tier { display: inline-flex; align-items: center; gap: 4px; color: var(--tier); white-space: nowrap; }
+
+/* met while watching: the picture comes in once (the lab's wildIn) */
+.chat-wild.appear .chat-wild-mon { animation: chat-wild-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes chat-wild-in { from { transform: translateY(6px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-wild.appear .chat-wild-mon { animation: none; }
+}

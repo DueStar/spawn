@@ -31,9 +31,56 @@ contextBridge.exposeInMainWorld('spawn', {
     pathForFile: (file) => { try { return webUtils.getPathForFile(file) || '' } catch { return '' } },
     // Ctrl+click on a link in a terminal: the user's browser opens it (http/https only)
     openUrl: (url) => ipcRenderer.invoke('terminals:open-url', String(url)),
-    openPath: (id, file, line, col) => ipcRenderer.invoke('terminals:open-path', { id, file, line, col }),
+    // (opts.from 'chat': a chat view's path chip — the editor or the folder, never the file run; a terminal's call is as it was)
+    openPath: (id, file, line, col, opts) => ipcRenderer.invoke('terminals:open-path', opts && opts.from === 'chat' ? { id, file, line, col, from: 'chat' } : { id, file, line, col }),
     onData: (fn) => on('terminals:data', fn),
     onList: (fn) => on('terminals:list', fn),
+  },
+  // main's feature switches the page follows (asked once, synchronously, as workModeAtLoad is)
+  features: {
+    chatView: (() => { try { return ipcRenderer.sendSync('features:chat-view') === true } catch { return false } })(),
+  },
+  // The chat view of a Claude Code session (electron/chatHost.cjs; answered only while it is on)
+  chat: {
+    open: (id) => ipcRenderer.invoke('chat:open', String(id)),
+    close: (id) => ipcRenderer.send('chat:close', String(id)),
+    older: (id) => ipcRenderer.invoke('chat:older', String(id)),
+    reload: (id) => ipcRenderer.invoke('chat:reload', String(id)),
+    resync: (id) => ipcRenderer.invoke('chat:resync', String(id)),
+    agent: (id, toolId) => ipcRenderer.invoke('chat:agent', { id: String(id), toolId: String(toolId) }),
+    // the changes panel (Phase 5): the conversation's changed files, and one file's edits (read from the transcript)
+    changes: (id) => ipcRenderer.invoke('chat:changes', String(id)),
+    changeFile: (p) => ipcRenderer.invoke('chat:change-file', {
+      id: String(p?.id ?? ''), file: String(p?.file ?? ''),
+      ...(typeof p?.before === 'number' && Number.isFinite(p.before) ? { before: p.before } : {}),
+    }),
+    onUpdate: (fn) => on('chat:update', fn),
+    // the composer (Phase 3): plain values only (strings, a list of strings); anything else is dropped
+    send: (p) => ipcRenderer.invoke('chat:send', {
+      id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), text: typeof p?.text === 'string' ? p.text : '',
+      images: Array.isArray(p?.images) ? p.images.filter(x => typeof x === 'string').slice(0, 64) : [], screen: String(p?.screen ?? ''),
+    }),
+    submit: (p) => ipcRenderer.invoke('chat:submit', { id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), echo: String(p?.echo ?? '') }),
+    interrupt: (id) => ipcRenderer.invoke('chat:interrupt', String(id)),
+    // an image's bytes (main checks them and names the file; the page never names a path) and its removal
+    image: (p) => ipcRenderer.invoke('chat:image', { id: String(p?.id ?? ''), bytes: p?.bytes instanceof Uint8Array ? p.bytes : null }),
+    dropImage: (p) => ipcRenderer.send('chat:image-drop', { id: String(p?.id ?? ''), token: String(p?.token ?? '') }),
+    // the @ mention: names from the session's own folder (main picks the folder)
+    files: (p) => ipcRenderer.invoke('chat:files', { id: String(p?.id ?? ''), query: String(p?.query ?? '').slice(0, 200) }),
+    // a send whose page went away before its Enter (asked once as the composer opens)
+    stranded: (id) => ipcRenderer.invoke('chat:stranded', String(id)),
+    // the buttons (Phase 4): which session's chat is shown (or none), and an answer — its choice only
+    // (main builds what is sent; the page never does)
+    visible: (id) => ipcRenderer.send('chat:visible', { id: typeof id === 'string' && id ? id : null }),
+    answer: (p) => ipcRenderer.invoke('chat:answer', {
+      id: String(p?.id ?? ''), holdId: String(p?.holdId ?? ''), choice: String(p?.choice ?? ''),
+      ...(Number.isInteger(p?.option) ? { option: p.option } : {}),
+    }),
+    // 7-48: one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
+    redraw: (id) => ipcRenderer.invoke('chat:redraw', String(id)),
+    // link previews (Phase 5): one link's card for the view of terminal `id`, fetched by the chat worker (main answers
+    // { ok: false } while off, and for a link that is not in that view's answers)
+    preview: (p) => ipcRenderer.invoke('chat:preview', { id: String(p?.id ?? '').slice(0, 200), url: String(p?.url ?? '').slice(0, 4096) }),
   },
   cloud: {
     signIn: () => ipcRenderer.invoke('cloud:signin'),

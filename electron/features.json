@@ -1,4 +1,6 @@
 {
   "//": "Other AI tools (Codex CLI and any tool other than Claude Code) were hidden on 2026-11-13 at the owner's request. Set otherTools to true to bring them back. Read by electron/features.cjs (main process) and src/features.ts (the page).",
-  "otherTools": false
+  "otherTools": false,
+  "//chatView": "The chat view of a Claude Code session (Phase 2, a read-only preview). Off: the app is release 1.4.0 (no chat hooks, no endpoint, no worker, no 설정 row). On: 설정 › 세션 shows '채팅으로 보기 (미리보기)', itself off by default.",
+  "chatView": true
 }

@@ -27,9 +27,14 @@ function run(cmd, args) {
   })
 }
 
-async function claudeVersion({ platform, run, home, exists }) {
+/**
+ * `claude --version`'s first line ("2.1.323 (Claude Code)"), or null. `binary`: that program
+ * only (the chat view's version gate asks about the one its sessions run, adapters.cjs claudeCommand).
+ */
+async function claudeVersion({ platform = process.platform, run: runner = run, home = os.homedir(), exists = fs.existsSync, binary = null } = {}) {
+  if (binary) { const out = await runner(binary, ['--version']); return out ? out.split('\n')[0] : null }
   const local = path.join(home, '.local', 'bin', platform === 'win32' ? 'claude.exe' : 'claude')
-  const out = (exists(local) && await run(local, ['--version'])) || await run('claude', ['--version'])
+  const out = (exists(local) && await runner(local, ['--version'])) || await runner('claude', ['--version'])
   return out ? out.split('\n')[0] : null
 }
 
@@ -53,4 +58,4 @@ async function checkPrereqs({ platform = process.platform, run: runner = run, ho
   return { claude: item(claude, 'claude'), git: item(git, 'git', platform === 'darwin') }
 }
 
-module.exports = { checkPrereqs, LINKS }
+module.exports = { checkPrereqs, claudeVersion, LINKS }

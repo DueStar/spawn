@@ -27,6 +27,7 @@ const { OTHER_TOOLS } = require('./features.cjs')
 
 const MAX_BUFFER = 200_000 // characters of scrollback kept for a tab opened later
 const OUTPUT_BATCH_MS = 16 // a session's output goes to the window at most once a frame
+const REDRAW_RESTORE_MS = 150 // the chat's redraw nudge: its real size again this long after the one-row step
 
 function loadPty() {
   // Loaded lazily: a missing native module must not stop the app window
@@ -86,16 +87,33 @@ function nodeCommand(runtime, script) {
   return `ELECTRON_RUN_AS_NODE=1 "${slash(runtime)}" "${slash(script)}"`
 }
 
-/** The hooks + status line for app sessions, written to userData once per start. */
-function writeSessionSettings(repoRoot, dir, runtime = process.execPath) {
+/**
+ * The session settings file's text: the hooks + status line for app sessions.
+ * `chat` (chatHooks.cjs chatHookEntries, the chat view switched on): each
+ * chat entry is its own matcher group appended after the game's (an event
+ * the game does not use, like MessageDisplay, gets the chat group alone, after
+ * the game's events). With `chat` null the text is release 1.4.0's, byte for
+ * byte (tests/terminals.test.ts pins it).
+ */
+function sessionSettingsJson(repoRoot, runtime = process.execPath, chat = null) {
   const hook = nodeCommand(runtime, path.join(repoRoot, 'hooks', 'spawn-hook.cjs'))
+  const hooks = Object.fromEntries(HOOK_EVENTS.map(e => [e, [{ hooks: [{ type: 'command', command: hook, ...(ASYNC_HOOKS.has(e) ? { async: true } : {}) }] }]]))
+  if (chat) {
+    // (a chat value is one group, or a list of groups: Phase 4's matcher group for AskUserQuestion)
+    for (const [event, group] of Object.entries(chat)) hooks[event] = [...(hooks[event] ?? []), ...[].concat(group)]
+  }
   const settings = {
-    hooks: Object.fromEntries(HOOK_EVENTS.map(e => [e, [{ hooks: [{ type: 'command', command: hook, ...(ASYNC_HOOKS.has(e) ? { async: true } : {}) }] }]])),
+    hooks,
     statusLine: { type: 'command', command: nodeCommand(runtime, path.join(repoRoot, 'hooks', 'status-line.cjs')) },
   }
+  return JSON.stringify(settings, null, 2)
+}
+
+/** The session settings file, written to userData (once per start, and again when the chat hooks change) */
+function writeSessionSettings(repoRoot, dir, runtime = process.execPath, chat = null) {
   fs.mkdirSync(dir, { recursive: true })
   const file = path.join(dir, 'session-settings.json')
-  fs.writeFileSync(file, JSON.stringify(settings, null, 2))
+  fs.writeFileSync(file, sessionSettingsJson(repoRoot, runtime, chat))
   return file
 }
 
@@ -129,6 +147,17 @@ function cleanEnv(env) {
  */
 const ANSI = /\x1b\[[0-9;?]*[ -\/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)|\x1b[()][A-Za-z0-9]|\x1b[=>78]/g
 function plainText(data) { return String(data).replace(ANSI, ' ') }
+
+/**
+ * Whether keys written to a session answer a question on its screen (the chat's ledger only, terminals.write): Enter,
+ * a lone Esc, or any typed character. Not the arrows and Tab that move between its choices, nor what the terminal
+ * writes back by itself (focus and position reports, a device or version answer).
+ */
+function answersQuestion(data) {
+  if (data === '\x1b') return true
+  const rest = String(data).replace(/\x1b(?:\[[\d;<=>?]*[ -\/]*[@-~]|O[@-~]|[P\]^_][\s\S]*?(?:\x07|\x1b\\)|[\s\S])?/g, '').replace(/\t/g, '')
+  return rest.length > 0
+}
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
@@ -195,8 +224,15 @@ function linkedConversation(userDataDir, sessionId) {
  * `tools()`: the trainer's other AI tools (설정 › 세션). `emit(event)`: a server
  * event for a session whose tool has no hooks (main posts it to /event).
  * `otherTools` (features.cjs): off, every session is Claude Code or the shell.
+ * `chat.state()` (chatHost.cjs, the chat view): `{ on: false }`, or `{ on:
+ * true, hooks, reason?, version? }` — `hooks` are the chat entries for the
+ * session settings file (null while starting or for a Claude Code version not
+ * checked), or a function of a terminal's id giving them (each session's own file).
+ * `chat.onInput` hears input to an armed session while the chat is on; `chat.busy(id)`
+ * says a chat send is between its text and its Enter there (the side box then waits).
+ * Off, nothing changes: no chat entries, no `chat` key on a terminal.
  */
-function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd, extraArgs = () => [], titles = { get: () => null, set: () => {} }, tools = () => [], emit = () => {}, postStatus = () => {}, pty: ptyModule = null, killTree = killTreeNow, codexWatch = createCodexWatch, exitGraceMs = 5000, otherTools = OTHER_TOOLS }) {
+function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd, extraArgs = () => [], titles = { get: () => null, set: () => {} }, tools = () => [], emit = () => {}, postStatus = () => {}, pty: ptyModule = null, killTree = killTreeNow, codexWatch = createCodexWatch, exitGraceMs = 5000, otherTools = OTHER_TOOLS, chat = { state: () => ({ on: false }) } }) {
   const terms = new Map() // id -> { id, sessionId, cwd, pty, buffer, status, createdAt, exitCode }
   let settingsFile = null
   // The sessions open when the app last closed (open-sessions.json): what the
@@ -212,19 +248,87 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
 
   try { fs.mkdirSync(path.join(userDataDir, 'session-links'), { recursive: true }) } catch {}
 
-  function settings() {
+  // The chat view's variants of the file: one per set of chat hooks (one endpoint, one token), by name
+  const chatFiles = new Map()
+  const chatState = () => { try { return chat.state() ?? { on: false } } catch { return { on: false } } }
+
+  /** The 1.4.0 file: session-settings.json, written once per start exactly as release 1.4.0 writes it */
+  function plainSettings() {
     if (!settingsFile) settingsFile = writeSessionSettings(repoRoot, userDataDir)
     return settingsFile
   }
 
+  let chatWriteLogged = false
+  /**
+   * The settings file a Claude Code session is launched with, and whether it holds the chat
+   * hooks (`armed`). Without chat hooks it is the 1.4.0 file. With them it is a file of its own
+   * (session-settings-chat-<hash>.json), written once, through a temporary file and a rename. No
+   * file a session was launched with is ever written again. When that file cannot be written
+   * (a full or read-only folder, a rename refused while something holds the temporary file), the
+   * session still opens, with the 1.4.0 file and unarmed: a chat file never keeps a session shut.
+   */
+  function settings(state = chatState(), id = null) {
+    // (the chat entries name the terminal a hook is about: a function of its id gives them)
+    let hooks = state.on ? state.hooks ?? null : null
+    if (typeof hooks === 'function') { try { hooks = id ? hooks(id) : null } catch { hooks = null } }
+    if (!hooks) return { file: plainSettings(), armed: false }
+    const text = sessionSettingsJson(repoRoot, process.execPath, hooks)
+    const name = `session-settings-chat-${crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)}.json`
+    if (!chatFiles.has(name)) {
+      // the first of this run: what an earlier run left goes (none of its sessions is alive now)
+      if (!chatFiles.size) {
+        try { for (const n of fs.readdirSync(userDataDir)) if (/^session-settings-chat-[0-9a-f]{12}\.json(\.\d+\.tmp)?$/.test(n) && n !== name) fs.rmSync(path.join(userDataDir, n), { force: true }) } catch {}
+      }
+      const file = path.join(userDataDir, name)
+      try {
+        if (!fs.existsSync(file) || fs.readFileSync(file, 'utf8') !== text) {
+          const tmp = `${file}.${process.pid}.tmp`
+          fs.writeFileSync(tmp, text)
+          // (Windows: a virus scanner or the indexer may hold the new file a moment: two more tries)
+          for (let k = 0; ; k++) {
+            try { fs.renameSync(tmp, file); break } catch (err) {
+              if (k >= 2 || (err?.code !== 'EPERM' && err?.code !== 'EBUSY' && err?.code !== 'EACCES')) {
+                try { fs.rmSync(tmp, { force: true }) } catch {}
+                throw err
+              }
+            }
+          }
+        }
+      } catch (err) {
+        // once a run, with the error's code only (never a path)
+        if (!chatWriteLogged) { chatWriteLogged = true; console.log(`[terminals] the chat view's settings file could not be written (${typeof err?.code === 'string' ? err.code : 'error'}): sessions open without the chat view`) }
+        return { file: plainSettings(), armed: false }
+      }
+      chatFiles.set(name, file)
+    }
+    return { file: chatFiles.get(name), armed: true }
+  }
+
   function info(t) {
-    return {
+    const out = {
       id: t.id, sessionId: t.sessionId, cwd: t.cwd, project: path.basename(t.cwd),
       status: t.status, createdAt: t.createdAt, exitCode: t.exitCode ?? null,
       asking: !!t.asking,
       tool: t.adapter.id, toolName: t.adapter.name, canResume: t.adapter.canResume,
       title: titles.get(t.sessionId) ?? null,
     }
+    // The chat view (on only): whether this Claude Code session was launched with the chat hooks
+    const state = chatState()
+    if (state.on && t.adapter.id === 'claude') out.chat = t.chatArmed ? 'armed' : (state.reason ?? 'unarmed')
+    return out
+  }
+
+  /**
+   * The chat view was switched on or off: sessions opened from now on get the other file (no file
+   * is written here, none a session runs with is touched), and the page hears the new `chat` values.
+   */
+  function refreshSettings() {
+    send('terminals:list', list())
+  }
+
+  /** Running sessions launched with the chat hooks (the endpoint must keep answering them) */
+  function armedCount() {
+    return [...terms.values()].filter(t => t.chatArmed && t.status !== 'exited').length
   }
 
   function broadcastList() { rememberOpen(); send('terminals:list', list()) }
@@ -281,7 +385,9 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // A terminal reopened resumes the conversation it last had (after a /clear, not the one it began with)
     // (Codex resumes only a thread its log named; with none it starts anew)
     const conversation = resume ? linkedConversation(userDataDir, resume) || (adapter.kind === 'codex' ? undefined : resume) : undefined
-    let { file: command, args } = adapter.launch({ sessionId, resume: conversation, settingsFile: adapter.id === 'claude' ? settings() : null, extraArgs: adapter.id === 'claude' ? extraArgs() : [] })
+    // The chat view: the hooks the file holds as this session starts are the ones it has (armed or not)
+    const launchSettings = adapter.id === 'claude' ? settings(chatState(), sessionId) : null
+    let { file: command, args } = adapter.launch({ sessionId, resume: conversation, settingsFile: launchSettings ? launchSettings.file : null, extraArgs: adapter.id === 'claude' ? extraArgs() : [] })
     // Debug only: SPAWN_CLAUDE runs another program in place of claude (tests the terminal plumbing for free)
     if (process.env.SPAWN_CLAUDE && adapter.id === 'claude') { command = process.env.SPAWN_CLAUDE; args = [] }
     const pty = (ptyModule ?? loadPty()).spawn(command, args, {
@@ -298,6 +404,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // for a tab opened later as the chunks sent (chunks/size): appending to one 200 KB string
     // copied all of it on every chunk. What a tab replays was sent already, so nothing doubles.
     const t = { id: sessionId, sessionId, cwd: dir, pty, chunks: [], size: 0, pending: '', flushTimer: null, seq: 0, status: 'running', createdAt: Date.now(), adapter }
+    if (launchSettings?.armed) { t.chatArmed = true; t.chatFile = launchSettings.file }
     t.exited = new Promise((resolve) => { t.markExited = resolve })
     terms.set(t.id, t)
     t.scan = ''
@@ -311,7 +418,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       if (!t.flushTimer) t.flushTimer = setTimeout(() => flushOutput(t), OUTPUT_BATCH_MS)
       // Only output since the user last answered counts
       t.scan = (t.scan + plainText(data)).slice(-4000)
-      if (!t.asking && adapter.asking.test(t.scan)) { t.asking = true; broadcastList() }
+      if (!t.asking && adapter.asking.test(t.scan)) { t.asking = true; t.questionSeen = true; broadcastList() }
       t.activity?.output(data)
     })
     // Codex CLI: its session log tells what it does (codexWatch.cjs), better than its output
@@ -351,9 +458,28 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return true
   }
 
+  /**
+   * The chat composer (chat view on, this session launched with its hooks only): what reached the
+   * terminal's input besides the chat itself, for its ledger of the prompt row (chatHost.cjs). Called
+   * after the writes; it can change nothing here, and a failure in it is the host's own.
+   */
+  function heard(t, ...args) {
+    if (!t.chatArmed || typeof chat.onInput !== 'function' || !chatState().on) return
+    try { chat.onInput(t.id, ...args) } catch {}
+  }
+
+  /** A chat send is between its text and its Enter in this session (armed sessions only, chat on) */
+  function chatBusy(t) {
+    if (!t.chatArmed || typeof chat.busy !== 'function') return false
+    try { return chat.busy(t.id) === true } catch { return false }
+  }
+
   function write(id, data) {
     const t = terms.get(id)
     if (!t || t.status === 'exited' || typeof data !== 'string') return false
+    // (for the chat's ledger a question stays on screen until a key answers it: the terminal's own reports and
+    // the arrows between its choices do not, though any ESC clears the side panel's flag below as in 1.4.0)
+    const asked = !!t.asking || t.questionSeen === true
     t.pty.write(data)
     t.activity?.input()
     // An answer (Enter, or Esc to dismiss) clears the question
@@ -361,7 +487,31 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       t.scan = ''
       if (t.asking) { t.asking = false; broadcastList() }
     }
+    if (t.questionSeen && answersQuestion(data)) t.questionSeen = false
+    // (whether a question was on screen as the keys came: they answered it, not the prompt row)
+    heard(t, data, 'keyboard', undefined, asked)
     return true
+  }
+
+  /**
+   * The chat composer's only way into a terminal (chatHost.cjs, which decides what and when): the
+   * data as given, to a running Claude Code session launched with the chat hooks. False otherwise.
+   */
+  function typeForChat(id, data) {
+    const t = terms.get(id)
+    if (!t || t.status === 'exited' || !t.chatArmed || t.adapter.id !== 'claude' || typeof data !== 'string') return false
+    t.pty.write(data)
+    t.activity?.input()
+    return true
+  }
+
+  /** A question answered from the chat (Phase 4): as an Enter in the terminal clears it */
+  function clearAsking(id) {
+    const t = terms.get(id)
+    if (!t) return
+    t.scan = ''
+    t.questionSeen = false
+    if (t.asking) { t.asking = false; broadcastList() }
   }
 
   /**
@@ -375,17 +525,22 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     const clean = String(text ?? '').replace(/\r\n?/g, '\n').trim()
     if (!clean) return { ok: false, reason: 'empty' }
     if (clean.length > 20_000) return { ok: false, reason: 'too-long' }
+    // the chat view's send is between its text and its Enter: this one would merge into it (refused, said)
+    if (chatBusy(t)) return { ok: false, reason: 'busy' }
     t.activity?.input()
     if (clean.includes('\n')) t.pty.write(`\x1b[200~${clean}\x1b[201~`)
     else t.pty.write(clean)
+    heard(t, null, 'side', 'typed')
     // Enter a beat later, so the TUI has taken the text in first
-    setTimeout(() => { if (t.status !== 'exited') t.pty.write('\r') }, 120)
+    setTimeout(() => { if (t.status !== 'exited') { t.pty.write('\r'); heard(t, null, 'side', 'enter') } }, 120)
     return { ok: true }
   }
 
   function resize(id, cols, rows) {
     const t = terms.get(id)
     if (!t || t.status === 'exited') return
+    // (each size the page asks for, the same one too: a chat redraw nudge does not undo it; redrawForChat)
+    t.sizeAsked = (t.sizeAsked ?? 0) + 1
     const c = Math.max(20, Math.min(400, cols | 0))
     const r = Math.max(5, Math.min(200, rows | 0))
     // The same size again is not passed on: every resize makes Claude Code clear and redraw its screen
@@ -394,6 +549,33 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     t.rows = r
     try { t.pty.resize(c, r) } catch {}
     if (process.env.SPAWN_DEBUG_RESIZE) console.log(`[terminals] resize ${id.slice(0, 8)} ${c}x${r}`)
+  }
+
+  /**
+   * The chat view's redraw nudge (7-48; asked only by chatHost.cjs redraw, which checks when): a
+   * Claude Code session shown as chat whose hidden xterm replayed before it fitted. Its pty gets one
+   * row less (one more at the smallest size) and, 150 ms later, its size again, so Claude Code draws
+   * its screen anew as on any window resize. A resize only: nothing reaches the session's input. The
+   * restore is skipped when the page asked for a size meanwhile. Only for a running session launched
+   * with the chat hooks, the chat on, its size known. True when the first step was taken.
+   */
+  function redrawForChat(id, { timers = { setTimeout: (f, ms) => setTimeout(f, ms) } } = {}) {
+    const t = terms.get(id)
+    if (!t || t.status === 'exited' || !t.chatArmed || t.adapter.id !== 'claude' || !chatState().on) return false
+    const c = t.cols, r = t.rows
+    if (!Number.isInteger(c) || !Number.isInteger(r)) return false
+    const step = r >= 6 ? r - 1 : r + 1
+    try { t.pty.resize(c, step) } catch { return false }
+    t.cols = c
+    t.rows = step
+    const asked = t.sizeAsked
+    timers.setTimeout(() => {
+      if (t.status === 'exited' || t.sizeAsked !== asked || t.cols !== c || t.rows !== step) return
+      try { t.pty.resize(c, r) } catch { return }
+      t.cols = c
+      t.rows = r
+    }, REDRAW_RESTORE_MS)
+    return true
   }
 
   /** Send what a session printed since the last batch, and keep it for a tab opened later */
@@ -430,6 +612,11 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // worker open after a plain exit, and once the tab is gone shutdown() cannot reach it
     try { t.pty.kill() } catch {}
     terms.delete(id)
+    // the chat settings file this session was launched with (one per session: its hooks name it) goes with it
+    if (t.chatFile && ![...terms.values()].some(o => o.chatFile === t.chatFile)) {
+      for (const [name, file] of chatFiles) if (file === t.chatFile) chatFiles.delete(name)
+      try { fs.rmSync(t.chatFile, { force: true }) } catch {}
+    }
     broadcastList()
   }
 
@@ -476,7 +663,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return { exited: running.length - stuck, stuck }
   }
 
-  return { create, write, sendInstruction, resize, buffer, list, rename, close, move, shutdown, freeze, takeRestorable }
+  return { create, write, sendInstruction, typeForChat, clearAsking, resize, redrawForChat, buffer, list, rename, close, move, shutdown, freeze, takeRestorable, refreshSettings, armedCount }
 }
 
-module.exports = { createTerminalManager, killTreeNow, writeSessionSettings, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
+module.exports = { createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }

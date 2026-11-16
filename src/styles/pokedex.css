@@ -510,6 +510,12 @@ html.qa-mode #root { min-height: 100vh; }
 .qa-fire { margin-left: auto; font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); padding: 3px 10px; border-radius: var(--r-s); border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
 .qa-fire:hover:not(:disabled) { border-color: var(--line-hover); color: var(--ink); }
 .qa-fire:disabled { opacity: 0.4; cursor: default; }
+/* the chat view's states (src/qaChat.tsx): the whole width, each in a window-sized box */
+.qa-item.qa-chat-item { grid-column: 1 / -1; max-width: none; }
+.qa-chat { height: 760px; border: 1px solid var(--line); border-radius: var(--r-l); overflow: hidden; }
+/* the composer's states: its own height, at the bottom of a short pane; working: a whole view */
+.qa-chat.qa-composer { height: auto; padding-top: 14px; }
+.qa-chat.qa-composer.tall { height: 560px; padding-top: 0; }
 /* The toast window never takes the text step (a fixed-size window): its samples here neither */
 .widget .toast-host.qa-toast { height: auto; padding: 0; width: 384px; display: block; --t-micro: 10px; --t-meta: 11px; --t-ui: 12px; }
 .widget .toast-host.qa-toast .w-toast { animation: none; }

@@ -1,0 +1,14 @@
+❯ Ask me which output format I want, then write the summary.
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ ☐ Format
+
+ Which output format do you want?
+
+ ❯ 1. JSON
+      Machine-readable, for scripts
+   2. Markdown
+      Human-readable, for the README
+   3. Type something.
+
+ Enter to select · ↑/↓ to navigate · Esc to cancel

@@ -1,0 +1,17 @@
+❯ In src/math.js add a mul(a, b) function after sub and export it. Use the Edit tool once. No other
+  tools.
+
+● Update(src\math.js)
+  ⎿  Error editing file
+
+● The single Edit failed, so src/math.js is unchanged and mul has not been added.
+
+  If you paste the current contents of src/math.js, or let me Read it first, I'll make the edit
+  correctly.
+
+✻ Sautéed for 6s · done 5:41 PM
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+❯ Read it first, then add mulWithout tools, name three rivers
+────────────────────────────────────────────────────────────────────────────────────────────────────
+  ⏸ manual mode on · ? for shortcuts

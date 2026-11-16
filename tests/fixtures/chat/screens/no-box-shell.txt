@@ -1,0 +1,7 @@
+❯ /exit
+  ⎿  Goodbye!
+
+Resume this session with:
+claude --resume 00000000-0000-4000-8000-000000000a02
+
+PS C:\Users\user\work\demo>

@@ -13,6 +13,31 @@ import type { AiTool } from './desktop'
 
 export const OTHER_TOOLS: boolean = FEATURES.otherTools === true
 
+/**
+ * CHAT_VIEW: the chat view of a Claude Code session (Phase 2, a read-only lens),
+ * the same switch as electron/features.cjs. Off, the app is release 1.4.0 (no 설정
+ * row, no flip). VITE_SPAWN_CHAT_VIEW=1 turns it on for development and the
+ * screenshot harness only.
+ */
+export const CHAT_VIEW: boolean = chatViewFlag(
+  typeof window !== 'undefined' ? (window as unknown as { spawn?: { features?: { chatView?: unknown } } }).spawn?.features?.chatView : undefined,
+  FEATURES.chatView === true || import.meta.env?.VITE_SPAWN_CHAT_VIEW === '1',
+)
+
+/**
+ * In the app main's switch decides (the preload asks it at load): a page built with
+ * VITE_SPAWN_CHAT_VIEW set never offers what main does not serve. Without an answer (a
+ * plain browser, the screenshot harness) the build's own value stands.
+ */
+export function chatViewFlag(fromMain: unknown, built: boolean): boolean {
+  return typeof fromMain === 'boolean' ? fromMain : built
+}
+
+/** The chat view is offered: the features.json switch and 설정 › 세션 › 채팅으로 보기 both on */
+export function chatViewOn(s: { session: { chatView: boolean } }, flag = CHAT_VIEW): boolean {
+  return flag && s.session.chatView === true
+}
+
 /** 설정's sections: AI 도구 only while other tools are on */
 export function settingsSections<K extends string>(sections: [K, string][], on = OTHER_TOOLS): [K, string][] {
   return on ? sections : sections.filter(([k]) => k !== 'tools')

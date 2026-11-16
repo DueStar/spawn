@@ -20,12 +20,12 @@ import { dispatchMeters, useMeters, formatClockTime, formatResetDay, formatReset
 import { hpTone, rowKeyAction, rowLabel, rowTooltip, sessionHeaderParts, setListMode, shellLabel, useListMode } from './sessionList'
 import { sessionTools, shownCodexLimits } from './features'
 import { bridge, useTerminals, type PastSession, type TerminalInfo, type WidgetMode, type UpdateState } from './desktop'
-import { castSession, sessionName, sessionSprite, useTheme, spriteUrl, iconUrl, pokemonById } from './theme'
+import { castSession, sessionArt, sessionName, sessionSprite, useTheme, spriteUrl, iconUrl, pokemonById } from './theme'
 import { isHardNeedsYou } from './mainState'
 import { cloudErrorText, dispatchCloud, useCloud } from './cloudStore'
 import { dispatchPokedex, usePokedex, useViewed, levelOf, freePartyCount, freeSessionCount, freeBoxUids, isHelperSession, type Mon } from './pokedexStore'
 import PatchNotes, { PatchNotesHistory } from './components/PatchNotes'
-import SettingsView from './components/SettingsView'
+import SettingsView, { type Section as SettingsSection } from './components/SettingsView'
 import FeedbackPin from './components/FeedbackPin'
 import { changeSettings, useSettings, useWorkMode } from './settingsStore'
 import { autoPartner, hideTitleKey, sessionLabel, sessionRowParts, shouldToast, viewIn, visibleViews, VIEWS, type View } from './workMode'
@@ -33,7 +33,12 @@ import { SwapPicker, ThrowPicker } from './components/PartyPickers'
 import { SessionHeader } from './components/SessionHeader'
 import { useDragOrder } from './useDragOrder'
 import { clampSideWidth, readSideWidth, sideMin, SIDE_DEFAULT, SIDE_MAX, writeSideWidth } from './sideWidth'
+import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, readChangesWidth, readOpen, writeChangesWidth, writeOpen } from './changesWidth'
 import { modeFromUrl, readCarry, writeCarry } from './carry'
+import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensModes, writeLensMode, type LensMode } from './chat/lensMode'
+import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
+import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
+import { ChatBoundary } from './components/ChatBoundary'
 import { BoxIcon, HelperIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SendIcon, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
 // The views and the terminal (xterm) are their own chunks: the widget's first
 // paint needs none of them. They are fetched right after it (preloadViews), so
@@ -49,6 +54,16 @@ const PokedexView = lazy(loadDex)
 const BoxView = lazy(loadBox)
 const TodayLog = lazy(loadToday)
 const LeaderboardView = lazy(loadRank)
+// The chat view (only while it is on, and only when a session is shown as chat: off, it never loads)
+const ChatView = lazy(() => import('./components/ChatView'))
+// the chat view's composer (Phase 3): loaded only with the chat view
+const Composer = lazy(() => import('./components/chat/Composer'))
+// the 변경 사항 panel and its header button (Phase 5): loaded only while the chat is shown
+const loadChanges = () => import('./components/chat/ChangesPanel')
+const ChangesPanel = lazy(loadChanges)
+const ChangesButton = lazy(() => loadChanges().then(m => ({ default: m.ChangesButton })))
+// 보기 정도 (기본 / 생각 포함 / 전부, Phase 5): in the header only while the chat is shown
+const DensityMenu = lazy(() => import('./components/chat/DensityMenu'))
 function preloadViews() {
   const go = () => { for (const load of [loadTerminal, loadDex, loadBox, loadToday, loadRank]) load().catch(() => {}) }
   if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 2000 })
@@ -253,6 +268,9 @@ const Widget: React.FC = () => {
   }
   const [notesOpen, setNotesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  // where 설정 opens when something other than its button opens it (the chat's version note: 세션, the 채팅 보기 help)
+  const [settingsAt, setSettingsAt] = useState<{ section: SettingsSection; help?: boolean } | undefined>(undefined)
+  const openChatHelp = useCallback(() => { setSettingsAt({ section: 'session', help: true }); setSettingsOpen(true) }, [])
   const [feedbackOpen, setFeedbackOpen] = useState(false)
   const closeFeedback = useCallback(() => setFeedbackOpen(false), [])
   // Read here so a settings change redraws the whole page (the privacy setting reaches every catch story)
@@ -448,13 +466,20 @@ const Widget: React.FC = () => {
     if (name === (r.title ?? '')) return
     bridge?.terminals.rename(r.terminal.id, name)
     if (!name) return
-    if (isFree(r)) bridge?.terminals.send(r.terminal.id, `/rename ${name}`)
+    if (isFree(r)) renameNow(r.terminal.id, name)
     else pendingRename.current.set(r.terminal.id, name)
+  }
+  // (the chat view's send between its text and its Enter refuses it, `busy`: the rename stays pending,
+  // never typed into that send)
+  const renameNow = (id: string, name: string) => {
+    void bridge?.terminals.send(id, `/rename ${name}`).then(res => {
+      if (res && !res.ok && res.reason === 'busy' && !pendingRename.current.has(id)) pendingRename.current.set(id, name)
+    }, () => {})
   }
   useEffect(() => {
     for (const r of rows) {
       const name = r.terminal && pendingRename.current.get(r.terminal.id)
-      if (name && isFree(r)) { pendingRename.current.delete(r.terminal!.id); bridge?.terminals.send(r.terminal!.id, `/rename ${name}`) }
+      if (name && isFree(r)) { pendingRename.current.delete(r.terminal!.id); renameNow(r.terminal!.id, name) }
     }
   })
   /**
@@ -597,14 +622,80 @@ const Widget: React.FC = () => {
   // One line per chosen session, picked at random (not on every render)
   const askPick = useMemo(() => Math.floor(Math.random() * ASK_LINES.length), [chosen?.sessionId])
   const shown = withTerminal.find(r => r.sessionId === target) ?? chosen ?? withTerminal[0]
+  // The chat view (src/chat/lensMode.ts): 채팅 / 터미널 per session, kept in the carry. Only a session whose
+  // terminal carries the chat key (the feature on, Claude Code) offers it, never the widget; the terminal
+  // stays mounted either way and only its `active` follows the choice
+  const [lensModes, setLensModes] = useState<Record<string, LensMode>>(readLensModes)
+  const lens = lensAvailability(shown?.terminal, mode)
+  const lensMode = effectiveMode(shown?.terminal, mode, (shown && lensModes[shown.sessionId]) || 'terminal')
+  const lensSid = shown?.sessionId
+  // The chat view takes the focus only on the user's own flip or session switch (never on its own mount:
+  // a session restored in chat, a /clear, a first row arriving while the side panel is being typed into)
+  // (a mark in lensMode.ts, not state: asking draws nothing again)
+  const setLens = useCallback((m: LensMode) => { if (lensSid) { setLensModes(writeLensMode(lensSid, m)); if (m === 'chat') askChatFocus() } }, [lensSid])
+  const toTerminal = useCallback(() => setLens('terminal'), [setLens])
+  const lastShownSid = useRef(lensSid)
+  // (a layout effect: it runs before the chat view's own effect, which takes the focus)
+  useLayoutEffect(() => {
+    if (lastShownSid.current && lensSid && lastShownSid.current !== lensSid) askChatFocus()
+    lastShownSid.current = lensSid
+  }, [lensSid])
+  // 7-48 (src/chat/termWarm.ts): the shown session's terminal settles once it has fitted while visible
+  // (until then, shown as chat, it stays active under the opaque chat pane); in chat, one that replayed
+  // first asks main for one redraw. Only where the chat is offered; terminal mode asks nothing
+  const warmTerm = view === 'terminal' && lens.show ? shown?.terminal?.id : undefined
+  useWarm(warmTerm, !!warmTerm, lensMode === 'chat')
+  // who answers, the same object while nothing about it changed (the chat's rows are not drawn again for nothing)
+  const chatArt = shown ? sessionArt(shown.sessionId) : ''
+  const who = useMemo(() => chatWho({ name: shown?.name ?? '', sprite: shown?.sprite ?? '', art: chatArt }, workMode), [shown?.name, shown?.sprite, chatArt, workMode])
+  // The composer under the chat (Phase 3): its handle (focus, 멈추기), and its control row from the side panel's own meters
+  const composerRef = useRef<ComposerHandle | null>(null)
+  const stopChat = useCallback(() => composerRef.current?.stop(), [])
+  // The side panel's box while the chat is shown: a pointer to the composer, the same size (its text kept)
+  const chatPointer = lensMode === 'chat' && view === 'terminal' && !!shown?.terminal
+  // The 변경 사항 panel (Phase 5, src/changesWidth.ts): open or closed for every session (remembered), its width
+  // remembered; it exists only while the chat of a window is shown, inside the chat's own area. While the left
+  // panel, the conversation and the panel do not fit, the left panel shows as the rail: derived here on every
+  // render, never stored (spawn-side-hidden is the user's own fold only), so it comes back by itself
+  const [changesOpen, setChangesOpenState] = useState(() => { try { return readOpen(localStorage) } catch { return false } })
+  const [chRemembered, setChRemembered] = useState<number | null>(() => { try { return readChangesWidth(localStorage) } catch { return null } })
+  const [chTarget, setChTarget] = useState<{ file: string; toolId: string | null; n: number } | null>(null)
+  const setChangesOpen = useCallback((open: boolean) => { setChangesOpenState(open); writeOpen(open); if (!open) setChTarget(null) }, [])
+  const changesRoom = canOpen({ winW })
+  const panelOn = lensMode === 'chat' && view === 'terminal' && mode !== 'widget' && changesOpen && canOpen({ winW }) && !!shown?.terminal
+  const chBase = changesWidthFor(chRemembered, winW)
+  const foldNow = expanded && autoFold({ winW, sideW: sideWidth, chW: Math.min(chBase, CH_MAX), open: changesOpen && changesRoom, chat: chatPointer, userHidden: sideHidden })
+  const folded = sideHidden || foldNow
+  // (the chat's area: the window less the left panel or the rail and the gaps)
+  const chRoom = winW - (folded ? RAIL_W : sideWidth) - 12
+  const chWidth = clampChangesWidth(chBase, chRoom)
+  const chMax = clampChangesWidth(CH_MAX, chRoom)
+  const setChangesWidth = (px: number | null, save: boolean) => {
+    if (px === null) { setChRemembered(null); writeChangesWidth(null); return }
+    const w = clampChangesWidth(px, chRoom)
+    setChRemembered(w)
+    if (save) writeChangesWidth(w)
+  }
+  // a diff block's +N −N: the panel opens at that file and scrolls to that edit
+  const openChangesAt = useCallback((p: { file: string; toolId: string }) => { setChangesOpen(true); setChTarget({ file: p.file, toolId: p.toolId, n: Date.now() }) }, [setChangesOpen])
+  const toggleChanges = useCallback(() => setChangesOpen(!changesOpen), [changesOpen, setChangesOpen])
+  // the rail's "unfold" (and its account button) while the panel folded it: the panel closes, so the left panel can come back
+  const unfoldSide = () => { if (!sideHidden && foldNow) setChangesOpen(false); else toggleSide() }
+  // a session gone: the chat's per-session memory (scroll, open rows) goes with it
+  const chatSeen = useRef(new Set<string>())
+  useEffect(() => {
+    const now = new Set(terminals.map(t => t.id))
+    for (const id of chatSeen.current) if (!now.has(id)) forgetChatTerminal(id)
+    chatSeen.current = now
+  }, [terminals])
   // The left list: 상세 or 간략 (src/sessionList.ts), and the open session's row kept in sight
   const listMode = useListMode()
   const compact = listMode === 'compact'
   const rowEls = useRef(new Map<string, HTMLElement>())
   // (also when the panel unfolds: a row picked from the rail while it was folded comes into sight)
   useEffect(() => {
-    if (shown?.sessionId && !(expanded && sideHidden)) rowEls.current.get(shown.sessionId)?.scrollIntoView({ block: 'nearest' })
-  }, [shown?.sessionId, listMode, sideHidden, expanded])
+    if (shown?.sessionId && !(expanded && folded)) rowEls.current.get(shown.sessionId)?.scrollIntoView({ block: 'nearest' })
+  }, [shown?.sessionId, listMode, folded, expanded])
   // The header's rename field belongs to the session it opened on: another session shown (Ctrl+Tab,
   // the rail, a close) drops it, so it cannot come back stale with the first one
   useEffect(() => {
@@ -629,6 +720,22 @@ const Widget: React.FC = () => {
   const fiveReset = fiveHour === 0 ? undefined : lim?.fiveHourResetsAt
   const sevenReset = sevenDay === 0 ? undefined : lim?.sevenDayResetsAt
   const claudeOpen = rows.some(r => r.terminal?.status === 'running' && (r.terminal.tool ?? 'claude') === 'claude')
+  // the composer's control row: the shown session's model and context as its row shows them, the usage as the panel's
+  const chatControl = useMemo<ComposerControl>(() => {
+    const used = shown?.meter?.context.used
+    const size = shown?.meter?.context.size ?? null
+    const left = typeof used === 'number' ? Math.max(0, Math.min(100, 100 - used)) : null
+    const leftTokens = left !== null && size ? Math.round((size * left) / 100) : null
+    const tip = left === null ? t('남은 컨텍스트')
+      : leftTokens !== null ? t('남은 컨텍스트 {left} / {size} ({pct}%)', { left: tokens(leftTokens), size: tokens(size!), pct: Math.round(left) })
+      : t('남은 컨텍스트 {pct}%', { pct: Math.round(left) })
+    const barLabel = sessionRowParts({ title: shown?.title ?? null, name: shown?.name ?? '', project: shown?.project ?? '', level: null, helpers: 0, helperSession: false, shell: false }, workMode).barLabel
+    return {
+      model: modelLabel(shown?.meter?.model, shown?.session?.model) || null,
+      context: { left, tip, label: barLabel },
+      usage: { ...(typeof fiveHour === 'number' ? { fiveHour } : {}), ...(typeof sevenDay === 'number' ? { weekly: sevenDay } : {}) },
+    }
+  }, [shown?.meter, shown?.session?.model, shown?.title, shown?.name, shown?.project, workMode, fiveHour, sevenDay, lang()]) // eslint-disable-line react-hooks/exhaustive-deps
   const showClaudeLimits = typeof fiveHour === 'number' || typeof sevenDay === 'number' || claudeOpen
   // Codex CLI's windows, labelled by their length (5 hours, a week on today's plans)
   // (none while other AI tools are switched off, src/features.ts: Claude's rows only)
@@ -767,7 +874,8 @@ const Widget: React.FC = () => {
     if (r.ok) {
       setNote(chosen.mood === 'working' ? t('지시를 보냈어요. 지금 하던 작업이 끝나면 이어서 처리해요.') : t('지시를 보냈어요.'))
       setText('')
-    } else setNote(t('지시를 보내지 못했어요 ({reason})', { reason: r.reason === 'exited' ? t('세션이 이미 종료됐어요') : r.reason ?? t('알 수 없는 이유') }))
+    } else if (r.reason === 'busy') setNote(t('채팅에서 보내는 중이에요. 잠시 뒤 다시 보내 주세요'))
+    else setNote(t('지시를 보내지 못했어요 ({reason})', { reason: r.reason === 'exited' ? t('세션이 이미 종료됐어요') : r.reason ?? t('알 수 없는 이유') }))
   }
 
   const openIds = new Set(terminals.filter(t => t.status === 'running').map(t => t.sessionId))
@@ -805,11 +913,11 @@ const Widget: React.FC = () => {
   ))
 
   return (
-    <div ref={widgetRef} className={`widget${expanded ? ' expanded' : ''} mode-${mode}${expanded && sideHidden ? ' side-hidden' : ''}${sideDragging ? ' resizing' : ''}`}
+    <div ref={widgetRef} className={`widget${expanded ? ' expanded' : ''} mode-${mode}${expanded && folded ? ' side-hidden' : ''}${sideDragging ? ' resizing' : ''}`}
       style={expanded ? { '--side-w': `${sideWidth}px` } as React.CSSProperties : undefined}>
       {/* The left panel folded: only the essentials, in one column (logo, new session,
           folder, resume, the open sessions, usage, settings) */}
-      {expanded && sideHidden && (
+      {expanded && folded && (
         <nav className="w-rail" aria-label={t('왼쪽 패널 (접힘)')}>
           {/* 업무 모드: no ball, its slot kept empty (as the lab), so nothing below moves when the mode toggles */}
           {workMode ? <span className="w-rail-btn w-rail-brand w-rail-blank" aria-hidden="true" /> : (
@@ -819,7 +927,7 @@ const Widget: React.FC = () => {
             </button>
           )}
           {/* The panel's own fold button: here to unfold it, in the panel's header to fold it */}
-          <button className="w-rail-btn w-side-toggle" onClick={toggleSide} title={t('왼쪽 패널 펼치기')} aria-label={t('왼쪽 패널 펼치기')} aria-pressed={false}><SidePanelIcon size={15} /></button>
+          <button className="w-rail-btn w-side-toggle" onClick={unfoldSide} title={t('왼쪽 패널 펼치기')} aria-label={t('왼쪽 패널 펼치기')} aria-pressed={false}><SidePanelIcon size={15} /></button>
           {update && (update.status === 'available' || update.status === 'ready') && (
             <button className="w-rail-btn w-rail-update" title={update.status === 'ready' ? t('재시작해서 적용') : t('업데이트')}
               onClick={() => { if (update.needsFull) bridge?.env.openLink('release'); else if (update.status === 'available') bridge?.update.install(); else bridge?.update.restart() }}>↑</button>
@@ -866,7 +974,7 @@ const Widget: React.FC = () => {
           <button className="w-rail-btn" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={15} /></button>
           {/* The profile, as in the panel's header: it unfolds the panel onto the account card */}
           {cloud?.enabled && (cloud.user ? (
-            <button className="w-rail-btn w-rail-account" onClick={() => { toggleSide(); setAccountOpen(true) }} title={cloud.user.email ?? ''} aria-label={t('계정')}>
+            <button className="w-rail-btn w-rail-account" onClick={() => { unfoldSide(); setAccountOpen(true) }} title={cloud.user.email ?? ''} aria-label={t('계정')}>
               <span className="w-account">{cloud.user.avatar ? <img src={cloud.user.avatar} alt="" referrerPolicy="no-referrer" /> : (cloud.user.name ?? cloud.user.email ?? '?').slice(0, 1)}</span>
             </button>
           ) : (
@@ -1234,6 +1342,21 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             </section>
           )}
 
+          {chatPointer ? (
+          // The chat is shown: the box keeps its place, size and frame (an empty field, the button hidden),
+          // and points to the composer under the chat; its own text (state) stays for the flip back
+          <section className="w-card w-compose w-compose-pointer">
+            {note && <div className="w-note" role="status" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>}
+            <div className="w-input">
+              <textarea value="" readOnly tabIndex={-1} aria-hidden="true" rows={2} />
+              <button className="w-send" tabIndex={-1} aria-hidden="true"><SendIcon size={15} /></button>
+              <div className="w-input-pointer">
+                <span>{t('채팅 아래 입력란에서 보내요')}</span>
+                <button type="button" className="w-input-to" onClick={() => composerRef.current?.focus()}>{t('입력란으로')}</button>
+              </div>
+            </div>
+          </section>
+          ) : (
           <section className="w-card w-compose">
             {note && <div className="w-note" role="status" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>}
             <div className="w-input">
@@ -1252,8 +1375,9 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </button>
             </div>
           </section>
+          )}
         </div>
-        {expanded && !sideHidden && <SideResize width={sideWidth} min={sideLow} max={sideMax} onWidth={setSideWidth} onDragging={setSideDragging} />}
+        {expanded && !folded && <SideResize width={sideWidth} min={sideLow} max={sideMax} onWidth={setSideWidth} onDragging={setSideDragging} />}
       </div>
 
       {expanded && (
@@ -1302,6 +1426,14 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   closing={closing === shown.sessionId}
                   onClose={() => closeSession(shown)}
                   onCloseCancel={() => setClosing(null)}
+                  lens={lens.show ? { mode: lensMode, enabled: lens.enabled, reason: lens.reason, onMode: setLens } : undefined}
+                  // the chat's own tools, only while the chat is shown: 보기 정도, then 변경 사항
+                  chatTools={lensMode === 'chat' && lens.show ? (
+                    <Suspense fallback={null}>
+                      <DensityMenu />
+                      <ChangesButton id={shown.terminal.id} open={changesOpen} enabled={changesRoom} onToggle={toggleChanges} />
+                    </Suspense>
+                  ) : undefined}
                 />
               )}
             </div>
@@ -1312,7 +1444,9 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             {view === 'today' && <div className="w-dex-body"><TodayLog /></div>}
             {view === 'rank' && <div className="w-dex-body"><LeaderboardView /></div>}
           </Suspense>
-          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none' }}>
+          {/* (the 변경 사항 panel's width for the chat pane and the panel; folded for it, the terminals keep the box they
+              had with the left panel open: --fold-pad, so a terminal fitted under the chat gets the size it will be shown at) */}
+          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(panelOn ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}>
             {withTerminal.length === 0 && (
               <div className="w-term-empty">
                 <p>{t('아직 터미널이 없어요')}</p>
@@ -1321,10 +1455,48 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </div>
             )}
             <Suspense fallback={null}>
-              {withTerminal.map(r => r.terminal && (
-                <TerminalView key={r.terminal.id} term={r.terminal} active={view === 'terminal' && shown?.sessionId === r.sessionId} />
-              ))}
+              {withTerminal.map(r => {
+                if (!r.terminal) return null
+                // 7-48: the shown chat session's terminal is active, never focused, under the opaque chat pane
+                // until it has fitted once (src/chat/termWarm.ts); in terminal mode `warm` is always false
+                const warm = lensMode === 'chat' && view === 'terminal' && r.sessionId === shown?.sessionId && warmNeeded(r.terminal.id)
+                const active = (view === 'terminal' && shown?.sessionId === r.sessionId && !(r.sessionId === shown?.sessionId && lensMode === 'chat')) || warm
+                // (first render only: whether its xterm fits before the replay arrives; only where this terminal
+                // offers the chat, so with the chat off nothing of termWarm runs)
+                if (lensAvailability(r.terminal, mode).show) noteMount(r.terminal.id, { active, visible: document.visibilityState === 'visible' })
+                return <TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm ? false : undefined} />
+              })}
             </Suspense>
+            {lensMode === 'chat' && view === 'terminal' && shown?.terminal && (
+              <div className="w-chat-pane">
+                <ChatBoundary key={shown.terminal.id} onTerminal={toTerminal}>
+                  <Suspense fallback={null}>
+                    <ChatView
+                      key={shown.terminal.id}
+                      term={shown.terminal}
+                      who={who}
+                      project={shown.project}
+                      branch={shown.branch ?? null}
+                      onTerminal={toTerminal}
+                      onStop={stopChat}
+                      onChanges={changesRoom ? openChangesAt : undefined}
+                      workMode={workMode}
+                      onHelp={openChatHelp}
+                      footer={<Suspense fallback={null}><Composer key={shown.terminal.id} term={shown.terminal} who={who} onTerminal={toTerminal} control={chatControl} focusRef={composerRef} /></Suspense>}
+                    />
+                  </Suspense>
+                </ChatBoundary>
+              </div>
+            )}
+            {/* 변경 사항 (Phase 5): the chat area's right column, after the conversation and its composer (DOM order = visual order) */}
+            {panelOn && shown?.terminal && (
+              <ChatBoundary key={`changes:${shown.terminal.id}`} onTerminal={toTerminal} where="w-ch-failed">
+                {/* (while its code loads, its column is already the panel's grey: nothing under the chat shows through) */}
+                <Suspense fallback={<div className="w-ch-wait" aria-hidden="true" />}>
+                  <ChangesPanel key={shown.terminal.id} id={shown.terminal.id} width={chWidth} max={chMax} onWidth={setChangesWidth} onClose={() => setChangesOpen(false)} target={chTarget} />
+                </Suspense>
+              </ChatBoundary>
+            )}
           </div>
         </section>
       )}
@@ -1343,7 +1515,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
       {!workMode && <PatchNotes />}
       {notesOpen && !workMode && <PatchNotesHistory onClose={() => setNotesOpen(false)} />}
       {feedbackOpen && <FeedbackPin view={expanded ? view : 'widget'} onClose={closeFeedback} />}
-      {settingsOpen && <SettingsView onClose={() => setSettingsOpen(false)} version={update?.current} onFeedback={() => { setSettingsOpen(false); setFeedbackOpen(true) }} />}
+      {settingsOpen && <SettingsView at={settingsAt} onClose={() => { setSettingsOpen(false); setSettingsAt(undefined) }} version={update?.current} onFeedback={() => { setSettingsOpen(false); setSettingsAt(undefined); setFeedbackOpen(true) }} />}
       {mode === 'widget' && <ResizeGrip />}
     </div>
   )

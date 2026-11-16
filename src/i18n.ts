@@ -30,8 +30,14 @@ export const lang = (): Lang => resolveLang(getSettings().app.language)
 /** The language, re-rendering the component when it changes */
 export function useLang(): Lang { return resolveLang(useSettings().app.language) }
 
+/**
+ * The variables in, and the plural forms chosen: `{n|file|files}` is "file" when n is 1, else "files" (en: "1 file
+ * changed", "3 files changed"). Korean and Japanese need no forms; a dictionary entry writes them only where it does.
+ */
 const fill = (text: string, vars?: Record<string, string | number>) =>
-  vars ? text.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : text
+  vars ? text
+    .replace(/\{(\w+)\|([^|{}]*)\|([^|{}]*)\}/g, (m, k, one, other) => (k in vars ? (Number(vars[k]) === 1 ? one : other) : m))
+    .replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : text
 
 /** `ko` in the language in use */
 export function t(ko: string, vars?: Record<string, string | number>): string {

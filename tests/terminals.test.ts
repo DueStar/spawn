@@ -4,7 +4,7 @@
  */
 
 import { spawnSync } from 'node:child_process'
-import fs, { mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import fs, { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import os, { tmpdir } from 'node:os'
 import path, { join } from 'node:path'
@@ -450,5 +450,614 @@ describe('reopening tabs', () => {
     terms.create({ tool: 'gone-tool', resume: '77777777-7777-4777-8777-777777777777' })
     expect(pty.spawned.at(-1)!.args).not.toContain('--resume')
     expect(pty.spawned.at(-1)!.args).toContain('--session-id')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// The chat view's hooks (Phase 2): appended to the same generated settings file;
+// with the feature off the file is exactly release 1.4.0's
+// ---------------------------------------------------------------------------
+
+const { sessionSettingsJson } = require('../electron/terminals.cjs')
+const { chatHookEntries } = require('../electron/chatHooks.cjs')
+
+const RUNTIME = 'C:\\Program Files\\spawn\\spawn.exe'
+/** a hook command as it is written into the JSON: forward slashes for the path separator, then JSON-escaped */
+const command = (script: string) => JSON.stringify(`ELECTRON_RUN_AS_NODE=1 "${RUNTIME.split(path.sep).join('/')}" "${path.join(REPO, 'hooks', script).split(path.sep).join('/')}"`).slice(1, -1)
+const HOOK = command('spawn-hook.cjs')
+const STATUS = command('status-line.cjs')
+/**
+ * session-settings.json exactly as release 1.4.0 writes it: captured from writeSessionSettings
+ * at cff52ac (before any chat code; written to a temp folder, its content pasted here). Only the
+ * two commands, which name this checkout and the runtime, are interpolated (HOOK, STATUS).
+ */
+const SETTINGS_1_4_0 = `{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "PostToolBatch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}",
+            "async": true
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ],
+    "PostModelSwitch": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${HOOK}"
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "${STATUS}"
+  }
+}`
+
+const CHAT_ID = '00000000-0000-4000-8000-000000000001'
+const CHAT = chatHookEntries({ port: 51234, token: 'ab'.repeat(24), id: CHAT_ID })
+
+describe('the session settings file with the chat view off: release 1.4.0, byte for byte', () => {
+  it('sessionSettingsJson with no chat hooks is the 1.4.0 file', () => {
+    expect(sessionSettingsJson(REPO, RUNTIME, null)).toBe(SETTINGS_1_4_0)
+    expect(sessionSettingsJson(REPO, RUNTIME)).toBe(SETTINGS_1_4_0)
+  })
+
+  it('writeSessionSettings writes exactly that (and with chat null, as before)', () => {
+    expect(readFileSync(writeSessionSettings(REPO, tempDir(), RUNTIME), 'utf8')).toBe(SETTINGS_1_4_0)
+    expect(readFileSync(writeSessionSettings(REPO, tempDir(), RUNTIME, null), 'utf8')).toBe(SETTINGS_1_4_0)
+  })
+})
+
+describe('the session settings file with chat hooks', () => {
+  it('appends each chat hook as its own group after the game\'s, which keep their place and bytes', () => {
+    const off = JSON.parse(SETTINGS_1_4_0)
+    const on = JSON.parse(sessionSettingsJson(REPO, RUNTIME, CHAT))
+    expect(on.statusLine).toEqual(off.statusLine)
+    for (const [event, groups] of Object.entries<any[]>(off.hooks)) {
+      expect(on.hooks[event][0], event).toEqual(groups[0])
+      if (CHAT[event]) {
+        expect(on.hooks[event], event).toHaveLength(2)
+        expect(on.hooks[event][1], event).toEqual(CHAT[event])
+      } else {
+        expect(on.hooks[event], event).toHaveLength(1)
+      }
+    }
+    // the chat-only events: one group, the chat's
+    expect(on.hooks.MessageDisplay).toEqual([CHAT.MessageDisplay])
+    expect(on.hooks.SubagentStart).toEqual([CHAT.SubagentStart])
+    // the game's events first, in their order
+    expect(Object.keys(on.hooks).slice(0, Object.keys(off.hooks).length)).toEqual(Object.keys(off.hooks))
+  })
+
+  it('writing twice gives the same bytes; with the chat hooks and then without, the 1.4.0 bytes again', () => {
+    const dir = tempDir()
+    const a = readFileSync(writeSessionSettings(REPO, dir, RUNTIME, CHAT), 'utf8')
+    const b = readFileSync(writeSessionSettings(REPO, dir, RUNTIME, CHAT), 'utf8')
+    expect(b).toBe(a)
+    expect(JSON.parse(a)).toEqual(JSON.parse(sessionSettingsJson(REPO, RUNTIME, CHAT)))
+    expect(readFileSync(writeSessionSettings(REPO, dir, RUNTIME, null), 'utf8')).toBe(SETTINGS_1_4_0)
+  })
+})
+
+describe('the terminal manager and the chat view', () => {
+  const settingsOf = (userDataDir: string) => readFileSync(join(userDataDir, 'session-settings.json'), 'utf8')
+  function chatManager(state: () => any) {
+    const pty = fakePty()
+    const userDataDir = tempDir()
+    const sent: any[] = []
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: (c: string, p: any) => sent.push([c, p]), pty, killTree: () => {}, chat: { state } })
+    return { pty, userDataDir, terms, sent }
+  }
+
+  it('off: terminals carry no chat key, the settings file has no chat hook (as today)', () => {
+    const plain = manager(fakePty(), () => {})
+    const { terms, userDataDir } = chatManager(() => ({ on: false }))
+    const a = plain.create({})
+    const b = terms.create({})
+    const shell = terms.create({ tool: 'shell' })
+    const strip = (t: any) => ({ ...t, id: '', sessionId: '', cwd: '', project: '', createdAt: 0 })
+    expect(strip(b)).toEqual(strip(a))
+    expect('chat' in b).toBe(false)
+    expect('chat' in shell).toBe(false)
+    expect(terms.list().every((t: any) => !('chat' in t))).toBe(true)
+    expect(settingsOf(userDataDir)).not.toContain('/chat/')
+    expect(JSON.parse(settingsOf(userDataDir)).hooks.MessageDisplay).toBeUndefined()
+  })
+
+  it('the default (no chat option) is off', () => {
+    const terms = manager(fakePty(), () => {})
+    expect('chat' in terms.create({})).toBe(false)
+  })
+
+  it('off: redrawForChat (Task 5.2) exists but does nothing; resizes are 1.4.0\'s; only chatHost.redraw calls it, after its off check', () => {
+    vi.useFakeTimers()
+    try {
+      const log: string[] = []
+      const terms = manager(fakePty(log), () => {})
+      const t = terms.create({})
+      terms.resize(t.id, 100, 30)
+      terms.resize(t.id, 100, 30)
+      expect(typeof terms.redrawForChat).toBe('function')
+      expect(terms.redrawForChat(t.id)).toBe(false)
+      vi.advanceTimersByTime(1000)
+      terms.resize(t.id, 101, 30)
+      expect(log.filter(l => l.startsWith('resize'))).toEqual(['resize 100 100x30', 'resize 100 101x30'])
+      const host = readFileSync(join(REPO, 'electron', 'chatHost.cjs'), 'utf8')
+      const redraw = host.slice(host.indexOf('function redraw('), host.indexOf('terminals.redrawForChat('))
+      expect(redraw).toMatch(/if \(!st\.on\) return \{ ok: false, reason: 'off' \}/)
+    } finally { vi.useRealTimers() }
+  })
+
+  /** the --settings file a session was launched with */
+  const launchedWith = (pty: ReturnType<typeof fakePty>) => { const a = pty.spawned.at(-1)!.args; return a[a.indexOf('--settings') + 1] }
+
+  it('on with hooks: a Claude terminal is armed and launched with its own chat settings file; a shell has no chat key', () => {
+    const { terms, userDataDir, pty } = chatManager(() => ({ on: true, hooks: CHAT, version: '2.1.323' }))
+    expect(terms.create({}).chat).toBe('armed')
+    const file = launchedWith(pty)
+    expect(path.basename(file)).toMatch(/^session-settings-chat-[0-9a-f]{12}\.json$/)
+    expect(path.dirname(file)).toBe(userDataDir)
+    expect(readFileSync(file, 'utf8')).toBe(sessionSettingsJson(REPO, process.execPath, CHAT))
+    expect('chat' in terms.create({ tool: 'shell' })).toBe(false)
+  })
+
+  it('on without hooks (a version not checked, or still starting): unarmed with the reason, launched with the 1.4.0 file', () => {
+    let state: any = { on: true, hooks: null, reason: 'version', version: '2.0.9' }
+    const { terms, pty, userDataDir } = chatManager(() => state)
+    expect(terms.create({}).chat).toBe('version')
+    expect(launchedWith(pty)).toBe(join(userDataDir, 'session-settings.json'))
+    state = { on: true, hooks: null, reason: 'starting' }
+    expect(terms.create({}).chat).toBe('starting')
+  })
+
+  it('a file a session was launched with is never written again (review I4): toggles change which file a new session gets', () => {
+    let state: any = { on: false }
+    const { terms, userDataDir, pty } = chatManager(() => state)
+    const plainFile = join(userDataDir, 'session-settings.json')
+    terms.create({})
+    expect(launchedWith(pty)).toBe(plainFile)
+    const plain = readFileSync(plainFile, 'utf8')
+    expect(plain).toBe(sessionSettingsJson(REPO, process.execPath, null))
+    const writes: string[] = []
+    const realWrite = fs.writeFileSync
+    const spy = vi.spyOn(fs, 'writeFileSync').mockImplementation(((p: any, ...rest: any[]) => { writes.push(String(p)); return (realWrite as any)(p, ...rest) }) as any)
+    try {
+      state = { on: true, hooks: CHAT, version: '2.1.323' }
+      terms.refreshSettings()
+      const first = terms.create({})
+      const chatFile = launchedWith(pty)
+      expect(chatFile).not.toBe(plainFile)
+      terms.create({})
+      expect(launchedWith(pty)).toBe(chatFile) // the same hooks: the same file, not written again
+      state = { on: true, hooks: null, reason: 'version' }
+      terms.refreshSettings()
+      const second = terms.create({})
+      expect(launchedWith(pty)).toBe(plainFile)
+      expect(terms.list().find((t: any) => t.id === first.id).chat).toBe('armed')
+      expect(second.chat).toBe('version')
+      state = { on: false }
+      terms.refreshSettings()
+      terms.create({})
+      expect(terms.list().every((t: any) => !('chat' in t))).toBe(true)
+      // a new endpoint (other port and token): another file; the first one is left as it is
+      state = { on: true, hooks: chatHookEntries({ port: 5555, token: 'cd'.repeat(24), id: CHAT_ID }) }
+      terms.create({})
+      expect(launchedWith(pty)).not.toBe(chatFile)
+      expect(readFileSync(chatFile, 'utf8')).toBe(sessionSettingsJson(REPO, process.execPath, CHAT))
+    } finally { spy.mockRestore() }
+    // the 1.4.0 file was never written again, and every chat file was written once (to a temp name, then renamed)
+    const settingsWrites = writes.filter(w => path.basename(w).startsWith('session-settings'))
+    expect(settingsWrites.filter(w => path.basename(w) === 'session-settings.json')).toEqual([])
+    expect(settingsWrites.every(w => /session-settings-chat-[0-9a-f]{12}\.json\.\d+\.tmp$/.test(path.basename(w)))).toBe(true)
+    expect(settingsWrites).toHaveLength(2)
+    expect(readFileSync(plainFile, 'utf8')).toBe(plain)
+    expect(fs.readdirSync(userDataDir).filter(n => n.endsWith('.tmp'))).toEqual([])
+  })
+
+  it('refreshSettings writes nothing; it broadcasts the list (so the page learns what changed)', () => {
+    let state: any = { on: false }
+    const { terms, sent, userDataDir } = chatManager(() => state)
+    terms.create({})
+    const before = settingsOf(userDataDir)
+    const files = fs.readdirSync(userDataDir).sort()
+    const n = sent.length
+    state = { on: true, hooks: CHAT }
+    terms.refreshSettings()
+    expect(sent.length).toBe(n + 1)
+    expect(sent.at(-1)[0]).toBe('terminals:list')
+    expect(settingsOf(userDataDir)).toBe(before)
+    expect(fs.readdirSync(userDataDir).sort()).toEqual(files)
+  })
+
+  it('chat settings files left by an earlier run go when this run writes its first one (never while off)', () => {
+    const userDataDir = tempDir()
+    fs.writeFileSync(join(userDataDir, 'session-settings-chat-0123456789ab.json'), '{}')
+    fs.writeFileSync(join(userDataDir, 'session-settings-chat-0123456789ab.json.42.tmp'), '{')
+    let state: any = { on: false }
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty: fakePty(), killTree: () => {}, chat: { state: () => state } })
+    terms.create({})
+    expect(fs.readdirSync(userDataDir).filter(n => n.startsWith('session-settings-chat-'))).toHaveLength(2)
+    state = { on: true, hooks: CHAT }
+    terms.create({})
+    expect(fs.readdirSync(userDataDir).filter(n => n.startsWith('session-settings-chat-'))).toHaveLength(1)
+  })
+
+  it('a chat settings file that cannot be renamed into place never keeps a session shut (re-review I-1): the 1.4.0 file, unarmed, logged once without a path', () => {
+    const { terms, pty, userDataDir } = chatManager(() => ({ on: true, hooks: CHAT, version: '2.1.323' }))
+    const said: string[] = []
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(((...a: any[]) => { said.push(a.join(' ')) }) as any)
+    const rename = vi.spyOn(fs, 'renameSync').mockImplementation((() => { throw Object.assign(new Error('EPERM: operation not permitted'), { code: 'EPERM' }) }) as any)
+    try {
+      const a = terms.create({})
+      expect(a.chat).toBe('unarmed')
+      expect(launchedWith(pty)).toBe(join(userDataDir, 'session-settings.json'))
+      expect(readFileSync(join(userDataDir, 'session-settings.json'), 'utf8')).toBe(sessionSettingsJson(REPO, process.execPath, null))
+      const b = terms.create({})
+      expect(b.chat).toBe('unarmed')
+      expect(rename.mock.calls.length).toBe(6) // two creates, three tries each
+      expect(terms.armedCount()).toBe(0)
+    } finally { rename.mockRestore(); logSpy.mockRestore() }
+    const about = said.filter(s => /settings file could not be written/.test(s))
+    expect(about).toEqual([expect.stringContaining('(EPERM)')])
+    expect(about[0]).not.toContain(userDataDir)
+    expect(about[0]).not.toMatch(/[\\/]/)
+    // no temporary file is left behind
+    expect(fs.readdirSync(userDataDir).filter(n => n.endsWith('.tmp'))).toEqual([])
+    // the next session, once the file can be written, is armed
+    const c = terms.create({})
+    expect(c.chat).toBe('armed')
+    expect(path.basename(launchedWith(pty))).toMatch(/^session-settings-chat-[0-9a-f]{12}\.json$/)
+  })
+
+  it('a rename held for a moment (EBUSY once) still arms; a write that fails (ENOSPC) opens the session unarmed', () => {
+    const one = chatManager(() => ({ on: true, hooks: CHAT }))
+    const realRename = fs.renameSync
+    let left = 1
+    const rename = vi.spyOn(fs, 'renameSync').mockImplementation(((a: any, b: any) => { if (left-- > 0) throw Object.assign(new Error('busy'), { code: 'EBUSY' }); return (realRename as any)(a, b) }) as any)
+    try { expect(one.terms.create({}).chat).toBe('armed') } finally { rename.mockRestore() }
+    const two = chatManager(() => ({ on: true, hooks: CHAT }))
+    const realWrite = fs.writeFileSync
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    const write = vi.spyOn(fs, 'writeFileSync').mockImplementation(((p: any, ...rest: any[]) => { if (/session-settings-chat-/.test(String(p))) throw Object.assign(new Error('no space'), { code: 'ENOSPC' }); return (realWrite as any)(p, ...rest) }) as any)
+    try {
+      const s = two.terms.create({})
+      expect(s.chat).toBe('unarmed')
+      expect(launchedWith(two.pty)).toBe(join(two.userDataDir, 'session-settings.json'))
+    } finally { write.mockRestore(); logSpy.mockRestore() }
+  })
+
+  it('armedCount counts the running armed sessions only', () => {
+    const state: any = { on: true, hooks: CHAT }
+    const { terms, pty } = chatManager(() => state)
+    const a = terms.create({})
+    terms.create({})
+    expect(terms.armedCount()).toBe(2)
+    const pid = [...pty.procs.keys()][0]
+    pty.exit(pid)
+    expect(terms.armedCount()).toBe(1)
+    terms.close(a.id)
+    expect(terms.armedCount()).toBe(1)
+  })
+})
+
+describe('the terminal manager and the chat composer (Phase 3)', () => {
+  /** A pty that records every write with the fake clock's time */
+  function recordingPty() {
+    const base = fakePty()
+    const writes: { pid: number; data: string; at: number }[] = []
+    return {
+      ...base,
+      writes,
+      spawn(command: string, args: string[]) {
+        const p = base.spawn(command, args)
+        return { ...p, write(d: string) { writes.push({ pid: p.pid, data: d, at: Date.now() }) } }
+      },
+    }
+  }
+  /** What a keyboard write, an Enter, an Esc and a side-box send (one line, then three lines) write, and when */
+  async function play(chat: Record<string, unknown> | undefined) {
+    const pty = recordingPty()
+    const userDataDir = tempDir()
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {}, ...(chat ? { chat } : {}) })
+    const t = terms.create({})
+    const t0 = Date.now()
+    terms.write(t.id, 'ab')
+    terms.write(t.id, '\r')
+    terms.write(t.id, '\x1b')
+    expect(terms.sendInstruction(t.id, ' hello ')).toEqual({ ok: true })
+    await vi.advanceTimersByTimeAsync(500)
+    expect(terms.sendInstruction(t.id, 'one\r\ntwo\nthree')).toEqual({ ok: true })
+    await vi.advanceTimersByTimeAsync(500)
+    return { writes: pty.writes.map(w => ({ data: w.data, at: w.at - t0 })), terms, t }
+  }
+  /** release 1.4.0's bytes and times for that sequence */
+  const PINNED = [
+    { data: 'ab', at: 0 }, { data: '\r', at: 0 }, { data: '\x1b', at: 0 },
+    { data: 'hello', at: 0 }, { data: '\r', at: 120 },
+    { data: '\x1b[200~one\ntwo\nthree\x1b[201~', at: 500 }, { data: '\r', at: 620 },
+  ]
+
+  it('off, or no onInput, or a session not armed: the same bytes at the same times as 1.4.0, onInput never called', async () => {
+    vi.useFakeTimers()
+    try {
+      const onInput = vi.fn()
+      expect((await play(undefined)).writes).toEqual(PINNED)
+      expect((await play({ state: () => ({ on: false }) })).writes).toEqual(PINNED)
+      // on but not armed (no hooks: the version gate, starting): onInput is there and never called
+      expect((await play({ state: () => ({ on: true, hooks: null, reason: 'version' }), onInput })).writes).toEqual(PINNED)
+      expect(onInput).not.toHaveBeenCalled()
+    } finally { vi.useRealTimers() }
+  })
+
+  it('armed: onInput hears every keyboard write (with the asking flag before it) and the side box, after the same writes', async () => {
+    vi.useFakeTimers()
+    try {
+      const calls: unknown[][] = []
+      const { writes } = await play({ state: () => ({ on: true, hooks: CHAT }), onInput: (...a: unknown[]) => calls.push(a) })
+      expect(writes).toEqual(PINNED)
+      const id = calls[0][0]
+      expect(calls).toEqual([
+        [id, 'ab', 'keyboard', undefined, false], [id, '\r', 'keyboard', undefined, false], [id, '\x1b', 'keyboard', undefined, false],
+        [id, null, 'side', 'typed'], [id, null, 'side', 'enter'],
+        [id, null, 'side', 'typed'], [id, null, 'side', 'enter'],
+      ])
+    } finally { vi.useRealTimers() }
+  })
+
+  it('an onInput that throws changes nothing for the terminal', async () => {
+    vi.useFakeTimers()
+    try {
+      const { writes } = await play({ state: () => ({ on: true, hooks: CHAT }), onInput: () => { throw new Error('host gone') } })
+      expect(writes).toEqual(PINNED)
+    } finally { vi.useRealTimers() }
+  })
+
+  it('review I-5: while a chat send is between its text and its Enter, the side box refuses (busy) and writes nothing; off or unarmed, busy is never asked', async () => {
+    vi.useFakeTimers()
+    try {
+      let busy = true
+      const asked: string[] = []
+      const chat = { state: () => ({ on: true, hooks: CHAT }), onInput: () => {}, busy: (id: string) => { asked.push(id); return busy } }
+      const pty = recordingPty()
+      const userDataDir = tempDir()
+      const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {}, chat })
+      const t = terms.create({})
+      expect(terms.sendInstruction(t.id, '/rename 로그인 수정')).toEqual({ ok: false, reason: 'busy' })
+      await vi.advanceTimersByTimeAsync(300)
+      expect(pty.writes).toEqual([])
+      busy = false
+      expect(terms.sendInstruction(t.id, '/rename 로그인 수정')).toEqual({ ok: true })
+      await vi.advanceTimersByTimeAsync(300)
+      expect(pty.writes.map(w => w.data)).toEqual(['/rename 로그인 수정', '\r'])
+      expect(asked).toEqual([t.id, t.id])
+      // off, or an unarmed session: 1.4.0 (busy never asked, the pinned bytes and times)
+      const never = vi.fn(() => true)
+      expect((await play({ state: () => ({ on: false }), onInput: () => {}, busy: never })).writes).toEqual(PINNED)
+      expect((await play({ state: () => ({ on: true, hooks: null, reason: 'version' }), onInput: () => {}, busy: never })).writes).toEqual(PINNED)
+      expect(never).not.toHaveBeenCalled()
+    } finally { vi.useRealTimers() }
+  })
+
+  it('review m9: a session launched armed, the chat turned off since: its input is not reported any more', async () => {
+    vi.useFakeTimers()
+    try {
+      let state: any = { on: true, hooks: CHAT }
+      const calls: unknown[][] = []
+      const pty = recordingPty()
+      const userDataDir = tempDir()
+      const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {}, chat: { state: () => state, onInput: (...a: unknown[]) => calls.push(a) } })
+      const t = terms.create({})
+      terms.write(t.id, 'a')
+      expect(calls).toHaveLength(1)
+      state = { on: false }
+      terms.write(t.id, 'b')
+      terms.sendInstruction(t.id, 'hi')
+      await vi.advanceTimersByTimeAsync(300)
+      expect(calls).toHaveLength(1)
+      expect(pty.writes.map(w => w.data)).toEqual(['a', 'b', 'hi', '\r'])
+    } finally { vi.useRealTimers() }
+  })
+
+  it('review I-4: each armed session gets a settings file of its own whose hooks name its terminal; it goes when the tab closes', () => {
+    const { chatHookEntries: entries } = require('../electron/chatHooks.cjs')
+    const hooks = (id: string) => entries({ port: 51234, token: 'ab'.repeat(24), id })
+    const pty = fakePty()
+    const userDataDir = tempDir()
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {}, chat: { state: () => ({ on: true, hooks }) } })
+    const launched = () => { const a = pty.spawned.at(-1)!.args; return a[a.indexOf('--settings') + 1] }
+    const a = terms.create({})
+    const fa = launched()
+    const b = terms.create({})
+    const fb = launched()
+    expect(fa).not.toBe(fb)
+    expect(a.chat).toBe('armed')
+    expect(readFileSync(fa, 'utf8')).toBe(sessionSettingsJson(REPO, process.execPath, hooks(a.id)))
+    expect(JSON.parse(readFileSync(fb, 'utf8')).hooks.PermissionRequest[1].hooks[0].url).toContain('/' + b.id + '/PermissionRequest')
+    terms.close(a.id)
+    expect(existsSync(fa)).toBe(false)
+    expect(existsSync(fb)).toBe(true)
+    // the 1.4.0 file is not written for armed sessions
+    expect(existsSync(join(userDataDir, 'session-settings.json'))).toBe(false)
+  })
+
+  it('typeForChat: only a running, armed Claude Code terminal; nothing else written; clearAsking clears the question', () => {
+    const pty = recordingPty()
+    const userDataDir = tempDir()
+    const sent: any[] = []
+    let state: any = { on: true, hooks: CHAT }
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: (c: string, p: any) => sent.push([c, p]), pty, killTree: () => {}, chat: { state: () => state } })
+    const armed = terms.create({})
+    const shell = terms.create({ tool: 'shell' })
+    state = { on: false }
+    const plain = terms.create({})
+    expect(terms.typeForChat(armed.id, 'x')).toBe(true)
+    expect(terms.typeForChat(shell.id, 'x')).toBe(false)
+    expect(terms.typeForChat(plain.id, 'x')).toBe(false)
+    expect(terms.typeForChat('nope', 'x')).toBe(false)
+    expect(terms.typeForChat(armed.id, 42 as any)).toBe(false)
+    expect(pty.writes.map(w => w.data)).toEqual(['x'])
+    // a question on screen (the trust question), cleared from the chat (Phase 4)
+    const pid = [...pty.procs.keys()][0]
+    pty.data(pid, 'Do you trust the files in this folder?\n❯ 1. Yes, proceed\n')
+    expect(terms.list().find((t: any) => t.id === armed.id).asking).toBe(true)
+    const before = sent.length
+    terms.clearAsking(armed.id)
+    expect(terms.list().find((t: any) => t.id === armed.id).asking).toBe(false)
+    expect(sent.length).toBe(before + 1)
+    terms.clearAsking(armed.id)
+    expect(sent.length).toBe(before + 1)
+    // exited: no more
+    pty.exit(pid)
+    expect(terms.typeForChat(armed.id, 'x')).toBe(false)
   })
 })

@@ -1,0 +1,27 @@
+❯ Read src/math.js, then add a mul(a, b) function after sub and export it.
+
+  Read 1 file
+
+● Update(src\math.js)
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Edit file
+ src\math.js
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+  6    return a - b
+  7  }
+  8
+  9 -module.exports = { add, sub }
+  9 +function mul(a, b) {
+ 10 +  return a * b
+ 11 +}
+ 12 +
+ 13 +module.exports = { add, sub, mul }
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Do you want to make this edit to math.js?
+ ❯ 1. Yes
+   2. Yes, and switch to accept edits (auto-approve file edits and common file commands) for this
+      session (shift+tab)
+   3. No
+
+ Esc to cancel · Tab to amend

@@ -4,7 +4,7 @@
  * and reaches every window; there is no "save" button.
  */
 
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { bridge, type AppSettings, type SettingsPatch } from '../desktop'
 import { useSettings, changeSettings } from '../settingsStore'
 import { cloudErrorText, useCloud } from '../cloudStore'
@@ -13,10 +13,10 @@ import { t, tSense, locale } from '../i18n'
 import { isMac, modLabel, platformWord } from '../platform'
 import { termFontLabel } from '../termFont'
 import { setTextStep, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, useTextStep, type TextStep } from '../textSize'
-import { settingsSections } from '../features'
+import { CHAT_VIEW, settingsSections } from '../features'
 import { workModeKeyLabel } from '../workMode'
 
-type Section = 'notify' | 'privacy' | 'session' | 'tools' | 'app' | 'data'
+export type Section = 'notify' | 'privacy' | 'session' | 'tools' | 'app' | 'data'
 
 /** Claude Code's own mode names (code.claude.com/docs/en/permission-modes), one line on what each does; shown through t() */
 const PERMISSION_HINT: Record<AppSettings['session']['permissionMode'], string> = {
@@ -118,11 +118,34 @@ function Choice<T extends string>({ label, hint, value, options, onChange }: { l
   )
 }
 
-const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback?: () => void }> = ({ onClose, version, onFeedback }) => {
+/** The 채팅 보기 help's five lines (Phase 6, Task 6.8): what the chat is, what a send does, what the panel knows, what a
+ *  preview tells a site, what an unchecked version turns off. No game word (tests/work-mode.test.ts) */
+const CHAT_HELP = [
+  '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요',
+  '보낸 말은 터미널 입력란에 그대로 들어가요. 확실하지 않으면 보내지 않고 알려 줘요',
+  '변경 사항은 기록에 남은 수정만 보여 줘요. 명령으로 바꾼 파일은 터미널에서 확인해 주세요',
+  '링크 미리보기는 켜야만 가져와요. 가져올 때 그 사이트는 누군가 링크를 열었다는 걸 알 수 있어요',
+  '확인하지 않은 Claude Code 버전에서는 버튼이 꺼지고, 이상하면 터미널로 보면 돼요',
+]
+
+const ChatHelp: React.FC<{ open: boolean; onToggle: () => void }> = ({ open, onToggle }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  // (opened from the chat's note: in view)
+  useEffect(() => { if (open) ref.current?.scrollIntoView({ block: 'nearest' }) }, [open])
+  return (
+    <div className="set-help" ref={ref}>
+      <button type="button" className="set-help-toggle" aria-expanded={open} aria-controls="set-chat-help" onClick={onToggle}>{t('채팅 보기란?')}</button>
+      {open && <ul className="set-help-lines" id="set-chat-help">{CHAT_HELP.map(k => <li key={k}>{t(k)}</li>)}</ul>}
+    </div>
+  )
+}
+
+const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback?: () => void; at?: { section: Section; help?: boolean } }> = ({ onClose, version, onFeedback, at }) => {
   const s = useSettings()
   const cloud = useCloud()
   const textStep = useTextStep()
-  const [section, setSection] = useState<Section>('notify')
+  const [section, setSection] = useState<Section>(at?.section ?? 'notify')
+  const [help, setHelp] = useState(at?.help === true)
   const [note, setNote] = useState<string | null>(null)
   const set = <G extends keyof AppSettings>(group: G, part: Partial<AppSettings[G]>) => { changeSettings({ [group]: part } as SettingsPatch) }
 
@@ -189,6 +212,10 @@ const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback
             <Choice label="Permission mode" hint={t(PERMISSION_HINT[s.session.permissionMode])} value={s.session.permissionMode} options={[['', t('기본값')], ['default', 'Manual'], ['acceptEdits', 'Accept edits'], ['plan', 'Plan'], ['auto', 'Auto']]} onChange={v => set('session', { permissionMode: v })} />
             <Toggle label={t('세션 닫기 전 확인')} hint={t('끄면 × 한 번으로 바로 닫혀요')} on={s.session.confirmClose} onChange={v => set('session', { confirmClose: v })} />
             <Toggle label={t('시작할 때 세션 다시 열기')} hint={t('앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요')} on={s.session.restoreOnStart} onChange={v => set('session', { restoreOnStart: v })} />
+            {/* The chat view (a preview): only behind the features.json switch (src/features.ts) */}
+            {CHAT_VIEW && <Toggle label={t('채팅으로 보기 (미리보기)')} hint={t('Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요')} on={s.session.chatView} onChange={v => set('session', { chatView: v })} />}
+            {CHAT_VIEW && <Toggle label={t('링크 미리보기 (채팅)')} hint={t('채팅에 나온 링크의 제목과 그림을 가져와 보여 줘요. 가져올 때 링크 주소 전체가 그 사이트로 가서, 누군가 그 링크를 열었다는 것도 알려져요. 물음표나 긴 값이 붙은 주소, 내 PC나 사내망 주소는 가져오지 않아요')} on={s.session.linkPreviews} disabled={!s.session.chatView} onChange={v => set('session', { linkPreviews: v })} />}
+            {CHAT_VIEW && <ChatHelp open={help} onToggle={() => setHelp(h => !h)} />}
           </>}
 
           {section === 'tools' && <ToolsSection s={s} set={part => set('session', part)} />}

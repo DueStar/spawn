@@ -1,0 +1,19 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Script and comments</title>
+<!-- <meta property="og:title" content="From a comment"> -->
+<script>
+  var tpl = '<meta property="og:title" content="From a script">';
+  document.write('<meta property="og:description" content="Also from a script">');
+</script>
+<script type="application/ld+json">{"name": "<meta property=\"og:image\" content=\"/bad.png\">"}</script>
+<style>/* <meta property="og:site_name" content="From a style"> */ body { color: black }</style>
+<noscript><meta property="og:description" content="From noscript"></noscript>
+<template><meta property="og:title" content="From a template"></template>
+<meta property="og:title" content="The real title">
+<meta property="og:description" content="The real description">
+</head>
+<body><p>Only the last two og tags count.</p></body>
+</html>

@@ -17,6 +17,7 @@ import { rowTooltip, sessionHeaderParts } from '../src/sessionList'
 import { setPlatformForTest } from '../src/platform'
 import DICTS from '../src/locales'
 import part from '../src/locales/workMode'
+import { GAME_WORDS } from './helpers'
 
 const require = createRequire(import.meta.url)
 const { DEFAULTS, sanitize, applyPatch, toastAllowed } = require('../electron/settings.cjs')
@@ -218,7 +219,7 @@ describe('on a Mac (the platform passed explicitly)', () => {
 })
 
 describe('the words', () => {
-  const GAME = /포켓몬|몬스터볼|도감|박스|잡았|포획|파티|트레이너|Lv\.|\bHP\b|Pok[eé]|Poké|Pokédex|ポケモン|図鑑|ボックス|ゲット|トレーナー|モンスターボール/i
+  const GAME = GAME_WORDS
   const everyWord = [...WORK_MODE_UI_TEXT, ...WORK_MODE_SETTING_TEXT]
 
   it('every one is in Korean, English and Japanese', () => {
@@ -290,5 +291,82 @@ describe('the words', () => {
   it('the game-word check itself catches the words it is for', () => {
     for (const w of ['Lv.17 모래두지', 'HP 12', '도감', 'Pokédex', 'ポケモン', '포켓몬을 잡았어요']) expect(w).toMatch(GAME)
     expect('컨텍스트').not.toMatch(GAME)
+  })
+})
+
+describe('the chat view in 업무 모드', () => {
+  it('no string of it names the game, in any language (the name comes in only through {name})', async () => {
+    const chat = (await import('../src/locales/chat')).default
+    const keys = Object.keys(chat.en)
+    expect(keys.length).toBeGreaterThan(60)
+    for (const ko of keys) {
+      for (const text of [ko, chat.en[ko], chat.ja[ko]]) expect(text, text).not.toMatch(GAME_WORDS)
+    }
+  })
+
+  it('who answers is a glyph and 에이전트: no picture, no name of a Pokémon', async () => {
+    const { chatWho } = await import('../src/chat/lensMode')
+    const who = chatWho({ name: '모래두지', sprite: '/sprites/pokemon/icon/27.png', art: '/sprites/pokemon/art/27.png' }, true)
+    expect(who).toEqual({ picture: 'glyph', name: '에이전트' })
+  })
+
+  it('the picture keeps its box in both modes (no layout jump when 업무 모드 toggles)', () => {
+    const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'chat.css'), 'utf8')
+    expect(css).toMatch(/\.chat-pic\.head \{[^}]*width: 22px; height: 22px;/)
+    expect(css).toMatch(/\.chat-pic\.empty \{[^}]*width: 96px; height: 96px;/)
+  })
+
+  // Phase 5: the game's words in the chat (the turn summary's steps, later the wild rows) live apart, in
+  // src/locales/chatGame.ts, and only parts drawn outside 업무 모드 use them
+  it('chatGame.ts\'s words are used only behind a 업무 모드 guard (the foot\'s steps span); chat.ts has none of them', async () => {
+    const game = (await import('../src/locales/chatGame')).default
+    const chat = (await import('../src/locales/chat')).default
+    const keys = Object.keys(game.en)
+    expect(keys).toEqual(expect.arrayContaining(['{n}걸음', '이 턴 동안 {name}{iga} 걸은 걸음']))
+    for (const k of keys) {
+      expect(game.ja[k], k).toBeTruthy()
+      expect(chat.en[k], k).toBeUndefined()
+      expect(chat.ja[k], k).toBeUndefined()
+    }
+    // ({n}걸음 is also the 도감 / 박스 views' word, with the same translations: those views are not shown in 업무 모드)
+    const dex = (await import('../src/locales/dex')).default as { en: Record<string, string>; ja: Record<string, string> }
+    for (const k of keys) if (dex.en[k]) { expect(game.en[k]).toBe(dex.en[k]); expect(game.ja[k]).toBe(dex.ja[k]) }
+    // every chat source that names one of them, and where
+    const { readdirSync, statSync } = await import('node:fs')
+    const SRC = join(__dirname, '..', 'src')
+    const walk = (d: string): string[] => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
+    const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:'"`\\])\/\/[^\n]*/g, '$1')
+    const chatFiles = [...walk(join(SRC, 'chat')), ...walk(join(SRC, 'components', 'chat')), join(SRC, 'components', 'ChatView.tsx'), join(SRC, 'Widget.tsx')]
+    const users = chatFiles.filter(f => /\.tsx?$/.test(f))
+      .filter(f => { const s = strip(readFileSync(f, 'utf8')); return keys.some(k => s.includes(`'${k}'`)) })
+      .map(f => f.slice(SRC.length + 1).replace(/\\/g, '/'))
+    expect(users).toEqual(['components/chat/TurnFoot.tsx', 'components/chat/WildRow.tsx'])
+    // the wild row (Task 5.7): ChatView gives it no entries in 업무 모드, and it draws nothing there itself, before any word
+    const wild = strip(readFileSync(join(SRC, 'components', 'chat', 'WildRow.tsx'), 'utf8'))
+    const guard = wild.indexOf('if (workMode) return null')
+    expect(guard).toBeGreaterThan(0)
+    expect(wild.indexOf("t('")).toBeGreaterThan(guard)
+    expect(wild.indexOf('spriteUrl(')).toBeGreaterThan(guard)
+    expect(keys).toEqual(expect.arrayContaining(['야생의 {name}{iga} 나타났다', '잡았다', '놓쳤다', '새로 등록', '색이 다른']))
+    const foot = strip(readFileSync(join(SRC, 'components', 'chat', 'TurnFoot.tsx'), 'utf8'))
+    const guarded = /\{!workMode && steps !== null && \(([\s\S]*?)\n\s*\)\}/.exec(foot)
+    expect(guarded).toBeTruthy()
+    const outside = foot.replace(guarded![0], '')
+    for (const k of keys) expect(outside, k).not.toContain(`'${k}'`)
+    expect(guarded![1]).toContain("'{n}걸음'")
+    expect(guarded![1]).toContain("'이 턴 동안 {name}{iga} 걸은 걸음'")
+  })
+})
+
+describe('the chat composer in 업무 모드 (Phase 3)', () => {
+  it('its own placeholder, 에이전트에게 지시하기…, in every language; the control row says 컨텍스트 through the side panel\'s barLabel', async () => {
+    const chat = (await import('../src/locales/chat')).default
+    expect(chat.en['에이전트에게 지시하기…']).toBe('Give the agent an instruction…')
+    expect(chat.ja['에이전트에게 지시하기…']).toBe('エージェントに指示する…')
+    const src = readFileSync(join(__dirname, '..', 'src', 'components', 'chat', 'Composer.tsx'), 'utf8')
+    expect(src).toMatch(/workMode \? t\('에이전트에게 지시하기…'\)/)
+    const row = readFileSync(join(__dirname, '..', 'src', 'components', 'chat', 'ControlRow.tsx'), 'utf8')
+    expect(row).toMatch(/label === 'HP' \? 'HP' : t\(label\)/)
+    expect(row).not.toMatch(/'HP'\s*\}|HP[^']*에너지/)
   })
 })
