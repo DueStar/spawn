@@ -13,6 +13,7 @@ import { isCommandText, sendDraft, wellFormed, type SendDeps } from '../src/chat
 import { echoState } from '../src/chat/promptRow'
 import { createOutbox } from '../src/chat/outbox'
 import type { LensStatus } from '../src/chat/types'
+import { maskOf } from './dim-mask'
 
 const require = createRequire(import.meta.url)
 const { isCommand } = require('../electron/chatInput.cjs')
@@ -98,10 +99,38 @@ describe('sendDraft', () => {
 
   it('send refused by main: the bubble goes, nothing left on the prompt row', async () => {
     const t = deps([screen('typed')], { send: { ok: false, reason: 'prompt-busy' } })
-    expect(await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)).toEqual({ ok: false, reason: 'prompt-busy', leftOnPrompt: false })
+    expect(await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)).toEqual({ ok: false, reason: 'prompt-busy', leftOnPrompt: false, row: 'add a mul function' })
     expect(t.calls.map(c => c.fn)).toEqual(['send'])
     expect(t.calls[0].arg.screen).toBe('text')
     expect(t.outbox.entries()).toEqual([])
+  })
+
+  it('1.6.2: with the dim mask, a suggestion goes as `suggestion` and typed text as `typed`', async () => {
+    const sug = screen('after-turn-suggestion').replace(/\n$/, '')
+    const t = deps([sug], { send: { ok: false, reason: 'empty' } })
+    t.d.readDim = () => maskOf(sug, true)
+    await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)
+    expect(t.calls[0].arg.screen).toBe('suggestion')
+    const typed = screen('typed').replace(/\n$/, '')
+    const u = deps([typed], { send: { ok: false, reason: 'prompt-busy' } })
+    u.d.readDim = () => maskOf(typed)
+    expect(await sendDraft({ id: T1, text: 'hi', images: [] }, u.d)).toEqual({ ok: false, reason: 'prompt-busy', leftOnPrompt: false, row: 'add a mul function' })
+    expect(u.calls[0].arg.screen).toBe('typed')
+  })
+
+  it('1.6.2: main\'s prompt-busy or prompt-unknown is logged once with the masked screen and its dim marks (~)', async () => {
+    const typed = screen('typed').replace(/\n$/, '')
+    for (const reason of ['prompt-busy', 'prompt-unknown']) {
+      const t = deps([typed], { send: { ok: false, reason } })
+      const diags: any[] = []
+      t.d.bridge.diag = (p) => { diags.push(p) }
+      t.d.readDim = () => maskOf(typed)
+      await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)
+      expect(diags).toHaveLength(1)
+      expect(diags[0].why).toBe(reason)
+      expect(diags[0].shape).not.toContain('mul')
+      expect(diags[0].shape).toContain('-- dim --')
+    }
   })
 
   it('a slash command: no bubble; command: true', async () => {

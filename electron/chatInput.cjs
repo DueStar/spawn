@@ -202,9 +202,14 @@ function nextDraft(d, ev) {
   return 'unknown'
 }
 
-/** The page's reading of the row with the ledger: may the chat type now? */
+/**
+ * The page's reading of the row with the ledger: may the chat type now? (1.6.2) The page reads which characters are
+ * dim: a row of only dim text is a placeholder or a greyed suggestion, which a paste replaces (`suggestion`), any
+ * normal character is someone's text (`typed`); the screen decides those, whatever the ledger says. Plain `text`
+ * comes from a page that could not read the marks: the ledger decides, as before.
+ */
 function mayType(screen, d) {
-  if (screen === 'empty') return true
+  if (screen === 'empty' || screen === 'suggestion') return true
   if (screen === 'text') return d === 'clean'
   return false
 }

@@ -791,9 +791,10 @@ function createChatHost({
     // (the terminal was nudged less than a second ago: the screen the page read may be mid-repaint)
     const nudged = redrawAt.get(id)
     if (nudged !== undefined && now() - nudged < REDRAW_SETTLE_MS) return { ok: false, reason: 'screen' }
-    const screen = p.screen === 'empty' || p.screen === 'text' ? p.screen : 'unknown'
+    const screen = ['empty', 'suggestion', 'typed', 'text'].includes(p.screen) ? p.screen : 'unknown'
     if (screen === 'unknown') return { ok: false, reason: 'screen' }
-    if (!mayType(screen, c.draft)) return { ok: false, reason: busyReason(c.draft) }
+    // (someone's text on the row, read by its dim marks: busy, whatever the ledger says)
+    if (!mayType(screen, c.draft)) return { ok: false, reason: screen === 'typed' ? 'prompt-busy' : busyReason(c.draft) }
     const text = sanitize(typeof p.text === 'string' ? p.text.slice(0, INPUT_CAPS.chars * 2) : '')
     const tokens = Array.isArray(p.images) ? p.images : null
     if (!tokens) return { ok: false, reason: 'images' }
@@ -979,7 +980,8 @@ function createChatHost({
     diagAt.set(id, now())
     const why = String(p?.why ?? '').replace(/[^a-z-]/g, '').slice(0, 20)
     const shape = String(p?.shape ?? '').replace(/[\p{L}\p{N}]/gu, 'a').slice(0, 3000)
-    log('info', `chat send refused by the page (${why}); the screen's last lines, masked:\n${shape}`)
+    // (1.6.2: also after main's prompt-busy / prompt-unknown, with the row's dim marks under `-- dim --`)
+    log('info', `chat send refused (${why}); the screen's last lines as the page read them, masked:\n${shape}`)
   }
   function refused(kind, r) {
     if (r && r.ok === false && r.reason !== 'empty') log('info', `chat ${kind} refused (${String(r.reason).slice(0, 30)})`)

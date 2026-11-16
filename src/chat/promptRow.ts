@@ -14,9 +14,15 @@
  * Pure: no page, no clock. Only the last 24 lines are looked at.
  */
 
+/**
+ * `typed` (1.6.2), read from the dim mask when one is given: Claude Code draws a placeholder and a greyed suggestion
+ * dim (SGR 2; seen on 2.1.325: `ESC[2mTry "fix lint errors"`, typed text `ESC[mhello`), typed text never. So a row
+ * whose text is all dim is a suggestion nobody typed (`false`), one with any normal character holds someone's text
+ * (`true`). Absent: no mask, or one that does not fit the screen; the ledger in main decides, as before 1.6.2.
+ */
 export type RowVerdict =
   | { kind: 'empty' }
-  | { kind: 'text'; text: string }
+  | { kind: 'text'; text: string; typed?: boolean }
   | { kind: 'unknown'; why: 'no-reader' | 'short' | 'dialog' | 'no-box' }
 
 export interface EchoExpect { head: string; images: number; long: boolean }
@@ -98,7 +104,44 @@ function lastLines(text: string, n: number): string[] {
   return out.reverse()
 }
 
-export function promptRow(screen: string | null): RowVerdict {
+/** One cell of an xterm buffer line, as much of it as dimMask reads (xterm's IBufferCell) */
+export interface DimCell { getChars(): string; getWidth(): number; isDim(): number }
+/** One xterm buffer line, as much of it as dimMask reads (xterm's IBufferLine; pass a reused cell for speed) */
+export interface DimLine { readonly length: number; getCell(x: number): DimCell | undefined }
+
+/**
+ * A buffer line's dim marks, one per UTF-16 code unit of its text as xterm's translateToString(true) gives it
+ * (`len` is that text's length): `d` for a character in a dim cell, `.` for any other. As translateToString does,
+ * a wide character's spacer cell is skipped and an empty cell reads as a space. Padded with `.` (typed: the safe
+ * side) if the cells run short of the text.
+ */
+export function dimMask(line: DimLine, len: number): string {
+  let out = ''
+  for (let x = 0; x < line.length && out.length < len; x++) {
+    const c = line.getCell(x)
+    if (!c) break
+    if (c.getWidth() === 0) continue
+    out += (c.isDim() ? 'd' : '.').repeat((c.getChars() || ' ').length)
+  }
+  return out.slice(0, len).padEnd(len, '.')
+}
+
+/**
+ * The dim mask's lines for the same window lastLines(screen, n) gives, or null when the mask does not fit the screen
+ * (another line count, or a line of another length)
+ */
+function maskWindow(screen: string, dim: string, n: number): string[] | null {
+  const t = screen.split('\n')
+  const m = dim.split('\n')
+  if (t.length !== m.length) return null
+  let end = t.length
+  while (end > 0 && !t[end - 1].replace(/\r$/, '').trim()) end--
+  const start = Math.max(0, end - n)
+  for (let i = start; i < end; i++) if (t[i].replace(/\r$/, '').length !== m[i].length) return null
+  return m.slice(start, end)
+}
+
+export function promptRow(screen: string | null, dim?: string | null): RowVerdict {
   if (typeof screen !== 'string') return { kind: 'unknown', why: 'no-reader' }
   const lines = lastLines(screen, LOOK)
   if (lines.filter(l => l.trim()).length < 3) return { kind: 'unknown', why: 'short' }
@@ -126,7 +169,16 @@ export function promptRow(screen: string | null): RowVerdict {
   if (footer.length > FOOTER_MAX && !agentsPanel(footer) && !(command && footer.length <= COMMAND_FOOTER_MAX && footer.every(l => !l.trim() || /^\s/.test(l)))) {
     return { kind: 'unknown', why: 'no-box' }
   }
-  return text ? { kind: 'text', text } : { kind: 'empty' }
+  if (!text) return { kind: 'empty' }
+  // (1.6.2) any character after the mark or the indent that is not dim: someone's text, not a suggestion
+  const marks = typeof dim === 'string' ? maskWindow(screen, dim, LOOK) : null
+  if (!marks || marks.length !== lines.length) return { kind: 'text', text }
+  let typed = false
+  for (let i = first + 1; i < last && !typed; i++) {
+    const l = lines[i]
+    for (let j = 2; j < l.length; j++) if (marks[i][j] !== 'd' && l[j].trim()) { typed = true; break }
+  }
+  return { kind: 'text', text, typed }
 }
 
 const collapse = (s: string) => s.replace(/\s+/g, ' ').trim()

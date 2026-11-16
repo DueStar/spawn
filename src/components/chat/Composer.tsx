@@ -20,7 +20,7 @@ import type { TerminalInfo } from '../../desktop'
 import { bridge } from '../../desktop'
 import { josa, t } from '../../i18n'
 import { useWorkMode } from '../../settingsStore'
-import { termText } from '../../termMetrics'
+import { termDim, termText } from '../../termMetrics'
 import { createImeTracker, keyAction, mentionAt } from '../../chat/composerKeys'
 import { onChatForget, takeChatFocus, type ChatWho } from '../../chat/lensMode'
 import { baselineOf, outboxFor } from '../../chat/outbox'
@@ -55,6 +55,8 @@ type ChatBridge = NonNullable<typeof bridge>['chat']
 export interface ComposerDeps {
   chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded'>>) | null
   termText(id: string): string | null
+  /** (1.6.2) the same lines' dim marks; absent: none (the ledger decides in main) */
+  termDim?(id: string): string | null
   now(): number
   sleep(ms: number): Promise<void>
 }
@@ -94,7 +96,14 @@ onChatForget(id => {
 const nameVars = (name: string) => ({ name, iga: josa(name, '이가') })
 
 /** What the composer says for a send that did not go (`card`: where the card above it stands, review M8) */
-function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who: ChatWho, card: CardNote = null): Note | null {
+/** The start of what is on the terminal's prompt row, for a note: one line, at most 24 characters */
+function rowQuote(row: string): string {
+  const one = row.replace(/\s+/g, ' ').trim()
+  const cut = [...one]
+  return cut.length > 24 ? `${cut.slice(0, 24).join('').trimEnd()}…` : one
+}
+
+function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who: ChatWho, card: CardNote = null, row?: string): Note | null {
   switch (reason) {
     // a card above the composer waits for its answer (Phase 4): it points there when it can be answered
     // there, to the terminal when only the terminal can, and says so while an answer sent is being worked on
@@ -103,7 +112,10 @@ function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who
       if (card === 'sent') return { key: '보낸 답을 {name}{iga} 처리하는 중이에요. 끝나면 보낼 수 있어요', vars: nameVars(who.name), terminal: true }
       if (card === 'terminal') return { key: '{name}{iga} 답을 기다리고 있어요. 터미널에서 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
       return { key: '{name}{iga} 답을 기다리고 있어요. 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
-    case 'prompt-busy': return { key: '터미널 입력란에 쓰던 글이 있어요. 터미널에서 보내거나 지운 뒤 다시 보내 주세요', terminal: true }
+    // (1.6.2) what is there, quoted: the terminal is hidden behind the chat, so the note shows it
+    case 'prompt-busy': return row?.trim()
+      ? { key: '터미널 입력란에 쓰던 글이 있어요: “{text}”. 터미널에서 보내거나 지운 뒤 다시 보내 주세요', vars: { text: rowQuote(row) }, terminal: true }
+      : { key: '터미널 입력란에 쓰던 글이 있어요. 터미널에서 보내거나 지운 뒤 다시 보내 주세요', terminal: true }
     // the ledger cannot tell a greyed suggestion from typed text: what to do, in the terminal, no restart
     case 'prompt-unknown': return { key: '터미널 입력란 상태를 알 수 없어요. 터미널에서 입력란을 비우거나 한 번 보내면 다시 보낼 수 있어요', terminal: true }
     case 'sending': case 'duplicate': case 'not-in-flight': return { key: '앞의 메시지를 보내는 중이에요' }
@@ -219,6 +231,8 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   const depsFor = (): SendDeps => ({
     bridge: chat!,
     readScreen: deps?.termText ?? termText,
+    // (an injected reader without marks reads without them; the page's own has them)
+    readDim: deps ? deps.termDim : termDim,
     now: deps?.now ?? Date.now,
     sleep: deps?.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms))),
     outbox: outboxFor(id),
@@ -255,7 +269,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
         say({ key: '보낸 글은 터미널 입력란에 남아 있어요. 터미널에서 Enter를 누르거나 지워 주세요', terminal: true })
       } else {
-        say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks))))
+        say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.row))
       }
     } finally {
       sending.current = false

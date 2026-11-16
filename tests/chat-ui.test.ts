@@ -172,6 +172,13 @@ describe('the composer (Phase 3): its look and its safety', () => {
       expect(DICTS.ja[k], `ja: ${k}`).toBeTruthy()
     }
   })
+
+  it('1.6.2: the composer reads the dim marks, and main\'s prompt-busy quotes what is on the terminal\'s row', () => {
+    const src = read(join(ROOT, 'src', 'components', 'chat', 'Composer.tsx'))
+    expect(src).toContain('readDim: deps ? deps.termDim : termDim')
+    expect(src).toContain('cardNote(shownCard(status?.asks)), r.row)')
+    expect(src).toContain('터미널 입력란에 쓰던 글이 있어요: “{text}”')
+  })
 })
 
 describe('the buttons (Phase 4): one place builds an answer, and it never names a settings file', () => {

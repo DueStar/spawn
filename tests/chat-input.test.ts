@@ -190,6 +190,13 @@ describe('the input ledger', () => {
     }
     expect(mayType('what', 'clean')).toBe(false)
   })
+
+  it('mayType (1.6.2): a row read by its dim cells: a suggestion always, typed text never, whatever the ledger', () => {
+    for (const d of ['clean', 'dirty', 'submitted', 'unknown']) {
+      expect(mayType('suggestion', d)).toBe(true)
+      expect(mayType('typed', d)).toBe(false)
+    }
+  })
 })
 
 describe('the review of Phase 3 (what it found, fixed)', () => {

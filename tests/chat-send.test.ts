@@ -119,6 +119,21 @@ describe('send and submit', () => {
     }
   })
 
+  it('1.6.2: a suggestion read by its dim cells is typed over, whatever the ledger says; typed text is prompt-busy', async () => {
+    // the owner's case: a key the ledger could not follow (a Korean syllable after Enter, /model, Esc) left it dirty
+    const s = await setup()
+    s.host.onInput(C1, '다', 'keyboard')
+    expect(s.host.inputState(C1)).toBe('dirty')
+    expect((await s.host.send({ id: C1, sendId: s.sendId(), text: 'hi', images: [], screen: 'suggestion' })).ok).toBe(true)
+    expect(s.pty.map(w => w.data)).toEqual(['\x1b[200~hi\x1b[201~'])
+    vi.useRealTimers()
+    const t = await setup()
+    expect(t.host.inputState(C1)).toBe('clean')
+    expect(await t.host.send({ id: C1, sendId: t.sendId(), text: 'hi', images: [], screen: 'typed' })).toEqual({ ok: false, reason: 'prompt-busy' })
+    expect(t.pty).toEqual([])
+    vi.useRealTimers()
+  })
+
   it('a permission request between the paste and Enter: no Enter', async () => {
     const s = await setup()
     const id = s.sendId()

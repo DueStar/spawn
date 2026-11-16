@@ -28,6 +28,8 @@ export interface SendDeps {
   }
   /** the terminal's last lines as text (src/termMetrics.ts termText) */
   readScreen(id: string): string | null
+  /** (1.6.2) the same lines' dim marks (src/termMetrics.ts termDim), read right after the text; absent: none */
+  readDim?(id: string): string | null
   now(): number
   sleep(ms: number): Promise<void>
   outbox: Outbox
@@ -37,7 +39,8 @@ export interface SendDeps {
   baseline: number
 }
 
-export type SendResult = { ok: true; command: boolean } | { ok: false; reason: SendRefusal | SubmitRefusal; leftOnPrompt: boolean }
+/** `row` (1.6.2): with main's prompt-busy, the text on the terminal's prompt row, so the note can say what is there */
+export type SendResult = { ok: true; command: boolean } | { ok: false; reason: SendRefusal | SubmitRefusal; leftOnPrompt: boolean; row?: string }
 
 const ECHO_MS = 1500
 const ECHO_IMAGE_MS = 500
@@ -79,7 +82,10 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
   if (busy.has(id)) return { ok: false, reason: 'sending', leftOnPrompt: false }
   // (a card open for this session (Phase 4): it is answered first; Enter here never answers it)
   if (d.status?.state === 'waiting' || (d.status?.asks?.length ?? 0) > 0) return { ok: false, reason: 'waiting', leftOnPrompt: false }
-  const row = promptRow(d.readScreen(id))
+  // (the text and its dim marks read one after the other, in one task: both of one buffer)
+  const rowScreen = d.readScreen(id)
+  const dim = d.readDim?.(id) ?? null
+  const row = promptRow(rowScreen, dim)
   if (row.kind === 'unknown') {
     try { d.bridge.diag?.({ id, why: row.why, shape: screenShape(d.readScreen(id)) }) } catch { /* only a log line */ }
     return { ok: false, reason: 'screen', leftOnPrompt: false }
@@ -94,14 +100,22 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
     const addBubble = () => d.outbox.add({ local, text: shown, images: draft.images, state: 'sending', at: d.now(), baseline: d.baseline })
     if (bubble) addBubble()
     let sent: Awaited<ReturnType<SendDeps['bridge']['send']>>
+    // (1.6.2) text whose dim marks were read says whether anyone typed it; without marks main's ledger decides
+    const screen: ScreenVerdict = row.kind !== 'text' ? row.kind : row.typed === undefined ? 'text' : row.typed ? 'typed' : 'suggestion'
     try {
-      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen: row.kind })
+      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen })
     } catch {
       sent = { ok: false, reason: 'no-session' }
     }
     if (!sent.ok) {
       // nothing was typed: the draft and its chips stay in the composer, so do their pictures
       if (bubble) d.outbox.remove(local, false)
+      if (sent.reason === 'prompt-busy' || sent.reason === 'prompt-unknown') {
+        // spawn.log: what the row looked like, masked, and which of its characters were dim (~)
+        const marks = typeof dim === 'string' ? screenShape(dim.replace(/d/g, '~')) : '(no dim marks)'
+        try { d.bridge.diag?.({ id, why: sent.reason, shape: `${screenShape(rowScreen)}\n-- dim --\n${marks}` }) } catch { /* only a log line */ }
+      }
+      if (sent.reason === 'prompt-busy' && row.kind === 'text') return { ok: false, reason: sent.reason, leftOnPrompt: false, row: row.text }
       return { ok: false, reason: sent.reason, leftOnPrompt: false }
     }
     const answeredAt = d.now()

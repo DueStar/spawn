@@ -150,7 +150,11 @@ export interface ChatUpdate { id: string /* terminal id */; rev: number; ops: Ch
 // ---- the composer (Phase 3): the send's two calls (electron/chatHost.cjs, electron/chatInput.cjs)
 
 /** The page's reading of the terminal's prompt row (src/chat/promptRow.ts) */
-export type ScreenVerdict = 'empty' | 'text' | 'unknown'
+/**
+ * What the page read on the prompt row. `suggestion` / `typed` (1.6.2): text whose dim marks were read, all dim (a
+ * placeholder or a greyed suggestion) or not; `text`: text whose marks could not be read (the ledger decides)
+ */
+export type ScreenVerdict = 'empty' | 'suggestion' | 'typed' | 'text' | 'unknown'
 /** What the echo of a send must show before Enter (chatInput.cjs encodeSend) */
 export interface Expect { head: string; images: number; long: boolean }
 /** What the page saw of the echo when it asks for Enter */

@@ -27,6 +27,11 @@ export type TermMetrics = {
   faces: { face: string; check: boolean; present: boolean; status: string | null }[]
   /** the last lines of the terminal's buffer, as text */
   text: string
+  /**
+   * (1.6.2) the same lines' dim marks, one per character of `text` (src/chat/promptRow.ts dimMask): `d` where the
+   * cell is dim, `.` elsewhere, lines joined by `\n` like `text`
+   */
+  dim?: string
 }
 
 const readers = new Map<string, () => TermMetrics>()
@@ -48,6 +53,19 @@ export function termText(id: string): string | null {
   try {
     const text = read().text
     return typeof text === 'string' ? text : null
+  } catch { return null }
+}
+
+/**
+ * (1.6.2) The dim marks of the same lines (its reader's `dim`), or null when there are none, no terminal of that id
+ * is on the page, or reading fails. Read right after termText, in the same task, so both see one buffer.
+ */
+export function termDim(id: string): string | null {
+  const read = readers.get(id)
+  if (!read) return null
+  try {
+    const dim = read().dim
+    return typeof dim === 'string' ? dim : null
   } catch { return null }
 }
 

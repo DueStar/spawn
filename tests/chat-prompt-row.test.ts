@@ -8,8 +8,9 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { echoState, promptRow } from '../src/chat/promptRow'
-import { termText, trackTermMetrics, type TermMetrics } from '../src/termMetrics'
+import { dimMask, echoState, promptRow } from '../src/chat/promptRow'
+import { termDim, termText, trackTermMetrics, type TermMetrics } from '../src/termMetrics'
+import { maskOf } from './dim-mask'
 
 const screen = (name: string) => readFileSync(join(__dirname, 'fixtures', 'chat', 'screens', `${name}.txt`), 'utf8').replace(/\n$/, '')
 const R = '─'.repeat(100)
@@ -68,6 +69,59 @@ describe('promptRow', () => {
   })
 })
 
+describe('promptRow with the dim mask (1.6.2: a greyed suggestion is not typed text)', () => {
+  it('a placeholder and an after-turn suggestion, drawn dim: text that nobody typed', () => {
+    for (const name of ['idle-placeholder', 'after-turn-suggestion']) {
+      const s = screen(name)
+      expect(promptRow(s, maskOf(s, true)), name).toMatchObject({ kind: 'text', typed: false })
+    }
+  })
+
+  it('typed text, drawn normal: typed, on one line or several', () => {
+    for (const name of ['typed', 'typed-multiline', 'narrow-wrap']) {
+      const s = screen(name)
+      expect(promptRow(s, maskOf(s)), name).toMatchObject({ kind: 'text', typed: true })
+    }
+  })
+
+  it('one normal character among dim ones (a ghost completion after a typed "/mo"): typed', () => {
+    const s = screen('after-turn-suggestion')
+    expect(promptRow(s, maskOf(s, true, [3]))).toMatchObject({ kind: 'text', typed: true })
+  })
+
+  it('no mask, or one that does not fit the screen: no `typed` (the ledger decides, as before)', () => {
+    const s = screen('typed')
+    expect(promptRow(s)).toStrictEqual({ kind: 'text', text: 'add a mul function' })
+    expect(promptRow(s, 'x')).toStrictEqual({ kind: 'text', text: 'add a mul function' })
+    expect(promptRow(s, null)).toStrictEqual({ kind: 'text', text: 'add a mul function' })
+  })
+
+  it('an empty row and a dialog read as before', () => {
+    const e = screen('idle-empty')
+    expect(promptRow(e, maskOf(e))).toEqual({ kind: 'empty' })
+    const d = screen('dialog-trust')
+    expect(promptRow(d, maskOf(d))).toEqual({ kind: 'unknown', why: 'dialog' })
+  })
+})
+
+describe('dimMask', () => {
+  const cell = (chars: string, width: number, dim: boolean) => ({ getChars: () => chars, getWidth: () => width, isDim: () => (dim ? 1 : 0) })
+  const line = (cells: ReturnType<typeof cell>[]) => ({ length: cells.length, getCell: (x: number) => cells[x] })
+
+  it('one mark per character of the line\'s text: d for a dim cell, . for any other', () => {
+    expect(dimMask(line([cell('❯', 1, false), cell(' ', 1, false), cell('T', 1, true), cell('r', 1, true), cell('', 1, false)]), 4)).toBe('..dd')
+  })
+
+  it('a wide character is marked once (its spacer cell skipped); a surrogate pair twice; an empty cell is a space', () => {
+    expect(dimMask(line([cell('한', 2, false), cell('', 0, false), cell('😀', 2, true), cell('', 0, false), cell('', 1, true), cell('a', 1, false)]), 5)).toBe('.ddd.')
+  })
+
+  it('cut to the text\'s length; padded with normal marks (typed, the safe side), never dim', () => {
+    expect(dimMask(line([cell('a', 1, true), cell('b', 1, true)]), 1)).toBe('d')
+    expect(dimMask(line([cell('a', 1, true)]), 3)).toBe('d..')
+  })
+})
+
 describe('echoState', () => {
   const head = 'Without tools, name thre'
   it('the sent text at the start of the row: ok; appended to a suggestion: mismatch', () => {
@@ -112,5 +166,18 @@ describe('termText', () => {
     const off2 = trackTermMetrics('t1', () => { throw new Error('gone') })
     expect(termText('t1')).toBeNull()
     off2()
+  })
+
+  it('termDim (1.6.2): the reader\'s dim mask; null with none, with no reader, or when it throws', () => {
+    expect(termDim('t1')).toBeNull()
+    const off = trackTermMetrics('t1', () => ({ ...metrics('❯ Try'), dim: '..ddd' }))
+    expect(termDim('t1')).toBe('..ddd')
+    off()
+    const off2 = trackTermMetrics('t1', () => metrics('❯ hi'))
+    expect(termDim('t1')).toBeNull()
+    off2()
+    const off3 = trackTermMetrics('t1', () => { throw new Error('gone') })
+    expect(termDim('t1')).toBeNull()
+    off3()
   })
 })

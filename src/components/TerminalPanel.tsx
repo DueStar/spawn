@@ -11,6 +11,7 @@ import { WebLinksAddon } from '@xterm/addon-web-links'
 import { SearchAddon } from '@xterm/addon-search'
 import { getTermFont, resetTermFont, stepTermFont, subscribeTermFont, termFontStack } from '../termFont'
 import { facePresent, faceStatus, stackFaces, trackTermMetrics } from '../termMetrics'
+import { dimMask } from '../chat/promptRow'
 import { getSettings, useSettings } from '../settingsStore'
 import '@xterm/xterm/css/xterm.css'
 import { bridge, onTerminalData, type PastSession, type TerminalInfo } from '../desktop'
@@ -93,13 +94,24 @@ export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus
       const fontSize = Number(xterm.options.fontSize)
       const buf = xterm.buffer.active
       const lines: string[] = []
-      for (let y = Math.max(0, buf.length - 80); y < buf.length; y++) lines.push(buf.getLine(y)?.translateToString(true) ?? '')
+      // (1.6.2) each line's dim marks beside its text: the chat tells a greyed suggestion from typed text by them
+      const marks: string[] = []
+      const cell = buf.getNullCell()
+      for (let y = Math.max(0, buf.length - 80); y < buf.length; y++) {
+        const line = buf.getLine(y)
+        const text = line?.translateToString(true) ?? ''
+        lines.push(text)
+        marks.push(line ? dimMask({ length: line.length, getCell: (x) => line.getCell(x, cell) }, text.length) : '')
+      }
+      const text = lines.join('\n').trimEnd()
       return {
         id: term.id, fontFamily, fontSize,
         cellWidth: dims?.width ?? null, cellHeight: dims?.height ?? null,
         cols: xterm.cols, rows: xterm.rows,
         faces: stackFaces(fontFamily).map(face => ({ face, check: document.fonts.check(`${fontSize}px "${face}"`), present: facePresent(face), status: faceStatus(face) })),
-        text: lines.join('\n').trimEnd(),
+        text,
+        // (one mark per character of the joined lines, so cut where `text` was trimmed: the two stay the same shape)
+        dim: marks.join('\n').slice(0, text.length),
       }
     })
     fitRef.current = fit
