@@ -39,7 +39,7 @@ import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailabil
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
-import { BoxIcon, HelperIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SendIcon, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
+import { BoxIcon, HelperIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
 // The views and the terminal (xterm) are their own chunks: the widget's first
 // paint needs none of them. They are fetched right after it (preloadViews), so
 // opening one later does not wait.
@@ -101,13 +101,6 @@ const PREREQ_LABEL = {
   claude: { name: 'Claude Code', why: '포켓몬이 일할 Claude 세션' },
   git: { name: 'Git for Windows', why: 'Claude Code가 쓰는 Git Bash' },
 } as const
-
-const ASK_LINES = [
-  (name: string) => t('{name}에게 지시하기…', { name }),
-  (name: string) => t('{name}{iga} 기다리고 있어요', { name, iga: josa(name, '이가') }),
-  (name: string) => t('{name}에게 지시해 보세요', { name }),
-]
-const askLine = (name: string, i: number) => ASK_LINES[i % ASK_LINES.length](name)
 
 const MOOD_LABEL: Record<Mood, string> = {
   working: '일하는 중', idle: '쉬는 중', 'needs-you': '확인 필요', error: '오류', ended: '종료',
@@ -495,18 +488,12 @@ const Widget: React.FC = () => {
   }
   const withTerminal = rows.filter(r => r.terminal)
   const [target, setTarget] = useState<string | null>(() => readCarry().target ?? null)
-  const [text, setText] = useState(() => readCarry().text ?? '')
-  // Kept for the next window (a mode swap builds a new one) and the next start.
-  // The tab and session are written at once; the instruction text at most every
-  // 300 ms while typing, and flushed before a swap and when the page goes away.
-  const carried = useRef({ view, target, text })
-  carried.current = { view, target, text }
+  // Kept for the next window (a mode swap builds a new one) and the next start: the tab and
+  // session, written at once, and flushed before a swap and when the page goes away
+  const carried = useRef({ view, target })
+  carried.current = { view, target }
   const flushCarry = useRef(() => writeCarry(carried.current)).current
   useEffect(() => { flushCarry() }, [view, target, flushCarry])
-  useEffect(() => {
-    const id = setTimeout(flushCarry, 300)
-    return () => clearTimeout(id)
-  }, [text, flushCarry])
   useEffect(() => {
     window.addEventListener('pagehide', flushCarry)
     return () => window.removeEventListener('pagehide', flushCarry)
@@ -619,8 +606,6 @@ const Widget: React.FC = () => {
   const restingUids = useMemo(() => new Set(restingKey ? restingKey.split(',') : []), [restingKey])
   const FULL_NOTE = t('세션을 최대 {n}개까지 열 수 있어요. 지금 연 세션 하나를 닫으면 새로 열 수 있어요.', { n: dex?.sessionLimit ?? dex?.partySize ?? 12 })
   const chosen = sendable.find(r => r.sessionId === target) ?? sendable[0]
-  // One line per chosen session, picked at random (not on every render)
-  const askPick = useMemo(() => Math.floor(Math.random() * ASK_LINES.length), [chosen?.sessionId])
   const shown = withTerminal.find(r => r.sessionId === target) ?? chosen ?? withTerminal[0]
   // The chat view (src/chat/lensMode.ts): 채팅 / 터미널 per session, kept in the carry. Only a session whose
   // terminal carries the chat key (the feature on, Claude Code) offers it, never the widget; the terminal
@@ -862,20 +847,6 @@ const Widget: React.FC = () => {
     if (settings.session.confirmClose && closing !== r.sessionId) { setClosing(r.sessionId); return }
     setClosing(null)
     bridge?.terminals.close(r.terminal.id)
-  }
-
-  const send = async () => {
-    if (!bridge || !chosen?.terminal || !text.trim()) return
-    if (chosen.mood === 'needs-you') {
-      setNote(t("'{name}' 세션이 확인을 기다리고 있어요. 터미널에서 먼저 답해 주세요.", { name: sessionLabel(chosen, workMode) ?? t('새 세션') }))
-      return
-    }
-    const r = await bridge.terminals.send(chosen.terminal.id, text)
-    if (r.ok) {
-      setNote(chosen.mood === 'working' ? t('지시를 보냈어요. 지금 하던 작업이 끝나면 이어서 처리해요.') : t('지시를 보냈어요.'))
-      setText('')
-    } else if (r.reason === 'busy') setNote(t('채팅에서 보내는 중이에요. 잠시 뒤 다시 보내 주세요'))
-    else setNote(t('지시를 보내지 못했어요 ({reason})', { reason: r.reason === 'exited' ? t('세션이 이미 종료됐어요') : r.reason ?? t('알 수 없는 이유') }))
   }
 
   const openIds = new Set(terminals.filter(t => t.status === 'running').map(t => t.sessionId))
@@ -1342,39 +1313,11 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             </section>
           )}
 
-          {chatPointer ? (
-          // The chat is shown: the box keeps its place, size and frame (an empty field, the button hidden),
-          // and points to the composer under the chat; its own text (state) stays for the flip back
-          <section className="w-card w-compose w-compose-pointer">
-            {note && <div className="w-note" role="status" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>}
-            <div className="w-input">
-              <textarea value="" readOnly tabIndex={-1} aria-hidden="true" rows={2} />
-              <button className="w-send" tabIndex={-1} aria-hidden="true"><SendIcon size={15} /></button>
-              <div className="w-input-pointer">
-                <span>{t('채팅 아래 입력란에서 보내요')}</span>
-                <button type="button" className="w-input-to" onClick={() => composerRef.current?.focus()}>{t('입력란으로')}</button>
-              </div>
-            </div>
-          </section>
-          ) : (
-          <section className="w-card w-compose">
-            {note && <div className="w-note" role="status" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>}
-            <div className="w-input">
-              <textarea
-                value={text}
-                placeholder={chosen ? (workMode ? t('지시하기…') : askLine(chosen.name, askPick)) : t('새 세션을 열면 지시할 수 있어요')}
-                onChange={e => setText(e.target.value)}
-                onKeyDown={e => {
-                  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); send() }
-                }}
-                disabled={!chosen}
-                rows={2}
-              />
-              <button className="w-send" onClick={send} disabled={!chosen || !text.trim()} aria-label={t('보내기')} title={t('보내기 (Enter)')}>
-                <SendIcon size={15} />
-              </button>
-            </div>
-          </section>
+          {/* A note (a launch that failed, the login started): its own card at the panel's foot */}
+          {note && (
+            <section className="w-card w-compose">
+              <div className="w-note" role="status" onClick={() => setNote(null)} title={t('눌러서 닫기')}>{note}</div>
+            </section>
           )}
         </div>
         {expanded && !folded && <SideResize width={sideWidth} min={sideLow} max={sideMax} onWidth={setSideWidth} onDragging={setSideDragging} />}

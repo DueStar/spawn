@@ -48,7 +48,7 @@
   border: 0;
   border-radius: var(--r-s);
   padding: 7px 8px;
-  /* the hit area the filled launcher had (34px tall, the side buttons 40px wide) */
+  /* the hit area the filled launcher had (34px tall) */
   min-height: 34px;
   cursor: pointer;
 }
@@ -57,7 +57,8 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  width: 40px;
+  /* 30px (was 40): the two read as one pair beside 새로운 세션 시작하기 (owner, 2026-11-16) */
+  width: 30px;
   font: inherit;
   font-size: 14px;
   color: var(--ink-3);
@@ -382,7 +383,7 @@
 .widget.mode-window .w-side .w-launch, .widget.mode-fullscreen .w-side .w-launch { padding: 6px 8px; }
 /* The Pokédex strip and the party strip read as one block: no line between them; the party's
    line runs the panel's full width */
-.widget.mode-window .w-side .w-dex, .widget.mode-fullscreen .w-side .w-dex { padding-bottom: 6px; border-bottom: 0; }
+.widget.mode-window .w-side .w-dex, .widget.mode-fullscreen .w-side .w-dex { padding-bottom: 12px; border-bottom: 0; }
 .widget.mode-window .w-side .w-party:has(> .w-party-head), .widget.mode-fullscreen .w-side .w-party:has(> .w-party-head) { padding-top: 0; }
 .widget.mode-window .w-party-head, .widget.mode-fullscreen .w-party-head { margin: 0 -16px 10px; padding: 0 16px 10px; }
 /* A row with no fill shows the panel */
@@ -425,13 +426,13 @@
 /* 가 keeps one size, so the button shows the step by its name, not by growing */
 .w-textsize-g { font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; font-size: 13px; line-height: 1; color: var(--ink); }
 .w-textsize-menu {
-  position: absolute; right: 0; top: calc(100% + 6px); width: 220px; box-sizing: border-box; padding: 4px;
+  position: absolute; right: 0; top: calc(100% + 6px); width: 140px; box-sizing: border-box; padding: 4px;
   background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 .w-textsize-title { padding: 6px 8px 4px; font-size: var(--t-meta); color: var(--ink-3); }
 .w-textsize-item {
-  display: grid; grid-template-columns: 16px minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 8px;
   width: 100%; padding: 6px 8px; text-align: left; font: inherit; font-size: var(--t-ui); color: var(--ink-2);
   background: none; border: 0; border-radius: var(--r-s); cursor: pointer;
 }
@@ -440,8 +441,6 @@
 .w-textsize-item:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
 .w-textsize-ck { display: inline-grid; place-items: center; color: var(--ink); opacity: 0; }
 .w-textsize-item.on .w-textsize-ck { opacity: 1; }
-.w-textsize-item small { font-size: var(--t-meta); color: var(--ink-3); white-space: nowrap; }
-.w-textsize-foot { margin-top: 4px; padding: 6px 8px 3px; border-top: 1px solid var(--line); font-size: var(--t-micro); color: var(--ink-3); }
 
 /* ---------- Patch notes after an update (PatchNotes.tsx) ---------- */
 .w-notes-body { overflow-y: auto; padding: 4px 16px 8px; line-height: 1.55; font-size: var(--t-name); }

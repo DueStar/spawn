@@ -61,9 +61,9 @@ describe('m6: an unconfirmed bubble does not float for good', () => {
 
 describe('I-5: the side panel while a chat send is in flight', () => {
   const widget = src('Widget.tsx')
-  it('a pending /rename refused as busy stays pending (never typed into that send); the side box says why', () => {
+  // (the side box that said why is gone: removed 2026-11-16 at the owner's request)
+  it('a pending /rename refused as busy stays pending (never typed into that send)', () => {
     expect(widget).toMatch(/res\.reason === 'busy' && !pendingRename\.current\.has\(id\)\) pendingRename\.current\.set\(id, name\)/)
-    expect(widget).toContain("else if (r.reason === 'busy') setNote(t('채팅에서 보내는 중이에요. 잠시 뒤 다시 보내 주세요'))")
   })
 })
 

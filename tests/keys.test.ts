@@ -283,11 +283,11 @@ describe('tooltips name the platform\'s keys', () => {
     }
     // the text-size control (TextSizeControl) and its 설정 row
     const vars = { mod: modLabel() }
-    const tip = '글자 크기 · 목록·패널·터미널 함께 ({mod}+= 크게 · {mod}+- 작게 · {mod}+0 보통 · {mod}+휠)'
+    const tip = '글자 크기 ({mod}+= / {mod}+-)'
     const hint = '목록·패널·터미널이 함께 바뀌어요 · {mod}+= / {mod}+-'
-    expect(fill(tip, vars)).toBe('글자 크기 · 목록·패널·터미널 함께 (Ctrl+= 크게 · Ctrl+- 작게 · Ctrl+0 보통 · Ctrl+휠)')
-    expect(fill(allDicts.en[tip], vars)).toBe('Text size · lists, panels and the terminal together (Ctrl+= larger · Ctrl+- smaller · Ctrl+0 normal · Ctrl+wheel)')
-    expect(fill(allDicts.ja[tip], vars)).toBe('文字サイズ・リスト、パネル、ターミナルを一緒に(Ctrl+= 大きく・Ctrl+- 小さく・Ctrl+0 標準・Ctrl+ホイール)')
+    expect(fill(tip, vars)).toBe('글자 크기 (Ctrl+= / Ctrl+-)')
+    expect(fill(allDicts.en[tip], vars)).toBe('Text size (Ctrl+= / Ctrl+-)')
+    expect(fill(allDicts.ja[tip], vars)).toBe('文字サイズ(Ctrl+= / Ctrl+-)')
     expect(fill(allDicts.en[hint], vars)).toBe('Lists, panels and the terminal change together · Ctrl+= / Ctrl+-')
     expect(fill(allDicts.ja[hint], vars)).toBe('リスト、パネル、ターミナルが一緒に変わります・Ctrl+= / Ctrl+-')
   })
@@ -295,7 +295,7 @@ describe('tooltips name the platform\'s keys', () => {
   it('macOS names ⌘', () => {
     setPlatformForTest('mac')
     expect(fill(widgetDicts.en['세션 ({key})'], { key: modCombo('1') })).toBe('Sessions (⌘1)')
-    expect(fill(allDicts.en['글자 크기 · 목록·패널·터미널 함께 ({mod}+= 크게 · {mod}+- 작게 · {mod}+0 보통 · {mod}+휠)'], { mod: modLabel() })).toBe('Text size · lists, panels and the terminal together (⌘+= larger · ⌘+- smaller · ⌘+0 normal · ⌘+wheel)')
+    expect(fill(allDicts.en['글자 크기 ({mod}+= / {mod}+-)'], { mod: modLabel() })).toBe('Text size (⌘+= / ⌘+-)')
     expect(fill(allDicts.en['목록·패널·터미널이 함께 바뀌어요 · {mod}+= / {mod}+-'], { mod: modLabel() })).toBe('Lists, panels and the terminal change together · ⌘+= / ⌘+-')
   })
 })
