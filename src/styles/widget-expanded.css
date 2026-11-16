@@ -384,8 +384,8 @@
 .widget.mode-window .w-bento, .widget.mode-fullscreen .w-bento { gap: 0; }
 .widget.mode-window .w-side .w-limits, .widget.mode-fullscreen .w-side .w-limits { padding: 12px 16px; }
 .widget.mode-window .w-side .w-launch, .widget.mode-fullscreen .w-side .w-launch { padding: 6px 8px; }
-/* The Pokédex strip and the session list read as one block: no line between them */
-.widget.mode-window .w-side .w-dex, .widget.mode-fullscreen .w-side .w-dex { padding-bottom: 12px; border-bottom: 0; }
+/* (1.6.2, the owner's ask: the Pokédex strip and the session list are divided like the other sections; until then
+   they read as one block, with no line between them) */
 /* A row with no fill shows the panel */
 .widget.mode-window .w-row, .widget.mode-fullscreen .w-row { --row-base: var(--side-bg); }
 .widget.mode-window .w-side .w-compose textarea, .widget.mode-fullscreen .w-side .w-compose textarea { background: var(--card); }
