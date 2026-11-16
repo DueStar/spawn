@@ -100,6 +100,9 @@ function moodOf(s: SessionInfo | undefined, t: TerminalInfo | undefined): Mood {
   return 'idle'
 }
 
+/** A pending /rename is tried again at most this often (1.6.2: each try reads the terminal's last lines) */
+const RENAME_RETRY_MS = 1000
+
 const PREREQ_LABEL = {
   claude: { name: 'Claude Code', why: '포켓몬이 일할 Claude 세션' },
   git: { name: 'Git for Windows', why: 'Claude Code가 쓰는 Git Bash' },
@@ -486,10 +489,18 @@ const Widget: React.FC = () => {
       if (res && !res.ok && (res.reason === 'busy' || res.reason === 'typing') && !pendingRename.current.has(id)) pendingRename.current.set(id, name)
     }, () => {})
   }
+  // (a pending one is tried again at most once a second: each try reads the terminal's last lines, and the page
+  // renders far more often than that)
+  const renameTriedAt = useRef(new Map<string, number>())
   useEffect(() => {
     for (const r of rows) {
       const name = r.terminal && pendingRename.current.get(r.terminal.id)
-      if (name && isFree(r)) { pendingRename.current.delete(r.terminal!.id); renameNow(r.terminal!.id, name) }
+      if (!name || !isFree(r)) continue
+      const id = r.terminal!.id
+      if (Date.now() - (renameTriedAt.current.get(id) ?? 0) < RENAME_RETRY_MS) continue
+      renameTriedAt.current.set(id, Date.now())
+      pendingRename.current.delete(id)
+      renameNow(id, name)
     }
   })
   /**

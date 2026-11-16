@@ -25,6 +25,11 @@ describe('the pending /rename', () => {
     expect(widget).toContain("res.reason === 'busy' || res.reason === 'typing'")
   })
 
+  it('a pending one is tried again at most once a second (each try reads the terminal; the page renders far more often)', () => {
+    expect(widget).toContain('const RENAME_RETRY_MS = 1000')
+    expect(widget).toContain('if (Date.now() - (renameTriedAt.current.get(id) ?? 0) < RENAME_RETRY_MS) continue')
+  })
+
   it('goes through the IPC with notWhileTyping (main\'s own launch instruction does not)', () => {
     expect(main).toContain("terminals.sendInstruction(String(id), text, { notWhileTyping: true })")
     expect(main).toMatch(/setTimeout\(\(\) => terminals\.sendInstruction\(t\.id, instruction\)/)
