@@ -367,6 +367,72 @@ describe('a Codex tab', () => {
   })
 })
 
+describe('1.6.2: a reopened Claude Code session that never got a prompt (no transcript)', () => {
+  // On 1.6.1 such a tab was left out of the reopen list (nothing to resume), and the next write of the list dropped it
+  // for good: the owner's new-folder session was gone after an update restart.
+  const ID = '55555555-5555-4555-8555-555555555555'
+  const OTHER = '66666666-6666-4666-8666-666666666666'
+  function manager(transcripts: string[], link?: string) {
+    const claude = tempDir()
+    fs.mkdirSync(join(claude, 'projects', 'C--work'), { recursive: true })
+    for (const t of transcripts) fs.writeFileSync(join(claude, 'projects', 'C--work', `${t}.jsonl`), '{}\n')
+    vi.stubEnv('CLAUDE_CONFIG_DIR', claude)
+    const userDataDir = tempDir()
+    if (link) {
+      fs.mkdirSync(join(userDataDir, 'session-links'), { recursive: true })
+      fs.writeFileSync(join(userDataDir, 'session-links', ID), link)
+    }
+    const pty = fakePty()
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {} })
+    return { pty, terms, userDataDir }
+  }
+  const after = (args: string[], flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : null)
+
+  it('is in the reopen list', () => {
+    try {
+      vi.stubEnv('CLAUDE_CONFIG_DIR', tempDir())
+      const userDataDir = tempDir()
+      const tab = { sessionId: ID, cwd: userDataDir, tool: 'claude' }
+      fs.writeFileSync(join(userDataDir, 'open-sessions.json'), JSON.stringify([tab]))
+      const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty: fakePty(), killTree: () => {} })
+      expect(terms.takeRestorable()).toEqual([tab])
+    } finally { vi.unstubAllEnvs() }
+  })
+
+  it('starts fresh under its own id (so its folder and its Pokémon): --session-id, never --resume', () => {
+    try {
+      const { pty, terms } = manager([])
+      const t = terms.create({ resume: ID })
+      expect(t.id).toBe(ID)
+      const args = pty.spawned.at(-1)!.args
+      expect(after(args, '--session-id')).toBe(ID)
+      expect(args).not.toContain('--resume')
+    } finally { vi.unstubAllEnvs() }
+  })
+
+  it('with a transcript it resumes, as before', () => {
+    try {
+      const { pty, terms } = manager([ID])
+      terms.create({ resume: ID })
+      expect(after(pty.spawned.at(-1)!.args, '--resume')).toBe(ID)
+      expect(pty.spawned.at(-1)!.args).not.toContain('--session-id')
+    } finally { vi.unstubAllEnvs() }
+  })
+
+  it('after a /clear: the linked conversation when it has a transcript; else the tab\'s own, never --session-id on an id with one', () => {
+    try {
+      const a = manager([OTHER], OTHER)
+      a.terms.create({ resume: ID })
+      expect(after(a.pty.spawned.at(-1)!.args, '--resume')).toBe(OTHER)
+      vi.unstubAllEnvs()
+      const b = manager([ID], OTHER)
+      b.terms.create({ resume: ID })
+      expect(after(b.pty.spawned.at(-1)!.args, '--resume')).toBe(ID)
+      expect(b.pty.spawned.at(-1)!.args).not.toContain('--session-id')
+    } finally { vi.unstubAllEnvs() }
+  })
+})
+
 describe('other AI tools switched off (electron/features.cjs)', () => {
   const TOOLS = [{ id: 'codex', name: 'Codex CLI', command: 'codex' }]
   function offManager(userDataDir = tempDir()) {

@@ -358,12 +358,14 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
 
   /**
    * The sessions to reopen, once per run (a window swap reloads the page and
-   * must not reopen them again). A Claude Code one only with a transcript: one
-   * that never got a prompt has nothing to resume. Another tool's opens anew
-   * in its folder (it cannot resume). None while some are open already.
+   * must not reopen them again). Every tab comes back: a Claude Code one that
+   * never got a prompt has no transcript, and create() starts it anew under
+   * its own id (1.6.2; it used to be left out, and so dropped from the list
+   * for good). Another tool's opens anew in its folder (it cannot resume).
+   * None while some are open already.
    */
   function takeRestorable() {
-    const out = terms.size ? [] : restorable.filter(s => s.tool !== 'claude' || hasTranscript(linkedConversation(userDataDir, s.sessionId) || s.sessionId))
+    const out = terms.size ? [] : restorable
     restorable = []
     return out
   }
@@ -386,7 +388,11 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     const sessionId = reopened || (typeof wanted === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(wanted) ? wanted : crypto.randomUUID())
     // A terminal reopened resumes the conversation it last had (after a /clear, not the one it began with)
     // (Codex resumes only a thread its log named; with none it starts anew)
-    const conversation = resume ? linkedConversation(userDataDir, resume) || (adapter.kind === 'codex' ? undefined : resume) : undefined
+    let conversation = resume ? linkedConversation(userDataDir, resume) || (adapter.kind === 'codex' ? undefined : resume) : undefined
+    // (1.6.2) Claude Code resumes only a conversation with a transcript (it writes one at the first prompt): with none,
+    // the tab's own id when that has one (a /clear whose new conversation never got a prompt), else it starts anew
+    // under the tab's own id (`--session-id`, never on an id that has a transcript: Claude Code would refuse it)
+    if (conversation && adapter.id === 'claude' && !hasTranscript(conversation)) conversation = conversation !== sessionId && hasTranscript(sessionId) ? sessionId : undefined
     // The chat view: the hooks the file holds as this session starts are the ones it has (armed or not)
     const launchSettings = adapter.id === 'claude' ? settings(chatState(), sessionId) : null
     let { file: command, args } = adapter.launch({ sessionId, resume: conversation, settingsFile: launchSettings ? launchSettings.file : null, extraArgs: adapter.id === 'claude' ? extraArgs() : [] })
