@@ -28,6 +28,22 @@ const { isRealInput } = require('./chatInput.cjs')
 
 const MAX_BUFFER = 200_000 // characters of scrollback kept for a tab opened later
 const TYPING_MS = 1500 // a send asked notWhileTyping: refused this long after a real key in the terminal (1.6.2)
+// spawn.log (1.6.2): in a session's first minutes, the keys that move or answer a question, counted (never what was
+// typed), with how much the tool drew since: a trust question that took no key on the owner's PC could not be told
+// apart (no key reached the terminal / the tool had exited / it drew nothing back)
+const KEY_DIAG_MS = 10 * 60_000
+const KEY_DIAG_BATCH_MS = 5000
+
+/** How many arrows, Enters, lone Escs and focus reports are in keyboard data (nothing else is looked at) */
+function keyKinds(data) {
+  const s = String(data ?? '')
+  return {
+    arrows: (s.match(/\x1b(?:\[|O)[ABCD]/g) ?? []).length,
+    enter: (s.match(/\r/g) ?? []).length,
+    esc: (s.match(/\x1b(?![[O\]P])/g) ?? []).length,
+    focus: (s.match(/\x1b\[[IO]/g) ?? []).length,
+  }
+}
 const OUTPUT_BATCH_MS = 16 // a session's output goes to the window at most once a frame
 const REDRAW_RESTORE_MS = 150 // the chat's redraw nudge: its real size again this long after the one-row step
 
@@ -423,6 +439,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     }
     pty.onData((data) => {
       t.pending += data
+      if (t.keyDiag?.timer) t.keyDiag.out += data.length
       if (!t.flushTimer) t.flushTimer = setTimeout(() => flushOutput(t), OUTPUT_BATCH_MS)
       // Only output since the user last answered counts
       t.scan = (t.scan + plainText(data)).slice(-4000)
@@ -442,6 +459,10 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     }
     pty.onExit(({ exitCode }) => {
       flushOutput(t)
+      // spawn.log (1.6.2): the keys of a batch not said yet, then how it ended (a question on screen: e.g. the trust
+      // question's first choice, "No, exit", taken with Enter)
+      sayKeys(t)
+      console.log(`[terminals] ${adapter.id} ${t.id.slice(0, 8)} exited (code ${exitCode}) after ${Math.round((Date.now() - t.createdAt) / 1000)} s${t.asking || t.questionSeen ? ', a question on its screen' : ''}`)
       t.codex?.stop()
       t.activity?.stop()
       t.status = 'exited'
@@ -482,6 +503,28 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     try { return chat.busy(t.id) === true } catch { return false }
   }
 
+  /** spawn.log, a session's first minutes: the keys that move or answer a question, counted per 5 s batch (KEY_DIAG_MS) */
+  function noteKeys(t, data) {
+    if (Date.now() - t.createdAt >= KEY_DIAG_MS) return
+    const k = keyKinds(data)
+    if (!k.arrows && !k.enter && !k.esc && !k.focus) return
+    const d = t.keyDiag ?? (t.keyDiag = { arrows: 0, enter: 0, esc: 0, focus: 0, out: 0, timer: null })
+    d.arrows += k.arrows; d.enter += k.enter; d.esc += k.esc; d.focus += k.focus
+    if (d.timer) return
+    d.out = 0
+    d.timer = setTimeout(() => sayKeys(t), KEY_DIAG_BATCH_MS)
+    d.timer.unref?.()
+  }
+
+  function sayKeys(t) {
+    const d = t.keyDiag
+    if (!d) return
+    if (d.timer) { clearTimeout(d.timer); d.timer = null }
+    if (!d.arrows && !d.enter && !d.esc && !d.focus) return
+    console.log(`[terminals] ${t.adapter.id} ${t.id.slice(0, 8)} +${Math.round((Date.now() - t.createdAt) / 1000)} s: arrows ${d.arrows}, enter ${d.enter}, esc ${d.esc}, focus ${d.focus}; output since ${d.out} B`)
+    d.arrows = d.enter = d.esc = d.focus = d.out = 0
+  }
+
   function write(id, data) {
     const t = terms.get(id)
     if (!t || t.status === 'exited' || typeof data !== 'string') return false
@@ -492,6 +535,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     t.activity?.input()
     // (1.6.2) when the owner last typed here: a key, not the terminal's own reports or the cursor moving
     if (isRealInput(data)) t.lastKeyAt = Date.now()
+    noteKeys(t, data)
     // An answer (Enter, or Esc to dismiss) clears the question
     if (/[\r\x1b]/.test(data)) {
       t.scan = ''

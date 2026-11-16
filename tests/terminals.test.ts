@@ -367,6 +367,62 @@ describe('a Codex tab', () => {
   })
 })
 
+describe('1.6.2: what spawn.log says about a session\'s first minutes (the trust question that took no key)', () => {
+  // Never what was typed: only how many arrows, Enters, Escs and focus reports arrived, and how much the tool drew since.
+  it('the keys that move or answer a question, counted in 5 s batches with the output since; text alone says nothing', async () => {
+    vi.useFakeTimers()
+    const said: string[] = []
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(((...a: any[]) => { said.push(a.join(' ')) }) as any)
+    try {
+      const pty = fakePty()
+      const terms = manager(pty, () => {})
+      const t = terms.create({})
+      terms.write(t.id, 'hello 다')
+      await vi.advanceTimersByTimeAsync(6000)
+      expect(said.filter(s => s.includes('[terminals]'))).toEqual([])
+      terms.write(t.id, '\x1b[O')
+      terms.write(t.id, '\x1b[I')
+      terms.write(t.id, '\x1b[B')
+      pty.data(100, 'x'.repeat(300))
+      terms.write(t.id, '\x1bOA')
+      terms.write(t.id, '\r')
+      terms.write(t.id, '\x1b')
+      await vi.advanceTimersByTimeAsync(5000)
+      const lines = said.filter(s => s.includes('[terminals]'))
+      expect(lines).toHaveLength(1)
+      expect(lines[0]).toMatch(new RegExp(`^\\[terminals\\] claude ${t.id.slice(0, 8)} \\+\\d+ s: arrows 2, enter 1, esc 1, focus 2; output since 300 B$`))
+      expect(lines[0]).not.toContain('hello')
+    } finally { logSpy.mockRestore(); vi.useRealTimers() }
+  })
+
+  it('nothing after the first 10 minutes', async () => {
+    vi.useFakeTimers()
+    const said: string[] = []
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(((...a: any[]) => { said.push(a.join(' ')) }) as any)
+    try {
+      const terms = manager(fakePty(), () => {})
+      const t = terms.create({})
+      await vi.advanceTimersByTimeAsync(10 * 60_000 + 1000)
+      terms.write(t.id, '\x1b[B')
+      await vi.advanceTimersByTimeAsync(6000)
+      expect(said.filter(s => s.includes('[terminals]'))).toEqual([])
+    } finally { logSpy.mockRestore(); vi.useRealTimers() }
+  })
+
+  it('an exit: the tool, how long it ran, its code, and whether a question was on its screen', () => {
+    const said: string[] = []
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(((...a: any[]) => { said.push(a.join(' ')) }) as any)
+    try {
+      const pty = fakePty()
+      const terms = manager(pty, () => {})
+      const t = terms.create({})
+      pty.data(100, ' ❯ 1. Yes, I trust this folder\r\n   2. No, exit\r\n')
+      pty.exit(100)
+      expect(said.filter(s => s.includes('[terminals]'))).toEqual([`[terminals] claude ${t.id.slice(0, 8)} exited (code 1) after 0 s, a question on its screen`])
+    } finally { logSpy.mockRestore() }
+  })
+})
+
 describe('1.6.2: a reopened Claude Code session that never got a prompt (no transcript)', () => {
   // On 1.6.1 such a tab was left out of the reopen list (nothing to resume), and the next write of the list dropped it
   // for good: the owner's new-folder session was gone after an update restart.
