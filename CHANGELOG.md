@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.6.1
+- 왼쪽 위 로고 옆의 spawn 글자를 없앴어요. 몬스터볼을 누르면 지금처럼 패치노트가 열려요.
+- 업데이트 버튼이 아이콘이 됐어요. 업데이트 안내가 떠도 프로필 사진이 눌려 잘리지 않아요. 무엇을 하는 버튼인지는 마우스를 올리면 보여요.
+- 터미널 위 세션 이름 줄에서 이름·브랜치·폴더 글자가 한 줄에 가지런히 놓여요.
+
 ### 1.6.0
 - 파티가 없어졌어요. 잡은 포켓몬은 모두 박스에 있어요. 파티에 있던 포켓몬은 박스 맨 앞으로 옮겨지고, 사라지는 포켓몬은 없어요.
 - 새 세션을 열거나 이어할 때, 지금 쉬고 있는 포켓몬 모두에서 골라요. 최근에 일한 포켓몬이 먼저 나오고 이름으로 찾을 수 있어요. 교체도 같은 목록이에요.
@@ -419,6 +424,11 @@
 
 ## spawn (English)
 
+### 1.6.1
+- The spawn wordmark next to the logo at the top left is gone. The Poké Ball still opens the patch notes.
+- The update button is now an icon, so the profile picture is no longer squeezed when an update is offered. Hover it to see what it does.
+- In the session line above the terminal, the name, branch and folder now sit on one even line.
+
 ### 1.6.0
 - The party is gone. Every Pokémon you have caught is in the Box. The ones that were in your party move to the front of the Box; none is lost.
 - Opening or resuming a session, you pick from every Pokémon that is resting now: the most recently worked come first, and you can search by name. Swap uses the same list.
@@ -695,6 +705,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.6.1
+- 左上のロゴの横の spawn の文字をなくしました。モンスターボールを押すと、これまで通りパッチノートが開きます。
+- アップデートボタンがアイコンになりました。アップデートの案内が出てもプロフィール画像が押しつぶされません。何をするボタンかはマウスを乗せると表示されます。
+- ターミナルの上のセッション名の行で、名前・ブランチ・フォルダの文字がそろって並びます。
 
 ### 1.6.0
 - 手持ちがなくなりました。捕まえたポケモンはすべてボックスにいます。手持ちにいたポケモンはボックスの先頭に移り、いなくなるポケモンはいません。

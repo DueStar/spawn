@@ -62,7 +62,6 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 }
 .w-brand { -webkit-app-region: no-drag; margin-right: auto; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 600; font-size: 17px; line-height: 1; letter-spacing: -0.02em; /* the wordmark: Uncut Sans 600, 17px, -2% */ color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
 /* Lowercase sits low in its line box: the x-height's middle is 1.5px under the ball's, lifted 0.75 (by eye) */
-.w-brand-name { display: block; transform: translateY(-0.75px); }
 .w-brand .pokeball { display: block; }
 .w-brand:hover .pokeball { filter: brightness(1.1); }
 .w-conn { flex: none; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--green); }
@@ -240,7 +239,8 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 
 /* ---------- Update: a hairline button; ready to apply, solid --ink ---------- */
 /* (3px 10px with the 1px border: main's 4px 10px target, ko, en and ja) */
-.w-update { -webkit-app-region: no-drag; font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); padding: 3px 10px; border-radius: var(--r-s); border: 1px solid var(--line); background: none; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+/* An icon button the size of the header's others (1.6.1): the words live in its tooltip, so the profile beside it never shrinks */
+.w-update { -webkit-app-region: no-drag; flex: none; width: 26px; height: 26px; padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-s); border: 1px solid var(--line); background: none; color: var(--ink-2); cursor: pointer; }
 .w-update:hover { border-color: var(--line-hover); color: var(--ink); }
 .w-update.downloading { border-color: var(--line); color: var(--ink-3); cursor: default; }
 .w-update.ready { border-color: transparent; background: var(--ink); color: var(--accent-ink); }

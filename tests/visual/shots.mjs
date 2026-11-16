@@ -995,6 +995,10 @@ const FLOWS = {
         floor: [30, 34],
         why: 'the owner (2026-11-16): narrower, so the folder and resume icons read as one pair beside 새로운 세션 시작하기',
       },
+      // the owner (2026-11-16): the update button is an icon, the header's own 26 × 26, so the profile never shrinks
+      'update button': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
+      'update button (en)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
+      'update button (ja)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
     }
     const NEW = ['list mode', 'list button', 'session header ×', 'text size', '간략 row ×',
       // the chat view (chat view phase 2)
@@ -4934,7 +4938,8 @@ async function textState(page, id) {
     const view = document.querySelector('.w-term-body .term-view:not([style*="display: none"])') ?? document.querySelector('.w-term-body .term-view')
     const screen = view?.querySelector('.xterm-screen')
     const box = view ? { view: view.clientHeight, screen: screen?.getBoundingClientRect().height ?? null, rows: term?.rows, cell: term?.cellHeight } : null
-    const brand = document.querySelector('.w-brand-name')
+    // (the ball alone since 1.6.1: no wordmark beside it)
+    const brand = document.querySelector('.w-brand')
     const b = brand?.getBoundingClientRect()
     return {
       cls: [...html.classList].filter(c => c.startsWith('ts-')).join(' '),

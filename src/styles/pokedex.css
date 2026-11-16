@@ -287,14 +287,14 @@
 
 /* ---------- Account (Google sign-in) ---------- */
 .w-signin {
-  -webkit-app-region: no-drag;
+  -webkit-app-region: no-drag; flex: none;
   /* 10px each side: the 400 weight sets narrower than main's 700, so this keeps main's target (ko, en and ja) */
   font: inherit; font-size: var(--t-meta); font-weight: var(--w-body); padding: 3px 10px; border-radius: var(--r-s); border: 0; white-space: nowrap;
   background: none; color: var(--ink-2); cursor: pointer;
 }
 .w-signin:hover { background: var(--hover); color: var(--ink); }
 .w-account {
-  -webkit-app-region: no-drag;
+  -webkit-app-region: no-drag; flex: none;
   width: 24px; height: 24px; border-radius: 50%; border: 1px solid var(--line); padding: 0; overflow: hidden;
   background: var(--card-2); color: var(--ink); font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); cursor: pointer;
   display: grid; place-items: center;

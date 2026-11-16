@@ -40,7 +40,7 @@ import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailabil
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
-import { BoxIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
+import { BoxIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, UpdateIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
 // The views and the terminal (xterm) are their own chunks: the widget's first
 // paint needs none of them. They are fetched right after it (preloadViews), so
 // opening one later does not wait.
@@ -138,6 +138,13 @@ function modelLabel(display?: string, id?: string): string {
 
 /** A reset a day or more away: the date, or on its own day the time (meters.ts formatResetDay) */
 const resetText = (epochSeconds: number): string => formatResetDay(epochSeconds)
+
+/** What the header's update button does now (its label and tooltip; the button itself is an icon) */
+const updateWord = (u: { status: string; progress?: number; needsFull?: boolean; error?: string | null }): string =>
+  u.status === 'downloading' ? t('받는 중 {pct}%', { pct: Math.round((u.progress ?? 0) * 100) })
+    : u.status === 'ready' ? t('재시작해서 적용')
+    : u.needsFull ? t('새 버전 받기')
+    : u.error ? t('업데이트 실패 · 다시 시도') : t('업데이트')
 
 /** A token count, short: 124K, 1.2M */
 function tokens(n: number): string {
@@ -969,10 +976,10 @@ const Widget: React.FC = () => {
         <div className="w-bento">
           <header className="w-card w-head">
             {/* The ball, the same size and spot as the folded rail's so the logo stays put when the
-                panel folds, and the wordmark beside it; it opens the patch notes */}
+                panel folds; it opens the patch notes (no wordmark beside it since 1.6.1, the owner's call) */}
             {/* 업무 모드: no ball and no wordmark; the profile takes their place on the left and the
                 connection dot follows it (on a Mac the window's traffic lights would sit in this corner) */}
-            {!workMode && <button className="w-brand" onClick={() => setNotesOpen(true)} title={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })} aria-label={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })}><PokeBall size={20} /><span className="w-brand-name">spawn</span></button>}
+            {!workMode && <button className="w-brand" onClick={() => setNotesOpen(true)} title={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })} aria-label={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })}><PokeBall size={20} /></button>}
             {workMode && accountButton}
             <span className={`w-conn${connected ? '' : ' off'}`} title={connected ? t('연결됨') : t('서버 연결 끊김')} />
             {!workMode && accountButton}
@@ -980,7 +987,8 @@ const Widget: React.FC = () => {
               <button
                 className={`w-update ${update.status}${update.status === 'available' && update.error ? ' failed' : ''}`}
                 disabled={update.status === 'downloading'}
-                title={`${update.current} → ${update.latest}${updateNotes(update) ? `
+                aria-label={updateWord(update)}
+                title={`${updateWord(update)} · ${update.current} → ${update.latest}${updateNotes(update) ? `
 
 ${updateNotes(update)}` : ''}${update.error ? `
 
@@ -991,10 +999,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   else if (update.status === 'ready') bridge?.update.restart()
                 }}
               >
-                {update.status === 'downloading' ? t('받는 중 {pct}%', { pct: Math.round(update.progress * 100) })
-                  : update.status === 'ready' ? t('재시작해서 적용')
-                  : update.needsFull ? t('새 버전 받기')
-                  : update.error ? t('업데이트 실패 · 다시 시도') : t('업데이트')}
+                {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's */}
+                <UpdateIcon size={14} />
               </button>
             )}
             <button className="w-icon" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={14} /></button>

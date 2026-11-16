@@ -21,8 +21,9 @@ describe('C1: hit areas not smaller than on main', () => {
   it("the header's 로그인: 10px each side (the 400 weight sets narrower than main's 700)", () => {
     expect(decls(css('pokedex.css'), '.w-signin')).toMatch(/padding: 3px 10px/)
   })
-  it('the update button: 3px 10px inside its 1px border (main: 4px 10px, no border)', () => {
-    expect(decls(css('widget.css'), '.w-update')).toMatch(/padding: 3px 10px;[^;]*;[^;]*border: 1px solid/)
+  // 1.6.1: an icon button the header's size (26 × 26, its words in the tooltip), so the profile beside it never shrinks
+  it('the update button: a 26 × 26 icon inside its 1px border, never shrinking', () => {
+    expect(decls(css('widget.css'), '.w-update')).toMatch(/flex: none; width: 26px; height: 26px;[^}]*border: 1px solid/)
   })
   it("상세's 확인 필요 button: 1px above and below (16px tall, as on main)", () => {
     expect(decls(css('widget-expanded.css'), '.w-pill.as-button')).toMatch(/padding: 1px 0/)

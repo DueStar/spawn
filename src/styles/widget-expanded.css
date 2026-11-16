@@ -131,7 +131,9 @@
   padding: 0 8px 0 10px; border-bottom: 1px solid var(--line);
   background: var(--bg); -webkit-app-region: no-drag;
 }
-.w-sess-head { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; padding-left: 4px; }
+.w-sess-head { display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; padding-left: 4px; }
+/* the words share a baseline (1.6.1: the mono branch sat higher than the folder); the picture, the field and the tools stay centred */
+.w-sess-head > .w-sess-head-pic, .w-sess-head > .w-sess-head-rename, .w-sess-head > .w-chat-tools, .w-sess-head > .w-sess-head-close, .w-sess-head > .w-lens { align-self: center; }
 .w-sess-head-pic { flex: none; width: 22px; height: 22px; object-fit: contain; }
 .w-sess-head-shell, .w-sess-head-glyph {
   display: inline-grid; place-items: center; box-sizing: border-box;
