@@ -236,7 +236,7 @@
   function nameOf(id) { var p = SP[id]; return p ? (p[lang] || p.en) : ''; }
   /* The HOME artwork (toasts, the Pokédex) */
   function art(id, shiny) { return ART + '/' + (shiny ? 'shiny/' : '') + id + '.png'; }
-  /* The Scarlet/Violet box icon (tabs, party, rows, log, ranking); the HOME picture when there is none */
+  /* The Scarlet/Violet box icon (tabs, rows, log, ranking); the HOME picture when there is none */
   function icon(id) { var p = SP[id]; return p && p.slug ? ICON + '/' + p.slug + '.png' : art(id); }
   function ballSrc(b) { return ITEM + '/' + (BALLS[b] ? b : 'poke-ball') + '.png'; }
   function ballName(b) { var n = BALLS[b] || BALLS['poke-ball']; return n[LI()] || n[1]; }
@@ -383,7 +383,6 @@
     head: document.getElementById('sessHead'),
     listCount: document.getElementById('listCount'),
     term: document.getElementById('term'),
-    slots: document.getElementById('partySlots'),
     dexCount: document.getElementById('dexCount'),
     dexRecent: document.getElementById('dexRecent'),
     dexNew: document.getElementById('dexNew'),
@@ -394,10 +393,8 @@
     toggle: document.getElementById('demoToggle')
   };
 
-  // The party: Charmander, Pikachu, Eevee, Gastly, Dratini, Snorlax
-  var PARTY = [4, 25, 133, 92, 147, 143];
   var demo = {
-    sessions: [], shown: null, party: PARTY.slice(),
+    sessions: [], shown: null,
     dex: 0, recent: [10, 41, 74, 63, 1],
     lim5: 31, limW: 46,
     userPaused: false, inView: true
@@ -418,7 +415,7 @@
       model: o.model, dex: o.dex || 0, lv: o.lv || 5, mood: o.mood || 'idle', hp: o.hp == null ? 100 : o.hp, ctx: o.ctx || 200000, chosen: false, lines: [] };
     demo.sessions.push(s);
     els.rows.appendChild(makeRow(s));
-    renderSlots();
+    renderCount();
     return s;
   }
 
@@ -441,7 +438,7 @@
   function removeSession(s) {
     demo.sessions = demo.sessions.filter(function (x) { return x !== s; });
     if (s.ui) s.ui.row.remove();
-    renderSlots();
+    renderCount();
   }
 
   function show(s) {
@@ -451,11 +448,8 @@
     renderTerm();
   }
 
-  function renderSlots() {
-    var out = demo.sessions.map(function (s) { return s.dex; });
-    els.slots.innerHTML = demo.party.map(function (id) {
-      return '<span class="w-party-mon' + (out.indexOf(id) >= 0 ? ' out' : '') + '" title="' + esc(nameOf(id)) + '">' + iconImg(id) + '</span>';
-    }).join('');
+  /* The list's header: 세션 n */
+  function renderCount() {
     els.listCount.textContent = t('app.sessions', { n: demo.sessions.length });
   }
 
@@ -530,8 +524,7 @@
         return wait(2900).then(function () {
           var from = s.dex;
           s.dex = extra.evolveTo;
-          demo.party = demo.party.map(function (id) { return id === from ? s.dex : id; });
-          update(s); renderSlots();
+          update(s);
           toast({ kind: 'evolve', from: from, id: s.dex });
         });
       }
@@ -574,7 +567,6 @@
   function setup() {
     els.rows.textContent = '';
     demo.sessions = [];
-    demo.party = PARTY.slice();
     a = newSession({ id: 'a', title: 'header-copy', project: 'spawn-site', branch: 'main', model: 'Opus', dex: 4, lv: 15, mood: 'idle', hp: 84, ctx: 200000 });
     b = newSession({ id: 'b', title: 'rank-api', project: 'server', branch: 'feat/rank', model: 'Sonnet', dex: 25, lv: 9, mood: 'working', hp: 63, ctx: 200000 });
     d = newSession({ id: 'd', title: 'migrate-db', project: 'server', branch: 'chore/db', model: 'Sonnet', dex: 143, lv: 23, mood: 'needs-you', hp: 24, ctx: 200000 });
@@ -611,7 +603,7 @@
     // a new session: its Pokémon is there from the start
     var c = newSession({ id: 'c', titleKey: 'app.newTab', project: 'spawn-site', branch: 'fix/login', model: 'Opus', dex: 133, lv: 12, mood: 'idle', hp: 100, ctx: 200000 });
     c.lines = [{ cls: 't-status', text: 'claude --session-id 2c91… ' }];
-    show(c); renderSlots();
+    show(c);
     await wait(1700);
     await typePrompt(c, 'term.prompt2');
     c.titleKey = null; c.title = 'login-bug';
@@ -639,7 +631,7 @@
     onLang(function () {
       demo.sessions.forEach(function (s) { updateRow(s); });
       updateHead();
-      renderSlots();
+      renderCount();
       renderTerm();
       els.toggle.textContent = t(demo.userPaused ? 'demo.play' : 'demo.pause');
     });
@@ -662,7 +654,6 @@
   // Shiny picks: Gyarados (red) and Zubat (green). Eevee was shiny here before, and shiny Eevee's HOME art is silver-white, which read as "faded" in the detail card
   var SHINY = [130, 41];
   var NEW_CAUGHT = [43, 92];
-  var PARTY_DEX = [5, 25, 133, 92, 147, 143];
   var WORKING_DEX = [5, 25];
   var TERRAINS = ['grass', 'cave', 'forest', 'sky', 'safari', 'plant'];
   var VIA = { grass: 'Edit', cave: 'Bash', forest: 'Read', sky: 'WebSearch', safari: 'Agent', plant: 'mcp__github' };
@@ -687,7 +678,7 @@
       for (var i = 0; i < count; i++) {
         var hv2 = hash(id * 31 + i);
         mons.push({ lv: 5 + (hv2 % 38), nature: NATURE_KEYS[hv2 % NATURE_KEYS.length], ball: BALL_POOL[hv2 % BALL_POOL.length], steps: (hv2 * 3) % 900,
-          shiny: SHINY.indexOf(id) >= 0 && i === 0, party: i === 0 && PARTY_DEX.indexOf(id) >= 0, working: i === 0 && WORKING_DEX.indexOf(id) >= 0, via: how === 'wild' ? VIA[terrain] : '' });
+          shiny: SHINY.indexOf(id) >= 0 && i === 0, working: i === 0 && WORKING_DEX.indexOf(id) >= 0, via: how === 'wild' ? VIA[terrain] : '' });
       }
       caught[id] = { count: count, shiny: SHINY.indexOf(id) >= 0, how: how, terrain: terrain, night: hv % 5 === 0, project: PROJECTS[hv % 3], first: day, mons: mons };
     } else if (isSeen) {
@@ -811,7 +802,7 @@
           return '<div class="dex-owned-row"><div class="dex-owned-top">' + ballImg(m.ball, 14) +
             '<span class="dex-lv">Lv.' + m.lv + '</span><b>' + (m.shiny ? '✦ ' : '') + esc(nameOf(p.id)) + '</b>' +
             '<span class="dex-nature">' + esc(natureName(m.nature)) + '</span></div>' +
-            '<div class="dex-owned-sub">' + esc(t(m.party ? 'app.party' : 'app.box')) + (m.working ? ' · ' + esc(t('app.working')) : '') + ' · ' + esc(t('fact.stepsVal', { n: m.steps })) +
+            '<div class="dex-owned-sub">' + esc(t('app.box')) + (m.working ? ' · ' + esc(t('app.working')) : '') + ' · ' + esc(t('fact.stepsVal', { n: m.steps })) +
             (m.via ? ' · ' + esc(t('app.viaCatch', { how: m.via })) : '') + '</div></div>';
         }).join('') + '</div>';
     } else if (ds) {
@@ -905,11 +896,9 @@
   (function () {
     var root = document.getElementById('sessDemo');
     if (!root) return;
-    var slotsEl = document.getElementById('sessSlots');
     var colsEl = document.getElementById('sessCols');
     var clock = sectionClock(root);
-    var party = [4, 25, 133, 92, 147, 143];
-    /* Two rounds of three sessions, so the party takes turns (each from the party, each its own project) */
+    /* Two rounds of three sessions, each taken by a resting Pokémon, each its own project */
     var ROUNDS = [
       [
         { mon: 4, title: 'header-copy', project: 'spawn-site', branch: 'main', model: 'Opus', lv: 15, hp: 92, sid: '7f3a', prompt: 'term.prompt1', reply: 'term.reply1',
@@ -930,12 +919,6 @@
     ];
     var round = 0, live = [];
 
-    function renderSlots() {
-      var out = live.map(function (s) { return s.dex; });
-      slotsEl.innerHTML = party.map(function (id) {
-        return '<span class="w-party-mon' + (out.indexOf(id) >= 0 ? ' out' : '') + '" title="' + esc(nameOf(id)) + '">' + iconImg(id) + '</span>';
-      }).join('');
-    }
     function pushLine(s, l) { s.lines.push(l); miniTerm(s.term, s.lines); var last = s.term.lastElementChild; if (last && !reduceMotion) last.style.animation = ''; }
 
     async function run(p, at) {
@@ -947,7 +930,7 @@
       col.appendChild(makeRow(s));
       s.term = node('div', undefined, 'fake-term sess-term');
       col.appendChild(s.term);
-      live.push(s); renderSlots();
+      live.push(s);
       pushLine(s, { cls: 't-status', text: 'claude --session-id ' + p.sid + '… ' });
       await clock.wait(1100);
       // the session takes its name (its Pokémon was there from the start)
@@ -973,7 +956,7 @@
     async function cycle() {
       // three empty places, filled one by one (the panel keeps its size while it plays)
       var plan = ROUNDS[round % ROUNDS.length]; round++;
-      colsEl.textContent = ''; live = []; renderSlots();
+      colsEl.textContent = ''; live = [];
       plan.forEach(function () { var c = node('div', undefined, 'sess-col'); c.appendChild(h('<span class="sess-wait">' + plainBall(22) + '</span>')); colsEl.appendChild(c); });
       await clock.wait(700);
       var runs = [];
@@ -981,7 +964,7 @@
       await Promise.all(runs);
       await clock.wait(4200);
     }
-    onLang(function () { renderSlots(); live.forEach(function (s) { updateRow(s); miniTerm(s.term, s.lines); }); });
+    onLang(function () { live.forEach(function (s) { updateRow(s); miniTerm(s.term, s.lines); }); });
     (async function () { for (;;) { await cycle(); } })();
   })();
 
@@ -1020,13 +1003,13 @@
       ['Glob', 'src/**/*.tsx', 'Found 23 files', 'forest'],
       ['Bash', 'git status', '2 files changed', 'cave'],
       ['Read', 'src/App.tsx', 'Read 210 lines', 'forest'],
-      ['Grep', '"PARTY_SIZE"', 'Found 3 files', 'forest'],
+      ['Grep', '"PAGE_SIZE"', 'Found 3 files', 'forest'],
       ['Edit', 'src/config.ts', 'Updated with 1 addition', 'grass'],
       ['Bash', 'npm test', 'Tests  28 passed (28)', 'cave'],
       ['WebSearch', '"react useMemo deps"', 'Did 1 search', 'sky'],
       ['Read', 'package.json', 'Read 61 lines', 'forest'],
-      ['Grep', '"useParty"', 'Found 4 files', 'forest'],
-      ['Edit', 'src/Party.tsx', 'Updated with 2 additions', 'grass'],
+      ['Grep', '"useSession"', 'Found 4 files', 'forest'],
+      ['Edit', 'src/Session.tsx', 'Updated with 2 additions', 'grass'],
       ['Bash', 'npm run build', 'built in 2.4s', 'cave'],
       ['WebFetch', 'pokeapi.co/docs', 'Received 22 KB', 'sky'],
       ['Edit', 'src/Box.tsx', 'Updated with 1 addition', 'grass']

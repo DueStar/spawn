@@ -107,7 +107,7 @@
               <div class="w-side">
                 <div class="w-bento">
                   <header class="w-card w-head">
-                    <span class="w-brand"><img class="pokeball" src="assets/img/poke-ball-dream.png" width="20" height="20" alt=""><span class="w-brand-name" data-name></span></span>
+                    <span class="w-brand"><img class="pokeball" src="assets/img/poke-ball-dream.png" width="20" height="20" alt=""></span>
                     <span class="w-conn"></span>
                     <span class="w-icon"><svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.32 3.40L6.63 1.54L9.37 1.54L9.68 3.40L11.15 4.25L12.90 3.58L14.28 5.96L12.83 7.15L12.83 8.85L14.28 10.04L12.90 12.42L11.15 11.75L9.68 12.60L9.37 14.46L6.63 14.46L6.32 12.60L4.85 11.75L3.10 12.42L1.72 10.04L3.17 8.85L3.17 7.15L1.72 5.96L3.10 3.58L4.85 4.25Z"/><circle cx="8" cy="8" r="2.1"/></svg></span>
                     <span class="w-icon w-side-toggle on"><svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="3" width="11" height="10" rx="2"/><path d="M6.5 3v10"/></svg></span>
@@ -131,17 +131,13 @@
                     <span class="w-launch-alt"><svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5c0-.6.4-1 1-1h3l1.5 1.5H13c.6 0 1 .4 1 1V12c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z"/></svg></span>
                     <span class="w-launch-alt"><svg class="ico" width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5.5" width="12" height="8" rx="1.5"/><path d="M3.5 3.5h9M5 1.8h6"/><path d="M5 9.5h4"/></svg></span>
                   </section>
-                  <!-- since 1.4.0 the dex and the party are one line each, the NEW dot right after the label -->
+                  <!-- since 1.4.0 the dex is one line, the NEW dot right after the label -->
                   <div class="w-card w-dex">
                     <span class="w-label"><span data-i18n="app.dex"></span><span class="w-new-dot" id="dexNew" hidden></span></span>
                     <span class="w-dex-count"><b id="dexCount">86</b><span> / 1025</span></span>
                     <span class="w-dex-recent" id="dexRecent"></span>
                   </div>
-                  <section class="w-card w-party">
-                    <div class="w-party-head">
-                      <span class="w-label" data-i18n="app.party"></span>
-                      <span class="w-party-slots" id="partySlots"></span>
-                    </div>
+                  <section class="w-card w-sessions">
                     <!-- the list's header (1.4.0): 세션 n, 간략 / 상세, a new shell, a new session -->
                     <div class="w-list-head">
                       <span class="w-list-count" id="listCount"></span>
@@ -204,7 +200,7 @@
     <!-- ============ 3. Features: a short line each, and the app view working ============ -->
     <div id="features">
 
-      <!-- 세션마다 한 마리: party slots + session rows (Widget.tsx) with their terminals -->
+      <!-- 세션마다 한 마리: session rows (Widget.tsx) with their terminals -->
       <section class="section feature" id="sessions">
         <div class="wrap">
           <div class="feature-head">
@@ -212,10 +208,6 @@
             <p class="lede" data-i18n="f1.lede"></p>
           </div>
           <div class="widget sess-demo" id="sessDemo" aria-hidden="true">
-            <div class="w-card sess-party">
-              <span class="w-label" data-i18n="app.party"></span>
-              <div class="w-party-slots sess-slots" id="sessSlots"></div>
-            </div>
             <div class="sess-cols" id="sessCols"></div>
           </div>
         </div>

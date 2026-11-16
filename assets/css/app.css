@@ -11,7 +11,7 @@
      src/styles/widget.css           cards, header, usage rows, the list header, session rows, status, HP
      src/styles/widget-expanded.css  window mode, launcher, terminal card, view bar, session header,
                                      text-size control, window buttons, settings rows and switch
-     src/styles/pokedex.css          dex strip, party strip, view tabs, NEW dot, the Pokédex, the log
+     src/styles/pokedex.css          dex strip, view tabs, NEW dot, the Pokédex, the log
      src/styles/toast.css            the catch notification card
      src/styles/terminal.css         the terminal view base
    The seven rules of the look: only Pokémon and tier colours are saturated; yellow only on the
@@ -76,7 +76,7 @@
 /* ---------- The bento ---------- */
 .w-bento { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; }
 .w-bento > .w-card { flex: none; }
-.w-bento > .w-party { flex: 1 1 auto; min-height: 0; }
+.w-bento > .w-sessions { flex: 1 1 auto; min-height: 0; }
 .w-card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -102,7 +102,6 @@
 }
 /* the app's wordmark (widget.css): the ball and "spawn", Uncut Sans 600 17px -2% */
 .w-brand { margin-right: auto; display: inline-flex; align-items: center; gap: 6px; font: inherit; font-weight: 600; font-size: 17px; line-height: 1; letter-spacing: -0.02em; color: inherit; background: none; border: 0; padding: 0; }
-.w-brand-name { display: block; transform: translateY(-0.75px); }
 .w-brand .pokeball { display: block; }
 .w-conn { flex: none; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--green); }
 /* An icon button: no fill until hovered */
@@ -121,7 +120,7 @@
 .w-bar { height: var(--bar-h); border-radius: 1px; background: var(--track); overflow: hidden; }
 .w-bar span { display: block; height: 100%; border-radius: 1px; background: var(--bar); transition: width 0.4s; }
 
-.w-party {
+.w-sessions {
   grid-column: 1 / -1;
   overflow-y: auto;
   display: flex;
@@ -247,7 +246,9 @@
   display: flex; align-items: center; gap: 4px; flex-shrink: 0; min-width: 0;
   height: var(--sess-bar-h); padding: 0 8px 0 10px; border-bottom: 1px solid var(--line); background: var(--bg);
 }
-.w-sess-head { display: flex; align-items: center; gap: 8px; flex: 1 1 auto; min-width: 0; padding-left: 4px; }
+.w-sess-head { display: flex; align-items: baseline; gap: 8px; flex: 1 1 auto; min-width: 0; padding-left: 4px; }
+/* the words share a baseline, as in the app (1.6.1); the picture and the × stay centred */
+.w-sess-head > .w-sess-head-pic, .w-sess-head > .w-sess-head-close { align-self: center; }
 .w-sess-head-pic { flex: none; width: 22px; height: 22px; object-fit: contain; }
 .w-sess-head-name {
   flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
@@ -283,11 +284,8 @@
 .widget.mode-window .w-bento { gap: 0; }
 .widget.mode-window .w-side .w-limits { padding: 12px 16px; }
 .widget.mode-window .w-side .w-launch { padding: 6px 8px; }
-/* The Pokédex strip and the party strip read as one block: no line between them; the party's
-   line runs the panel's full width */
+/* The Pokédex strip and the session list read as one block: no line between them */
 .widget.mode-window .w-side .w-dex { padding-bottom: 6px; border-bottom: 0; }
-.widget.mode-window .w-side .w-party:has(> .w-party-head) { padding-top: 0; }
-.widget.mode-window .w-party-head { margin: 0 -16px 10px; padding: 0 16px 10px; }
 
 /* ---------- The top bar's right end: the widget toggle, the text size, the window's own three ---------- */
 .w-win-controls { display: flex; gap: 2px; margin-left: 4px; flex: none; }
@@ -328,7 +326,7 @@
 .w-toast-tier { color: var(--tier); font-weight: var(--w-name); }
 
 .dex-cell img, .dex-card-art img,
-.w-dex-recent img, .w-party-slots img, .w-row img { image-rendering: auto !important; }
+.w-dex-recent img, .w-row img { image-rendering: auto !important; }
 
 /* ---------- Dex strip: one line — the label (and the new dot), the count beside it, the latest four ---------- */
 .w-dex {
@@ -499,13 +497,6 @@
 .dex-lv { font-size: var(--t-micro); font-weight: var(--w-name); color: var(--ink-2); margin-right: 2px; font-variant-numeric: tabular-nums; }
 .dex-owned-top img.pokeball { width: 14px; height: 14px; }
 
-/* ---------- Party lineup ---------- */
-/* One line: the label in a 36px column, the party right-aligned; a line under it, card edge to card edge */
-.w-party-head { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 10px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
-.w-party-slots { display: flex; gap: 4px; justify-content: flex-end; align-items: center; min-width: 0; }
-.w-party-slots img { width: var(--w-icon); height: var(--w-icon); flex: none; object-fit: contain; opacity: 0.45; filter: grayscale(0.3); }
-.w-party-mon { padding: 0; border: 0; background: none; border-radius: var(--r-s); display: grid; place-items: center; }
-.w-party-mon.out img { opacity: 1; filter: none; }
 .w-row-mon { width: var(--row-mon); height: var(--row-mon); object-fit: contain; flex-shrink: 0; image-rendering: auto; }
 .w-row-lv { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 

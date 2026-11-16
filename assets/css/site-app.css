@@ -10,7 +10,7 @@
 /* ---------- The hero app (window mode) ---------- */
 /* (the left panel is the app's default 300px, --side-w in app.css) */
 .hero-app { display: flex; height: 560px; position: relative; cursor: default; user-select: none; }
-.hero-app .w-party { overflow: hidden; }
+.hero-app .w-sessions { overflow: hidden; }
 .hero-app .w-row { animation: rowIn 0.35s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes rowIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
 
@@ -47,7 +47,7 @@
 @media (max-width: 820px) {
   .hero-app { flex-direction: column; height: auto; }
   .widget.expanded.hero-app .w-side { flex: none; width: auto; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
-  .hero-app .w-party { max-height: 260px; }
+  .hero-app .w-sessions { max-height: 260px; }
   .widget.mode-window.hero-app .w-term { flex: none; height: 320px; }
   .toast-slot { right: 10px; left: 10px; bottom: 10px; width: auto; max-width: none; }
 }
@@ -109,11 +109,8 @@
   .sess-demo, .step-panel, .tools-panel { zoom: 1.18; }
 }
 
-/* ---------- 세션마다 한 마리: the party and three sessions opening ---------- */
+/* ---------- 세션마다 한 마리: three sessions opening, a resting Pokémon on each ---------- */
 .sess-demo { display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 20px; background: var(--side); border: 1px solid var(--line); --w-icon: 40px; --w-icon-gap: 14px; }
-.sess-party { display: flex; align-items: center; gap: 18px; padding: 14px 18px; }
-.sess-party .w-party-mon img { transition: opacity 0.4s, filter 0.4s, transform 0.3s; }
-.sess-party .w-party-mon.out img { transform: translateY(-3px); }
 .sess-cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .sess-col { min-width: 0; height: 300px; display: flex; flex-direction: column; gap: 8px; padding: 8px; border-radius: 16px; background: var(--term); border: 1px dashed var(--line-strong); }
 .sess-col.open { border: 1px solid var(--line); animation: rowIn 0.35s cubic-bezier(.2, .8, .2, 1) both; }
@@ -127,7 +124,6 @@
   .sess-col { height: 220px; }
   .sess-col:nth-child(3) { display: none; }
   .sess-demo { --w-icon: 32px; --w-icon-gap: 8px; }
-  .sess-party { flex-direction: column; align-items: flex-start; gap: 10px; padding: 12px 14px; }
 }
 
 /* ---------- 도구를 쓰면 한 걸음: tool calls on the left, the walk and the catch card on the right ---------- */
@@ -245,7 +241,6 @@
 
 @media (prefers-reduced-motion: reduce) {
   .hero-app .w-row, .fake-term .ln, .sess-col.open, .dex-strip .dex-cell.fill img { animation: none; }
-  .sess-party .w-party-mon img { transition: none; }
   .fake-term .t-cursor { animation: none; }
   .w-ctx.w-hp span, .w-bar span { transition: none; }
 }
