@@ -1,0 +1,16 @@
+❯ Use the Agent tool to start one background subagent that runs a short sleep.
+
+● Agent "Sleep then report" is waiting on its own background work · 18s
+
+● The background agent has not finished yet. It should say "done" once the sleep ends.
+
+✻ Churned for 33s · done 오전 11:16 · 1 shell still running
+                                                                                         
+─────────────────────────────────────────────────────────────────────────────────────────
+❯                                                                                        
+─────────────────────────────────────────────────────────────────────────────────────────
+  Opus 5.5 · ctx 7% · $0.83                                                              
+  ⏵⏵ accept edits on · 1 shell
+                                                                                         
+  ● main
+  ◯ general-purpose  Sleep then report                              18s · ↓ 61.4k tokens

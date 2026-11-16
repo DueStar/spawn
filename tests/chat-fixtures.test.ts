@@ -224,6 +224,8 @@ const SCREENS = [
   'narrow-wrap', 'bash-mode', 'no-box-shell', 'short',
   // what the Phase 3 trial showed on Claude Code 2.1.325 (hand-redacted real shapes)
   'real-placeholder-nbsp', 'real-idle-empty-nbsp', 'real-history-recall',
+  // the owner's session after 1.5.1: a named session, a subagent running (tests/chat-real-owner-screens.test.ts)
+  'real-named-session', 'real-agents-panel',
 ]
 
 describe('the composer fixtures', () => {

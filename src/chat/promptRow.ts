@@ -25,8 +25,13 @@ export type EchoState = 'ok' | 'pending' | 'mismatch' | 'blocked'
 const LOOK = 24
 const SOLID = /^\s*─{20,}\s*$/
 const DASHED = /╌{20,}/
-/** the box's top rule with a label in it, as while a prompt is recalled with ↑ ("─── History 33/33 ───…"; the Phase 3 trial) */
-const TOP_LABELLED = /^\s*─{2,} [^─╌❯]{1,40} ─{20,}\s*$/
+/**
+ * the box's top rule with a label in it: a prompt recalled with ↑ at its left ("─── History 33/33 ───…"; the Phase 3
+ * trial), a named session's name (/rename, --name) at its right ("───…─── Spawn ─"; the owner's session after 1.5.1),
+ * or both; still at least 20 rule characters in all (topLabelled)
+ */
+const TOP_LABELLED = /^\s*─{2,}(?: [^─╌❯]+? ─+)+\s*$/
+const topLabelled = (l: string) => TOP_LABELLED.test(l) && (l.match(/─/g)?.length ?? 0) >= 20
 /** a numbered menu line with the selection mark (a dialog), anywhere on its line */
 const MENU = /^\s*❯\s*\d+\.\s/
 /** the same, indented: never a prompt Claude Code echoed (those start at the first column) */
@@ -40,6 +45,21 @@ const SHELL = /^(?:PS\s.*>|[A-Za-z]:\\.*>|\S+[$#%])\s*$/
 const FOOTER_MAX = 4
 /** while a slash command is typed, Claude Code lists the commands that match under the box */
 const COMMAND_FOOTER_MAX = 12
+/**
+ * while a subagent runs (`"tui": "fullscreen"`), the agents panel under the footer: a blank line, then indented lines,
+ * the first a status glyph ("  ● main", "  ◯ general-purpose  …"), no selection mark (the owner's session after 1.5.1)
+ */
+const PANEL_MAX = 12
+const PANEL_FIRST = /^\s+[^\p{L}\p{N}\s❯]/u
+
+/** The footer is the short footer, then a blank line and the agents panel */
+function agentsPanel(footer: string[]): boolean {
+  const blank = footer.findIndex(l => !l.trim())
+  if (blank < 0 || blank > FOOTER_MAX) return false
+  const panel = footer.slice(blank + 1)
+  const first = panel.find(l => l.trim())
+  return !!first && panel.length <= PANEL_MAX && PANEL_FIRST.test(first) && panel.every(l => !l.trim() || (/^\s+\S/.test(l) && !l.includes('❯')))
+}
 
 /** The last `n` lines of a text, without splitting all of it (a long buffer costs nothing) */
 function lastLines(text: string, n: number): string[] {
@@ -74,17 +94,18 @@ export function promptRow(screen: string | null): RowVerdict {
 
   // the box: the nearest solid rule above the last one, 1–12 lines between
   let first = -1
-  for (let i = last - 1; i >= Math.max(0, last - 13); i--) if (SOLID.test(lines[i]) || TOP_LABELLED.test(lines[i])) { first = i; break }
+  for (let i = last - 1; i >= Math.max(0, last - 13); i--) if (SOLID.test(lines[i]) || topLabelled(lines[i])) { first = i; break }
   const inside = first >= 0 ? lines.slice(first + 1, last) : []
   if (!inside.length || !PROMPT.test(inside[0])) return { kind: 'unknown', why: 'no-box' }
   if (inside.slice(1).some(l => l.trim() !== '' && !INDENT.test(l))) return { kind: 'unknown', why: 'no-box' }
   const text = [inside[0].slice(2), ...inside.slice(1).map(l => l.slice(2))].join('\n').trim()
 
-  // the footer: short, no shell prompt (a command's list of matches may be longer, all indented)
+  // the footer: short, no shell prompt (a command's list of matches may be longer, all indented; the agents panel
+  // may follow it)
   const footer = lines.slice(last + 1)
   if (footer.some(l => SHELL.test(l.trim()) && !l.startsWith(' '))) return { kind: 'unknown', why: 'no-box' }
   const command = text.startsWith('/')
-  if (footer.length > FOOTER_MAX && !(command && footer.length <= COMMAND_FOOTER_MAX && footer.every(l => !l.trim() || /^\s/.test(l)))) {
+  if (footer.length > FOOTER_MAX && !agentsPanel(footer) && !(command && footer.length <= COMMAND_FOOTER_MAX && footer.every(l => !l.trim() || /^\s/.test(l)))) {
     return { kind: 'unknown', why: 'no-box' }
   }
   return text ? { kind: 'text', text } : { kind: 'empty' }
