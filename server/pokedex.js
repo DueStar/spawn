@@ -1,14 +1,21 @@
 /**
  * pokedex.js — the game, trainer style.
  *
- * The trainer starts with a party of six: a starter (이상해씨 / 파이리 / 꼬부기, at
- * random) and five base-form Pokémon. Each Claude Code session takes a party
- * Pokémon that is not working (the starter first); with all six out, there is
- * no one left to send. Growth belongs to the Pokémon, not the session: every
- * tool call is a step for it; it levels up with work time and evolves at the
- * games' evolution level. A fully
- * evolved Pokémon can be swapped out of its session for another one the
- * trainer owns, so a busy session can raise someone new.
+ * Every Pokémon the trainer owns lives in one collection, the box. A first run
+ * gifts six into it: a starter (any generation's grass / fire / water first
+ * form, at random) and five base-form companions. Each Claude Code session goes
+ * out with a resting Pokémon (one not working a session or helping a subagent):
+ * the one the app threw, else the resting one that went out most recently
+ * (byRecentWork). There is no session limit. A session opened while none rests
+ * goes without: it meets and catches nothing, and the next Pokémon to rest goes
+ * out with it (the oldest waiting session first). Growth belongs to the Pokémon, not
+ * the session: every tool call is a step for it; it levels up with work time
+ * and evolves at the games' evolution level. A session's Pokémon can be swapped
+ * for any resting one, so a busy session can raise someone new.
+ *
+ * Saves from 1.5.4 and older kept a party of up to six apart from the box; on
+ * load (and on a synced game) it is folded into the front of the box, and the
+ * save keeps an empty `party` so an older app can still read it.
  *
  * Every step is also a step through tall grass: it may meet a wild Pokémon,
  * rolled on a gacha-style table with pities, and the caught ones go to the box.
@@ -16,7 +23,8 @@
  *
  *   createPokedex({ file, species, broadcast, isActive?, now?, random? })
  *     .noteEvent(event, session)    after the server processed a hook event
- *     .swap(sessionId, uid)         put another party Pokémon (a resting one) on a session
+ *     .throwBall(sessionId, uid)    send a resting Pokémon out with a session
+ *     .swap(sessionId, uid)         put another resting Pokémon on a session
  *     .publicState()                the whole game for the snapshot / GET /pokedex
  */
 
@@ -31,16 +39,14 @@ export const STARTERS = [
   1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495, 498, 501,
   650, 653, 656, 722, 725, 728, 810, 813, 816, 906, 909, 912,
 ]
-export const PARTY_SIZE = 6
 /**
- * Sessions open at once. The party's six go first; past them a resting box
- * Pokémon works the session as a "helper" (the party stays six, as in the games).
- * Twelve: every terminal holds a WebGL context and Chromium allows about 16.
+ * The size of a party in saves from 1.5.4 and older. Used only to read and
+ * merge them: the party is folded into the box, and nothing keeps one now.
  */
-export const SESSION_LIMIT = 12
+export const LEGACY_PARTY_SIZE = 6
 /**
- * The PC box holds this many Pokémon (the party's six are separate). It keeps
- * one trainer's saved game bounded (about 0.4 MB of individuals at ~360 bytes
+ * The box holds every Pokémon the trainer owns, up to this many. It keeps one
+ * trainer's saved game bounded (about 0.4 MB of individuals at ~360 bytes
  * each) so the free cloud tier lasts. When it is full, a new catch still fills
  * the Pokédex, but the individual is sent to the professor instead of the box.
  */
@@ -271,6 +277,34 @@ export function monKey(m) {
   return `${m.originUid ?? m.uid}|${JSON.stringify(fixed)}`
 }
 
+/**
+ * Pokémon in "most recently worked" order (a new array): the ones that went out
+ * with a session (outAt), the latest first; then the rest by work time, the
+ * most first; ties keep the given order. The page mirrors it (src/resting.ts).
+ */
+export function byRecentWork(uids, mons) {
+  const outAt = (u) => { const t = mons?.[u]?.outAt; return typeof t === 'number' ? t : null }
+  const workMs = (u) => { const w = mons?.[u]?.workMs; return typeof w === 'number' ? w : 0 }
+  return uids
+    .map((u, i) => ({ u, i, out: outAt(u), work: workMs(u) }))
+    .sort((a, b) => {
+      if (a.out !== null || b.out !== null) {
+        if (a.out === null) return 1
+        if (b.out === null) return -1
+        if (a.out !== b.out) return b.out - a.out
+      } else if (a.work !== b.work) return b.work - a.work
+      return a.i - b.i
+    })
+    .map(x => x.u)
+}
+
+/**
+ * The log events that mark a Pokémon going out with a session (the source of a
+ * missing outAt). An `exchange` counts only with a `sessionId`: a plain PC
+ * trade between box and party never went out.
+ */
+const OUT_KINDS = new Set(['sendout', 'swap', 'exchange'])
+
 /** How many released individuals the save remembers (the oldest are forgotten past this) */
 export const RELEASED_LIMIT = 5000
 
@@ -280,8 +314,8 @@ function emptyState() {
     caught: {}, seen: {},
     trainer: null,          // { starter, since }
     mons: {},               // uid -> { uid, dex, steps, evos, shiny, how, place, at }
-    party: [],              // up to PARTY_SIZE uids
-    box: [],                // uids
+    party: [],              // always empty: kept so an older app can read the save (1.5.4's party, folded into the box)
+    box: [],                // uids: every Pokémon the trainer owns
     assign: {},             // sessionId -> uid
     projects: {},           // sessionId -> project (for places)
     nextUid: 1,
@@ -302,8 +336,8 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
   let state = load()
   // A throw holds its Pokémon only while that session starts up in this run: the
   // app and its terminals restart with the server, so a hold saved by the last run
-  // would only keep the party "busy" with sessions that are gone (a quick restart
-  // after a restore left all six busy and nothing could open)
+  // would only keep Pokémon "busy" with sessions that are gone (a quick restart
+  // after a restore once left all six of the party busy and nothing could open)
   if (state.thrownAt) state.thrownAt = {}
   /** Individuals saved by older versions get the fields added since (on load and on a synced game) */
   function upgradeMons() {
@@ -318,6 +352,35 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
     for (const c of Object.values(state.caught ?? {})) {
       if ((c.how === 'starter' || c.how === 'gift') && !c.ball) c.ball = 'poke-ball'
     }
+    // When each went out with a session, for saves from before outAt was kept: the
+    // newest sendout / swap / exchange onto a session in the log (a helper is not a session's)
+    const lastOut = new Map()
+    for (const e of Array.isArray(state.log) ? state.log : []) {
+      if (!e || !OUT_KINDS.has(e.kind) || typeof e.uid !== 'string' || typeof e.at !== 'number') continue
+      if (e.kind === 'exchange' && !e.sessionId) continue
+      if (!(lastOut.get(e.uid) >= e.at)) lastOut.set(e.uid, e.at)
+    }
+    for (const [uid, m] of Object.entries(state.mons ?? {})) {
+      if (typeof m.outAt !== 'number' && lastOut.has(uid)) m.outAt = lastOut.get(uid)
+    }
+  }
+  /**
+   * A party kept by 1.5.4 and older joins the front of the box, in its order
+   * (members that exist and are not in the box already), and the party is left
+   * empty. Nothing leaves state.mons. Returns whether anything changed.
+   */
+  function foldParty() {
+    const party = state.party
+    if (Array.isArray(party) && party.length === 0) return false
+    if (!Array.isArray(state.box)) state.box = []
+    const have = new Set(state.box)
+    const front = []
+    for (const uid of Array.isArray(party) ? party : []) {
+      if (typeof uid === 'string' && state.mons?.[uid] && !have.has(uid)) { front.push(uid); have.add(uid) }
+    }
+    state.box = [...front, ...state.box]
+    state.party = []
+    return true
   }
   upgradeMons()
   let traitsBackfilled = false
@@ -374,6 +437,8 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
   function flush() {
     if (saveTimer || stepTimer) writeNow()
   }
+  // After the save timers exist: a 1.5.4 party joins the box, and the save says so
+  if (foldParty()) save()
 
   function publish(event) {
     broadcast({ type: 'pokedex', state: publicState(), ...(event ? { event } : {}) })
@@ -383,18 +448,27 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
   /** A throw holds its Pokémon this long while the session starts up (before its first hook event) */
   const THROW_HOLD_MS = 10 * 60 * 1000
 
+  /** The session holds its Pokémon now: it is open, or a throw for it is still starting up */
+  function holding(sid) {
+    const thrown = state.thrownAt?.[sid]
+    return isActive(sid) || !!(thrown && now() - thrown < THROW_HOLD_MS)
+  }
   function busyUids() {
     const busy = new Map()
     for (const [sid, uid] of Object.entries(state.assign)) {
-      const thrown = state.thrownAt?.[sid]
-      if (isActive(sid) || (thrown && now() - thrown < THROW_HOLD_MS)) busy.set(uid, sid)
+      if (holding(sid)) busy.set(uid, sid)
     }
     return busy
   }
+  /** `uid` works for a session other than `sessionId`, or helps a subagent */
+  function busyElsewhere(uid, sessionId) {
+    for (const [sid, u] of Object.entries(state.assign)) if (u === uid && sid !== sessionId && holding(sid)) return true
+    return helpingUids().has(uid)
+  }
 
   /**
-   * Helpers: a session's subagents are worked by box Pokémon, one each, while
-   * the subagent runs (the party stays the session cap). Per run only: a
+   * Helpers: a session's subagents are worked by resting box Pokémon, one each,
+   * while the subagent runs. Per run only: a
    * helper goes back to the box when its subagent stops, its session ends or
    * it has not worked for HELPER_IDLE_MS. key `${sessionId}
 ${agentId}` -> { uid, sessionId, lastAt }
@@ -416,7 +490,7 @@ ${agentId}`
     helpers.set(key, { uid, sessionId, lastAt: now() })
     return { uid, isNew: true }
   }
-  /** A session that is not working right now (its turn is over, or it stopped on an error): its Pokémon may leave the party */
+  /** A session that is not working right now (its turn is over, or it stopped on an error); used only by exchange(), which nothing calls now */
   const HARD_NEEDS_YOU = new Set(['permission', 'agent-input', 'registry'])
   function sessionResting(sid) {
     const m = sessionOf(sid)?.main
@@ -452,14 +526,11 @@ ${agentId}`
       seen: state.seen,
       trainer: state.trainer,
       mons: state.mons,
-      party: state.party,
       box: state.box,
       assign,
       remembered: state.assign,
       // sessionId -> the box Pokémon helping its subagents
       helpers: [...helpers.values()].reduce((m, h) => { (m[h.sessionId] ??= []).push(h.uid); return m }, {}),
-      partySize: PARTY_SIZE,
-      sessionLimit: SESSION_LIMIT,
       boxLimit: BOX_LIMIT,
       encounters: state.encounters,
       sinceLegend: state.sinceLegend,
@@ -554,8 +625,9 @@ ${agentId}`
 
   /**
    * The very first run: one starter (any generation's) and five common base-form
-   * companions, all at Lv.5 in a plain Poké Ball
+   * companions, all at Lv.5 in a plain Poké Ball, into the box (the starter first)
    */
+  const FIRST_GIFTS = 6
   function ensureTrainer() {
     if (state.trainer || species.length === 0) return false
     const starters = STARTERS.filter(id => byId.has(id))
@@ -563,35 +635,89 @@ ${agentId}`
     const starter = starters[Math.floor(random() * starters.length)]
     state.trainer = { starter, since: now() }
     const place = placeCode.start()
-    state.party = [newMon(starter, { how: 'starter', place, ball: 'poke-ball', level: STARTER_LEVEL })]
+    const gifts = [newMon(starter, { how: 'starter', place, ball: 'poke-ball', level: STARTER_LEVEL })]
     // Companions: common base forms that can evolve, so every one has somewhere to grow
     const pool = species.filter(s => s.tier === 'common' && !s.evolvesFrom && nextOf.has(s.id) && !STARTERS.includes(s.id))
     // Draw without replacement (a partial shuffle), so it always ends
     const deck = pool.slice()
-    for (let i = 0; i < deck.length && state.party.length < PARTY_SIZE; i++) {
+    for (let i = 0; i < deck.length && gifts.length < FIRST_GIFTS; i++) {
       const j = i + Math.floor(random() * (deck.length - i))
       ;[deck[i], deck[j]] = [deck[j], deck[i]]
-      state.party.push(newMon(deck[i].id, { how: 'gift', place, ball: 'poke-ball', level: STARTER_LEVEL }))
+      gifts.push(newMon(deck[i].id, { how: 'gift', place, ball: 'poke-ball', level: STARTER_LEVEL }))
     }
+    state.box = [...gifts, ...state.box]
     return true
   }
 
-  /** A session's Pokémon, sent out on its first event: the first party member not working */
+  /**
+   * The Pokémon a session goes out with when none was thrown: of the resting ones
+   * (in the box, not working a session, not helping a subagent), the one that
+   * went out most recently, else the one that worked most (byRecentWork); when
+   * none of them has ever worked, any of them at random. null when none rests.
+   * `sessionId`'s own remembered Pokémon does not count as busy.
+   */
+  function pickResting(sessionId) {
+    const busy = new Set()
+    for (const [sid, uid] of Object.entries(state.assign)) if (sid !== sessionId && holding(sid)) busy.add(uid)
+    const out = helpingUids()
+    const resting = byRecentWork(state.box.filter(u => state.mons[u] && !busy.has(u) && !out.has(u)), state.mons)
+    if (!resting.length) return null
+    const first = state.mons[resting[0]]
+    if (typeof first.outAt === 'number' || (first.workMs ?? 0) > 0) return resting[0]
+    return resting[Math.floor(random() * resting.length)]
+  }
+
+  /**
+   * A session's Pokémon, on each of its events: the one it remembers while that
+   * one is not busy with another session, else a resting one (pickResting), sent
+   * out now. With none resting the session goes without (and waits: assignWaiting).
+   */
   function ensureAssigned(sessionId) {
     const have = state.assign[sessionId]
-    if (have && state.mons[have]) return { uid: have, isNew: false }
-    const busy = busyUids()
-    let uid = state.party.find(u => !busy.has(u))
-    // The party is all out: a resting box Pokémon helps, up to SESSION_LIMIT sessions
-    if (!uid && busy.size < SESSION_LIMIT) {
-      const out = helpingUids()
-      const free = state.box.filter(u => state.mons[u] && !busy.has(u) && !out.has(u))
-      if (free.length) uid = free[Math.floor(random() * free.length)]
-    }
-    if (!uid) return { uid: null, isNew: false }
+    if (have && state.mons[have] && !busyElsewhere(have, sessionId)) return { uid: have, isNew: false }
+    const uid = pickResting(sessionId)
+    if (!uid) { delete state.assign[sessionId]; return { uid: null, isNew: false } }
     state.assign[sessionId] = uid
+    state.mons[uid].outAt = now()
     return { uid, isNew: true }
   }
+
+  /** The session works with a Pokémon now: the one it remembers exists and is held by it */
+  function hasPokemon(sessionId) {
+    const uid = state.assign[sessionId]
+    return !!(uid && state.mons[uid]) && busyUids().get(uid) === sessionId
+  }
+
+  /**
+   * Sessions opened while no Pokémon rested (per run): sessionId -> since. The
+   * map's order is the order they began waiting, the oldest first.
+   */
+  const waiting = new Map()
+
+  /**
+   * Give resting Pokémon to the waiting sessions, the oldest first. One that
+   * ended or has a Pokémon already stops waiting; the first that finds none
+   * resting ends the round. Returns whether any was sent out (the caller saves).
+   */
+  function assignWaiting() {
+    let any = false
+    for (const sid of [...waiting.keys()]) {
+      if (!isActive(sid) || hasPokemon(sid)) { waiting.delete(sid); continue }
+      const uid = pickResting(sid)
+      if (!uid) break
+      const mon = state.mons[uid]
+      state.assign[sid] = uid
+      mon.outAt = now()
+      const event = { kind: 'sendout', id: mon.dex, name: byId.get(mon.dex)?.ko, sessionId: sid, uid, shiny: mon.shiny, at: now() }
+      pushLog(event)
+      publish(event)
+      waiting.delete(sid)
+      any = true
+    }
+    return any
+  }
+  /** A catch that went to the box may go straight to a waiting session */
+  const afterCatch = (ev) => (ev?.kind === 'catch' && ev.uid ? assignWaiting() : false)
 
   /**
    * The encounter's tier. The daily attendance encounter (a sure uncaught
@@ -755,16 +881,21 @@ ${agentId}`
   function drainStep(sessionId) {
     const q = pendingSteps.get(sessionId)
     if (!q?.length) return null
+    // An open session with no Pokémon meets nothing: its waiting steps are dropped, not met
+    // once it gets one. An ended session's backlog still drains, as before.
+    if (isActive(sessionId) && !hasPokemon(sessionId)) { pendingSteps.delete(sessionId); return null }
     const last = lastStepAt.get(sessionId)
     if (last !== undefined && now() - last < stepSpacingMs) return null
     const step = q.shift()
     if (!q.length) pendingSteps.delete(sessionId)
     lastStepAt.set(sessionId, now())
+    // A step meets with the Pokémon it was taken with (the partner, or a subagent's helper),
+    // even if that one has gone on to another session since; a released one's step is dropped
+    const mon = step.uid ? state.mons[step.uid] : null
+    if (!mon) return null
     // A helper session meets as often as any: encounters follow the work done (steps), not the session count
     if (random() >= ENCOUNTER_PER_STEP) return null
-    // A subagent's step meets with its helper (if it is still around), else the partner
-    const uid = (step.uid && state.mons[step.uid]) ? step.uid : state.assign[sessionId]
-    return encounter(sessionId, uid ? state.mons[uid] : null, step.tool, false, step.via)
+    return encounter(sessionId, mon, step.tool, false, step.via)
   }
 
   /**
@@ -777,19 +908,22 @@ ${agentId}`
     let changed = false
     let worth = false
     if (dismissHelpers(h => now() - h.lastAt > HELPER_IDLE_MS)) publish(null)
+    // Pokémon freed without an event here (a session the registry ended, a helper back to rest) go to waiting sessions
+    if (waiting.size > 0 && assignWaiting()) worth = true
     for (const sessionId of new Set([...pendingSteps.keys(), ...lastActivityAt.keys()])) {
       const session = sessionOf(sessionId)
-      if (session?.main?.state === 'working' && now() - (lastActivityAt.get(sessionId) ?? now()) >= THINK_STEP_MS) {
+      // A session with no Pokémon takes no thinking steps
+      if (session?.main?.state === 'working' && now() - (lastActivityAt.get(sessionId) ?? now()) >= THINK_STEP_MS && hasPokemon(sessionId)) {
         lastActivityAt.set(sessionId, now())
         const uid = state.assign[sessionId]
         const grown = workStep(sessionId, uid ? state.mons[uid] : null, null)
         if (grown) { publish(grown); worth = true }
         const prompt = String(session?.main?.lastPrompt ?? '').replace(/\s+/g, ' ').trim()
-        queueStep(sessionId, { tool: null, via: { tool: null, label: '#thinking', prompt: prompt ? (prompt.length > 40 ? `${prompt.slice(0, 40)}…` : prompt) : null } })
+        queueStep(sessionId, { tool: null, uid, via: { tool: null, label: '#thinking', prompt: prompt ? (prompt.length > 40 ? `${prompt.slice(0, 40)}…` : prompt) : null } })
         changed = true
       }
       const met = drainStep(sessionId)
-      if (met) { publish(met); worth = true }
+      if (met) { publish(met); worth = true; afterCatch(met) }
     }
     if (worth) save()
     else if (changed) saveSoon() // a thinking step only
@@ -812,7 +946,7 @@ ${agentId}`
    *  - friendship and other level-up conditions: once the trainer has raised it
    *    BOND_LEVELS levels ("friendship maxed"), at the next level-up
    *  - trade evolutions: after it was traded (a swap onto a session, or a
-   *    box ↔ party exchange), at the next level-up
+   *    1.5.4 PC exchange), at the next level-up
    *  - stones and the rest: level 30 (first evolution) / 40 (second)
    *  - Eevee from level 30: friendship maxed → Espeon by day, Umbreon at night;
    *    working in the forest (Read) → Leafeon; in a cave (Bash) at night →
@@ -866,7 +1000,8 @@ ${agentId}`
 
   /**
    * A hook event the server just processed. A session's first event sends a
-   * party Pokémon out with it; a tool call is a step for that Pokémon.
+   * resting Pokémon out with it (unless one was thrown); a tool call is a step
+   * for that Pokémon.
    */
   function noteEvent(ev, session) {
     const sessionId = ev?.sessionId
@@ -874,20 +1009,42 @@ ${agentId}`
     const fresh = ensureTrainer()
     if (session?.project) state.projects[sessionId] = session.project
     else if (ev.project && !state.projects[sessionId]) state.projects[sessionId] = ev.project
-    if (ev.type === 'session_ended') { if (state.thrownAt) delete state.thrownAt[sessionId]; dismissHelpers(h => h.sessionId === sessionId); save(); publish(null); return }
+    if (ev.type === 'session_ended') {
+      if (state.thrownAt) delete state.thrownAt[sessionId]
+      waiting.delete(sessionId)
+      dismissHelpers(h => h.sessionId === sessionId)
+      // Its Pokémon (and helpers) rest now: the oldest waiting session takes one
+      assignWaiting()
+      save(); publish(null); return
+    }
     // A subagent finished: its helper goes back to the box
-    if (ev.type === 'agent_completed' && ev.agentId) { noteFinished(helperKey(sessionId, ev.agentId)); if (dismissHelpers((h, key) => key === helperKey(sessionId, ev.agentId))) publish(null); return }
+    if (ev.type === 'agent_completed' && ev.agentId) {
+      noteFinished(helperKey(sessionId, ev.agentId))
+      if (dismissHelpers((h, key) => key === helperKey(sessionId, ev.agentId))) {
+        publish(null)
+        // The helper rests now: the oldest waiting session takes it
+        if (assignWaiting()) save()
+      }
+      return
+    }
+    // Waiting sessions first, the oldest first (this one too, in its place in line): a Pokémon
+    // freed with no call here (a throw's hold ran out, a thrown session let its first one go)
+    // must not go to this session's ensureAssigned or a new subagent's helperFor ahead of them
+    if (waiting.size > 0 && assignWaiting()) save()
     const { uid, isNew } = ensureAssigned(sessionId)
+    // None rests: the session waits for the next one (assignWaiting), and meets nothing meanwhile
+    if (!uid && !waiting.has(sessionId)) waiting.set(sessionId, now())
     const mon = uid ? state.mons[uid] : null
+    const has = !!mon && hasPokemon(sessionId)
     let event = null
     if (isNew && mon) event = { kind: 'sendout', id: mon.dex, name: byId.get(mon.dex)?.ko, sessionId, uid, shiny: mon.shiny, at: now() }
-    // Attendance: the day's first session event meets an uncaught species
+    // Attendance: the day's first event of a session with a Pokémon meets an uncaught species
     const today = localDay(now())
-    if (state.attendedOn !== today) {
+    if (has && state.attendedOn !== today) {
       state.attendedOn = today
       if (event) { publish(event); event = null }
       const att = encounter(sessionId, mon, ev.tool, true, catchSource(ev, session))
-      if (att) { save(); publish(att) }
+      if (att) { save(); publish(att); if (afterCatch(att)) save() }
     }
     if (!sessionOpenedAt.has(sessionId)) sessionOpenedAt.set(sessionId, now())
     if (ev.type === 'agent_working' && !ev.failed) {
@@ -898,69 +1055,56 @@ ${agentId}`
       if (help.isNew && !event) event = { kind: 'helper', id: worker.dex, name: byId.get(worker.dex)?.ko, sessionId, uid: help.uid, shiny: worker.shiny, at: now() }
       const grown = workStep(sessionId, worker, ev.tool, help.uid ? helperKey(sessionId, ev.agentId) : sessionId)
       if (grown) { if (event) publish(event); event = grown }
-      // The step waits its turn: a burst of tool calls is met one step at a time
-      queueStep(sessionId, { tool: ev.tool, via: catchSource(ev, session), ...(help.uid ? { uid: help.uid } : {}) })
+      // The step waits its turn: a burst of tool calls is met one step at a time.
+      // A session with no Pokémon takes no steps (its subagents' neither)
+      if (has) queueStep(sessionId, { tool: ev.tool, via: catchSource(ev, session), uid: help.uid ?? uid })
       const met = drainStep(sessionId)
       if (met) { if (event) publish(event); event = met }
     }
     if (fresh || event) {
       save()
       publish(event)
+      // A catch goes straight to the oldest waiting session (after the catch is told)
+      if (afterCatch(event)) save()
     } else if (ev.type === 'agent_working') {
       saveSoon() // a step only: no broadcast for every call, and no write right away
     }
   }
 
-  /** Put another party Pokémon (not working elsewhere) on a session; a box one comes into the party first (exchange) */
+  /** Put another resting Pokémon (in the box, not working elsewhere, not helping) on a session; nobody moves in the box */
   function swap(sessionId, uid) {
     const current = state.assign[sessionId]
     const cur = current && state.mons[current]
     const next = state.mons[uid]
     if (!cur) return { ok: false, reason: 'no-pokemon' }
-    if (!next) return { ok: false, reason: 'unknown-pokemon' }
+    if (!next || !state.box.includes(uid)) return { ok: false, reason: 'unknown-pokemon' }
     if (uid === current) return { ok: false, reason: 'same' }
-    const inBox = state.box.indexOf(uid)
-    if (!state.party.includes(uid) && inBox === -1) return { ok: false, reason: 'unknown-pokemon' }
-    const busy = busyUids()
-    if (busy.has(uid) || helpingUids().has(uid)) return { ok: false, reason: 'busy' }
-    // A box Pokémon takes the working one's party slot, and that one goes to the box in its place.
-    // A helper session (its worker is in the box) just changes worker: nobody moves
-    if (inBox !== -1 && state.party.includes(current)) {
-      const slot = state.party.indexOf(current)
-      if (slot === -1) return { ok: false, reason: 'not-in-party' }
-      state.party[slot] = uid
-      state.box[inBox] = current
-    }
+    if (busyElsewhere(uid, sessionId)) return { ok: false, reason: 'busy' }
     state.assign[sessionId] = uid
+    next.outAt = now()
     next.traded = true // a trade: trade evolutions happen at its next level-up
     const event = { kind: 'swap', id: next.dex, from: cur.dex, name: byId.get(next.dex)?.ko, fromName: byId.get(cur.dex)?.ko, sessionId, uid, shiny: next.shiny, at: now() }
     pushLog(event)
     save()
     publish(event)
+    // The one swapped out rests now: the oldest waiting session takes it
+    if (assignWaiting()) save()
     return { ok: true }
   }
 
   /**
-   * The trainer throws a Poké Ball: `uid` (a party Pokémon that is not working)
-   * goes out with `sessionId`. The app calls this as it opens or resumes the
-   * session, before Claude Code's first hook event arrives.
+   * The trainer throws a Poké Ball: `uid` (any box Pokémon not working another
+   * session and not helping a subagent) goes out with `sessionId`. The app calls
+   * this as it opens or resumes the session, before Claude Code's first hook
+   * event arrives.
    */
   function throwBall(sessionId, uid) {
     ensureTrainer()
     const mon = state.mons[uid]
-    if (!mon) return { ok: false, reason: 'unknown-pokemon' }
-    const busy = busyUids()
-    const holder = busy.get(uid)
-    if (holder && holder !== sessionId) return { ok: false, reason: 'busy' }
-    if (!state.party.includes(uid)) {
-      // A box Pokémon goes out as a helper: only once the party is all out, and within SESSION_LIMIT
-      if (!state.box.includes(uid)) return { ok: false, reason: 'unknown-pokemon' }
-      if (helpingUids().has(uid)) return { ok: false, reason: 'busy' }
-      const others = [...busy.values()].filter(sid => sid !== sessionId)
-      if (state.party.some(u => !busy.has(u) || busy.get(u) === sessionId)) return { ok: false, reason: 'party-free' }
-      if (others.length >= SESSION_LIMIT) return { ok: false, reason: 'full' }
-    }
+    if (!mon || !state.box.includes(uid)) return { ok: false, reason: 'unknown-pokemon' }
+    if (busyElsewhere(uid, sessionId)) return { ok: false, reason: 'busy' }
     state.assign[sessionId] = uid
+    mon.outAt = now()
     ;(state.thrownAt ??= {})[sessionId] = now()
     const event = { kind: 'sendout', id: mon.dex, name: byId.get(mon.dex)?.ko, sessionId, uid, shiny: mon.shiny, at: now() }
     pushLog(event)
@@ -970,8 +1114,8 @@ ${agentId}`
   }
 
   /**
-   * The PC: a box Pokémon trades places with a resting party Pokémon (no
-   * session involved). Neither may be working.
+   * Kept for older pages; nothing calls it; always refused now that party is [].
+   * (1.5.4: a box Pokémon traded places with a resting party Pokémon.)
    */
   function exchange(boxUid, partyUid) {
     if (!state.mons[boxUid] || !state.mons[partyUid]) return { ok: false, reason: 'unknown-pokemon' }
@@ -1009,11 +1153,10 @@ ${agentId}`
     return { ok: true }
   }
 
-  /** Let a box Pokémon go (never one in the party or working a session) */
+  /** Let a resting Pokémon go (never one working a session or helping a subagent) */
   function release(uid) {
     const mon = state.mons[uid]
     if (!mon) return { ok: false, reason: 'unknown-pokemon' }
-    if (state.party.includes(uid)) return { ok: false, reason: 'in-party' }
     if (busyUids().has(uid) || helpingUids().has(uid)) return { ok: false, reason: 'busy' }
     const at = state.box.indexOf(uid)
     if (at !== -1) state.box.splice(at, 1)
@@ -1033,9 +1176,10 @@ ${agentId}`
 
   /**
    * Take a synced game: this PC's game merged with the cloud's (server/merge.js),
-   * which already carries this PC's own session assignments and party. The
-   * game as it was is copied to pokedex.json.before-sync first, so a bad merge
-   * can be undone by hand; without that copy nothing is replaced.
+   * which already carries this PC's own session assignments. A party in it (a
+   * copy from 1.5.4 or older) is folded into the box, as on load. The game as
+   * it was is copied to pokedex.json.before-sync first, so a bad merge can be
+   * undone by hand; without that copy nothing is replaced.
    */
   function importState(next) {
     if (!next || next.version !== 2) return false
@@ -1047,7 +1191,10 @@ ${agentId}`
     }
     state = { ...emptyState(), ...next }
     upgradeMons()
+    foldParty()
     traitsBackfilled = false
+    // A synced game may bring Pokémon that rest: waiting sessions take them
+    assignWaiting()
     save()
     publish(null)
     return true

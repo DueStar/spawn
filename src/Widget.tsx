@@ -1,6 +1,6 @@
 /**
  * Widget — the app. A transparent, always-on-top window with a bento of cards
- * (usage limits, launcher, Pokédex, party and sessions, and a box to hand a
+ * (usage limits, launcher, Pokédex, the sessions, and a box to hand a
  * Pokémon its next instruction). As a window or full screen the same page grows
  * a terminal card beside it: one tab per Pokémon, the real Claude Code session,
  * and the Pokédex, box and log views.
@@ -23,11 +23,12 @@ import { bridge, useTerminals, type PastSession, type TerminalInfo, type WidgetM
 import { castSession, sessionArt, sessionName, sessionSprite, useTheme, spriteUrl, iconUrl, pokemonById } from './theme'
 import { isHardNeedsYou } from './mainState'
 import { cloudErrorText, dispatchCloud, useCloud } from './cloudStore'
-import { dispatchPokedex, usePokedex, useViewed, levelOf, freePartyCount, freeSessionCount, freeBoxUids, isHelperSession, type Mon } from './pokedexStore'
+import { dispatchPokedex, usePokedex, useViewed, levelOf, restingUids as restingOf, type Mon } from './pokedexStore'
 import PatchNotes, { PatchNotesHistory } from './components/PatchNotes'
 import SettingsView, { type Section as SettingsSection } from './components/SettingsView'
 import FeedbackPin from './components/FeedbackPin'
 import { changeSettings, useSettings, useWorkMode } from './settingsStore'
+import { restorePicks } from './resting'
 import { autoPartner, hideTitleKey, sessionLabel, sessionRowParts, shouldToast, viewIn, visibleViews, VIEWS, type View } from './workMode'
 import { SwapPicker, ThrowPicker } from './components/PartyPickers'
 import { SessionHeader } from './components/SessionHeader'
@@ -39,7 +40,7 @@ import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailabil
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
-import { BoxIcon, HelperIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
+import { BoxIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
 // The views and the terminal (xterm) are their own chunks: the widget's first
 // paint needs none of them. They are fetched right after it (preloadViews), so
 // opening one later does not wait.
@@ -438,7 +439,7 @@ const Widget: React.FC = () => {
       lastMood.current.set(r.sessionId, r.mood)
       if (!before || before === r.mood || !settings.notify.sessions || !r.terminal || r.shell) continue
       // 업무 모드: named by the session or its folder, never its Pokémon
-      const name = sessionLabel(r, workMode) ?? t('새 세션')
+      const name = sessionLabel({ ...r, noPokemon: noPokemon(r) }, workMode) ?? t('새 세션')
       if (r.mood === 'needs-you') bridge?.widget.alert(name, t('확인이 필요해요'))
       else if (before === 'working' && r.mood === 'idle') bridge?.widget.alert(name, t('일을 마쳤어요'))
     }
@@ -530,8 +531,14 @@ const Widget: React.FC = () => {
     const uid = dex?.assign?.[sessionId]
     return uid ? dex?.mons?.[uid] : undefined
   }
-  // Full: the session limit is reached, or nobody is left to send (the party, then the box as helpers)
-  const partyFull = freeSessionCount(dex) <= 0
+  // Sessions whose throw is on its way (openSession): drawn with the Pokémon they were dressed in, not as Pokémon-less
+  const pendingThrows = useRef<Set<string>>(new Set())
+  /**
+   * A session no Pokémon works yet: none rested when it opened, and the server sends it the next one
+   * to rest. Drawn with the plain glyph (as in 업무 모드), no Lv and no swap
+   */
+  const noPokemon = (r: Row): boolean =>
+    !!dex && !r.shell && !!r.terminal && r.mood !== 'ended' && !dex.assign?.[r.sessionId] && !pendingThrows.current.has(r.sessionId)
   // The top bar never scrolls and never clips the window buttons: when it runs out of room it
   // gives way a step at a time — 1: the view buttons drop their names (icons only); 2: the text
   // size folds to one 가 button (the same step menu); 3: the widget toggle goes (the tray and the
@@ -600,11 +607,6 @@ const Widget: React.FC = () => {
     setSideW(w)
     if (save) writeSideWidth(w)
   }
-  // Party Pokémon whose session is open but resting (turn over or stopped): they may trade places with a box one
-  // The same members give the same Set, so the (memoized) box does not re-render for nothing
-  const restingKey = rows.filter(r => r.mood === 'idle' || r.mood === 'error').map(r => dex?.assign?.[r.sessionId]).filter((u): u is string => !!u).sort().join(',')
-  const restingUids = useMemo(() => new Set(restingKey ? restingKey.split(',') : []), [restingKey])
-  const FULL_NOTE = t('세션을 최대 {n}개까지 열 수 있어요. 지금 연 세션 하나를 닫으면 새로 열 수 있어요.', { n: dex?.sessionLimit ?? dex?.partySize ?? 12 })
   const chosen = sendable.find(r => r.sessionId === target) ?? sendable[0]
   const shown = withTerminal.find(r => r.sessionId === target) ?? chosen ?? withTerminal[0]
   // The chat view (src/chat/lensMode.ts): 채팅 / 터미널 per session, kept in the carry. Only a session whose
@@ -632,7 +634,8 @@ const Widget: React.FC = () => {
   useWarm(warmTerm, !!warmTerm, lensMode === 'chat')
   // who answers, the same object while nothing about it changed (the chat's rows are not drawn again for nothing)
   const chatArt = shown ? sessionArt(shown.sessionId) : ''
-  const who = useMemo(() => chatWho({ name: shown?.name ?? '', sprite: shown?.sprite ?? '', art: chatArt }, workMode), [shown?.name, shown?.sprite, chatArt, workMode])
+  const shownNoMon = shown ? noPokemon(shown) : false
+  const who = useMemo(() => chatWho({ name: shown?.name ?? '', sprite: shown?.sprite ?? '', art: chatArt, noPokemon: shownNoMon }, workMode), [shown?.name, shown?.sprite, chatArt, shownNoMon, workMode])
   // The composer under the chat (Phase 3): its handle (focus, 멈추기), and its control row from the side panel's own meters
   const composerRef = useRef<ComposerHandle | null>(null)
   const stopChat = useCallback(() => composerRef.current?.stop(), [])
@@ -714,7 +717,7 @@ const Widget: React.FC = () => {
     const tip = left === null ? t('남은 컨텍스트')
       : leftTokens !== null ? t('남은 컨텍스트 {left} / {size} ({pct}%)', { left: tokens(leftTokens), size: tokens(size!), pct: Math.round(left) })
       : t('남은 컨텍스트 {pct}%', { pct: Math.round(left) })
-    const barLabel = sessionRowParts({ title: shown?.title ?? null, name: shown?.name ?? '', project: shown?.project ?? '', level: null, helpers: 0, helperSession: false, shell: false }, workMode).barLabel
+    const barLabel = sessionRowParts({ title: shown?.title ?? null, name: shown?.name ?? '', project: shown?.project ?? '', level: null, helpers: 0, shell: false }, workMode).barLabel
     return {
       model: modelLabel(shown?.meter?.model, shown?.session?.model) || null,
       context: { left, tip, label: barLabel },
@@ -739,12 +742,10 @@ const Widget: React.FC = () => {
 
   /** Where the next throw goes: a new session (optionally in a picked folder) or a resumed one */
   const [throwing, setThrowing] = useState<{ cwd?: string; resume?: PastSession } | null>(null)
-  const busyUids = new Set(Object.values(dex?.assign ?? {}))
 
   const launch = async (pick: boolean) => {
     if (!bridge) return
     if (missing.length) { setNote(t('먼저 위의 준비 카드에서 필요한 프로그램을 설치해주세요.')); return }
-    if (partyFull) { setNote(FULL_NOTE); return }
     let cwd: string | undefined
     if (pick) {
       const chosenDir = await bridge.terminals.pickFolder()
@@ -756,38 +757,61 @@ const Widget: React.FC = () => {
 
   /**
    * Who goes with a new or resumed session: the trainer picks (ThrowPicker), or in 업무 모드
-   * the app picks as a restored session does, with no Pokémon on screen (src/workMode.ts)
+   * the app picks as a restored session does, with no Pokémon on screen (src/workMode.ts).
+   * With nobody resting the session opens without one, and the server sends it the next to rest
    */
   const sendOut = (where: { cwd?: string; resume?: PastSession }) => {
-    if (workMode && dex) {
-      const uid = autoPartner(dex, where.resume ? dex.remembered?.[where.resume.id] : null)
-      if (!uid) { setNote(FULL_NOTE); return }
-      const tool = where.resume ? undefined : sessionTools(settings.session).defaultTool
-      void throwBall(uid, { ...where, ...(tool && tool !== 'claude' ? { tool } : {}) })
+    // (no picker to choose the AI tool: a new session takes the default one, a resumed one its own)
+    const tool = where.resume ? undefined : sessionTools(settings.session).defaultTool
+    const how = { ...where, ...(tool && tool !== 'claude' ? { tool } : {}) }
+    if (!dex || !restingOf(dex).length) {
+      void openSession(how, null)
+      // (업무 모드: the session is open, which is all it needs to say)
+      if (!workMode && dex) setNote(t('쉬고 있는 포켓몬이 없어서 포켓몬 없이 열었어요. 한 마리가 쉬게 되면 바로 함께해요.'))
+      return
+    }
+    if (workMode) {
+      void openSession(how, autoPartner(dex, where.resume ? dex.remembered?.[where.resume.id] : null))
       return
     }
     setThrowing(where)
   }
 
-  /** The chosen party Pokémon goes out with a new (or resumed) session */
-  const throwBall = async (uid: string, where: { cwd?: string; resume?: PastSession; tool?: string }, quiet = false) => {
+  /**
+   * A new (or resumed) session. With a uid that Pokémon goes with it: the session is dressed in it
+   * first (the tab must never show a bare Poké Ball) and held in pendingThrows until the throw is
+   * answered. With null only the terminal opens; the session waits for the next Pokémon to rest.
+   * `quiet` (the restore at startup): no terminal view and no note about the throw
+   */
+  const openSession = async (where: { cwd?: string; resume?: PastSession; tool?: string }, uid: string | null, quiet = false): Promise<void> => {
     setThrowing(null)
     if (!bridge) return
-    // Dress the session in its Pokémon first: the tab must never show a bare Poké Ball
     const sessionId = where.resume?.id ?? crypto.randomUUID()
-    const mon = dex?.mons?.[uid]
+    const mon = uid ? dex?.mons?.[uid] : undefined
     if (mon) castSession(sessionId, mon.dex, mon.shiny)
-    const r = await bridge.terminals.create(where.resume ? { cwd: where.resume.cwd, resume: where.resume.id, ...(where.tool ? { tool: where.tool } : {}) } : { sessionId, ...(where.cwd ? { cwd: where.cwd } : {}), ...(where.tool ? { tool: where.tool } : {}) })
-    if ('error' in r) { setNote(t('세션을 열 수 없어요: {error}', { error: r.error })); return }
-    const thrown = await bridge.game.throw(r.sessionId, uid)
-    // (업무 모드: the session is open, which is all it needs to say; these speak of the partner)
-    if (!thrown.ok && !workModeRef.current) setNote(thrown.reason === 'busy' ? t('세션은 열렸어요. 고른 파트너가 다른 세션에서 일하고 있어서 다른 파트너가 함께해요.') : thrown.reason === 'no-token' ? t('세션은 열렸어요. 서버와 연결되는 중이라 파트너는 잠시 뒤에 배정돼요.') : t('세션은 열렸지만 파트너를 배정하지 못했어요 ({reason})', { reason: thrown.reason ?? t('알 수 없는 이유') }))
-    setTarget(r.sessionId)
-    if (where.resume && !quiet) { setView('terminal'); setExpanded(true) }
+    if (uid !== null) pendingThrows.current.add(sessionId)
+    let opened: string | null = null
+    try {
+      const r = await bridge.terminals.create(where.resume ? { cwd: where.resume.cwd, resume: where.resume.id, ...(where.tool ? { tool: where.tool } : {}) } : { sessionId, ...(where.cwd ? { cwd: where.cwd } : {}), ...(where.tool ? { tool: where.tool } : {}) })
+      if ('error' in r) { setNote(t('세션을 열 수 없어요: {error}', { error: r.error })); return }
+      opened = r.sessionId
+      if (uid !== null) {
+        pendingThrows.current.add(r.sessionId)
+        const thrown = await bridge.game.throw(r.sessionId, uid)
+        // (업무 모드: the session is open, which is all it needs to say; these speak of the partner.
+        // A quiet open is a restore at startup: the server gives it the next Pokémon, no note)
+        if (!thrown.ok && !quiet && !workModeRef.current) setNote(thrown.reason === 'busy' ? t('세션은 열렸어요. 고른 파트너가 다른 세션에서 일하고 있어서 다른 파트너가 함께해요.') : thrown.reason === 'no-token' ? t('세션은 열렸어요. 서버와 연결되는 중이라 파트너는 잠시 뒤에 배정돼요.') : t('세션은 열렸지만 파트너를 배정하지 못했어요 ({reason})', { reason: thrown.reason ?? t('알 수 없는 이유') }))
+      }
+      setTarget(r.sessionId)
+      if (where.resume && !quiet) { setView('terminal'); setExpanded(true) }
+    } finally {
+      pendingThrows.current.delete(sessionId)
+      if (opened) pendingThrows.current.delete(opened)
+    }
   }
 
-  /** A plain shell tab (PowerShell): no Pokémon goes, so the party is not asked; at most MAX_SHELLS */
-  const MAX_SHELLS = 3 // twelve sessions + three shells + the ask card stay within Chromium's ~16 WebGL contexts
+  /** A plain shell tab (PowerShell): no Pokémon goes with it; at most MAX_SHELLS */
+  const MAX_SHELLS = 3 // (past Chromium's ~16 WebGL contexts a terminal falls back to the DOM renderer: TerminalPanel's onContextLoss)
   /** A new shell; true when one opened (at the limit or on an error it leaves a note and says false) */
   const openShell = async (): Promise<boolean> => {
     if (!bridge) return false
@@ -805,39 +829,36 @@ const Widget: React.FC = () => {
   const resume = async (past: PastSession) => {
     setPicking(false)
     if (!bridge) return
-    if (partyFull) { setNote(FULL_NOTE); return }
-    // The Pokémon that worked this session comes back with it, if it is resting in the party
+    // The Pokémon that worked this session comes back with it, if it is resting
     const remembered = dex?.remembered?.[past.id]
-    if (remembered && dex?.party.includes(remembered) && !busyUids.has(remembered)) { await throwBall(remembered, { resume: past }); return }
+    if (dex && remembered && restingOf(dex).includes(remembered)) { await openSession({ resume: past }, remembered); return }
     sendOut({ resume: past })
   }
 
-  // The sessions open when the app last closed come back at start (설정 › 세션),
-  // each with the Pokémon that worked it when it is resting in the party
+  // The sessions open when the app last closed come back at start (설정 › 세션), every one of them:
+  // each with the Pokémon that worked it when that one rests, else the next resting one no other
+  // session remembers, else with none (it waits for the next to rest, as a new session does).
+  // A Pokémon goes with one session only (src/resting.ts restorePicks)
   const restored = useRef(false)
   useEffect(() => {
     if (restored.current || !bridge || !dex) return
     restored.current = true
     void (async () => {
       const open = await bridge.terminals.restorable().catch(() => [])
-      // A session coming back may hold its own Pokémon still (the last run's record): that one is not "used"
+      // A session coming back may hold its own Pokémon still (the last run's record): that one is not taken
       const back = new Set(open.map(s => s.sessionId))
-      const used = new Set(Object.entries(dex.assign ?? {}).filter(([sid]) => !back.has(sid)).map(([, uid]) => uid))
-      const limit = dex.sessionLimit ?? dex.partySize
+      const held = Object.fromEntries(Object.entries(dex.assign ?? {}).filter(([sid]) => !back.has(sid)))
+      const picks = restorePicks(
+        open.filter(s => s.tool !== 'shell').map(s => ({ id: s.sessionId, remembered: dex.remembered?.[s.sessionId] })),
+        restingOf({ ...dex, assign: held }),
+      )
       for (const s of open) {
         // A shell tab comes back as a fresh shell in its folder, with no Pokémon
         if (s.tool === 'shell') { await bridge.terminals.create({ cwd: s.cwd, tool: 'shell' }); continue }
-        if (used.size >= limit) break
-        // The party first; past it a resting box Pokémon comes as a helper
-        const freeParty = dex.party.filter(u => !used.has(u))
-        const free = freeParty.length ? freeParty : freeBoxUids(dex).filter(u => !used.has(u))
-        const remembered = dex.remembered?.[s.sessionId]
-        const uid = remembered && free.includes(remembered) ? remembered : free[0]
-        if (!uid) break
-        used.add(uid)
+        const uid = picks.get(s.sessionId) ?? null
         // Every tab comes back under its own id (so with its Pokémon): Claude Code and Codex CLI
         // resume their conversation, another tool opens anew in the same folder
-        await throwBall(uid, { resume: { id: s.sessionId, cwd: s.cwd } as PastSession, ...(s.tool && s.tool !== 'claude' ? { tool: s.tool } : {}) }, true)
+        await openSession({ resume: { id: s.sessionId, cwd: s.cwd } as PastSession, ...(s.tool && s.tool !== 'claude' ? { tool: s.tool } : {}) }, uid, true)
       }
     })()
   }, [dex]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -861,18 +882,9 @@ const Widget: React.FC = () => {
     const r = await bridge.game.swap(sessionId, uid)
     if (!r.ok) {
       if (before) castSession(sessionId, before.dex, before.shiny)
-      setNote(t('교체하지 못했어요 ({reason})', { reason: r.reason === 'busy' ? t('다른 세션에서 일하는 중') : r.reason === 'not-in-party' ? t('파티 포켓몬만 교체할 수 있어요') : r.reason ?? t('알 수 없음') }))
+      setNote(t('교체하지 못했어요 ({reason})', { reason: r.reason === 'busy' ? t('다른 세션에서 일하는 중') : r.reason ?? t('알 수 없음') }))
     }
   }
-  // The swap list shows the artwork; fetch the box icons it may switch to before a pick
-  useEffect(() => {
-    if (!swapFor || !dex) return
-    const busy = new Set(Object.values(dex.assign ?? {}))
-    for (const uid of dex.party) {
-      const m = dex.mons[uid]
-      if (m && !busy.has(uid)) new Image().src = iconUrl(m.dex)
-    }
-  }, [swapFor, dex])
 
   // The header's profile (or 로그인): right of the logo, or in 업무 모드 in the logo's place
   const accountButton = cloud?.enabled && (cloud.user ? (
@@ -904,7 +916,7 @@ const Widget: React.FC = () => {
               onClick={() => { if (update.needsFull) bridge?.env.openLink('release'); else if (update.status === 'available') bridge?.update.install(); else bridge?.update.restart() }}>↑</button>
           )}
           <span className="w-rail-sep" />
-          <button className={`w-rail-btn${partyFull ? ' full' : ''}`} onClick={() => launch(false)} title={partyFull ? FULL_NOTE : t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={16} /></button>
+          <button className="w-rail-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={16} /></button>
           <button className="w-rail-btn" onClick={() => launch(true)} title={t('다른 폴더에서 새 세션')} aria-label={t('다른 폴더에서 새 세션')}><FolderIcon /></button>
           <button className="w-rail-btn" onClick={() => setPicking(true)} title={t('예전 세션 골라서 이어하기')} aria-label={t('예전 세션 이어하기')}><SessionsIcon /></button>
           {/* A new shell, as the list header's >_ does while the panel is open */}
@@ -917,7 +929,7 @@ const Widget: React.FC = () => {
                 onClick={() => { setTarget(r.sessionId); setView('terminal') }}
                 title={`${r.title ?? t('새 세션')} · ${t(MOOD_LABEL[r.mood])}`} aria-label={r.title ?? t('새 세션')}>
                 {r.shell ? <span className="w-rail-shell" aria-hidden="true">&gt;_</span>
-                  : workMode ? <span className="w-rail-glyph" aria-hidden="true"><TerminalIcon size={18} /></span>
+                  : workMode || noPokemon(r) ? <span className="w-rail-glyph" aria-hidden="true"><TerminalIcon size={18} /></span>
                   : <img src={r.sprite} alt="" draggable={false} />}
                 <span className="w-rail-dot" />
               </button>
@@ -1051,14 +1063,14 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           )}
 
           <section className="w-card w-launch">
-            <button className={`w-launch-main${partyFull ? ' full' : ''}`} onClick={() => launch(false)} title={partyFull ? FULL_NOTE : t('문서 폴더에서 새 Claude 세션')}>
+            <button className="w-launch-main" onClick={() => launch(false)} title={t('문서 폴더에서 새 Claude 세션')}>
               <PlusIcon size={15} /><span className="w-launch-label">{t('새로운 세션 시작하기')}</span>
             </button>
             <button className="w-launch-alt" onClick={() => launch(true)} title={t('다른 폴더에서 새 세션')} aria-label={t('다른 폴더에서 새 세션')}><FolderIcon /></button>
             <button className="w-launch-alt" onClick={() => setPicking(true)} title={t('예전 세션 골라서 이어하기')} aria-label={t('예전 세션 이어하기')}><SessionsIcon /></button>
           </section>
 
-          {/* 업무 모드: no Pokédex card and no party (not drawn, so no pictures are fetched) */}
+          {/* 업무 모드: no Pokédex card (not drawn, so no pictures are fetched) */}
           {!workMode && <button className="w-card w-dex" onClick={() => { setView('dex'); setExpanded(true) }} title={t('도감 열기')}>
             <span className="w-label">{t('도감')}{hasNew && <span className="w-new-dot" aria-label={t('새로 잡은 포켓몬')} />}</span>
             <span className="w-dex-count"><b>{dex ? Object.keys(dex.caught).length : 0}</b><span> / {dex?.total ?? 1025}</span></span>
@@ -1070,30 +1082,6 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </button>}
 
           <section className="w-card w-party">
-            {!workMode && <div className="w-party-head">
-              <span className="w-label">{t('파티')}</span>
-              {/* A resting one, clicked, goes to work in the chosen session in place of its Pokémon */}
-              <span className="w-party-slots">
-                {(dex?.party ?? []).map(uid => {
-                  const m = dex?.mons?.[uid]
-                  if (!m) return null
-                  const out = Object.values(dex?.assign ?? {}).includes(uid)
-                  const name = `${m.shiny ? '✨ ' : ''}${nameOf(pokemonById(m.dex))}`
-                  const into = !out && shown?.terminal ? shown : null
-                  return (
-                    <button
-                      key={uid}
-                      className={`w-party-mon${out ? ' out' : ''}`}
-                      disabled={!into}
-                      onClick={() => { if (into) doSwap(into.sessionId, uid) }}
-                      title={out ? t('{name} · 일하는 중', { name }) : into ? t("{name} · 눌러서 '{session}' 세션의 포켓몬과 교체", { name, session: into.title ?? t('새 세션') }) : t('{name} · 쉬는 중', { name })}
-                    >
-                      <img src={iconUrl(m.dex)} alt={name} />
-                    </button>
-                  )
-                })}
-              </span>
-            </div>}
             {/* The list's header: how many, 간략 / 상세, a new shell, a new session */}
             <div className="w-list-head">
               <span className="w-list-count">{t('세션 {n}', { n: rows.length })}</span>
@@ -1103,7 +1091,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </span>
               <button className="w-list-btn w-list-shell" onClick={async () => { if (await openShell()) setExpanded(true) }}
                 title={workMode ? t('셸 열기') : t('셸 열기 (포켓몬 없이 {shell})', { shell: shellLabel(rows) })} aria-label={t('셸 열기')}>&gt;_</button>
-              <button className={`w-list-btn${partyFull ? ' full' : ''}`} onClick={() => launch(false)} title={partyFull ? FULL_NOTE : t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
+              <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
             <div className={`w-rows${compact ? ' compact' : ''}`}>
@@ -1111,7 +1099,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               const r = rowById.get(sid)!
               const drag = rowOrder.bind(sid, i, !!r.terminal)
               const mon = monOf(r.sessionId)
-              const parts = sessionRowParts({ title: r.title, name: r.name, project: r.project, level: mon ? levelOf(mon) : null, helpers: (dex?.helpers?.[r.sessionId] ?? []).length, helperSession: isHelperSession(dex, r.sessionId), shell: r.shell }, workMode)
+              const parts = sessionRowParts({ title: r.title, name: r.name, project: r.project, level: mon ? levelOf(mon) : null, helpers: (dex?.helpers?.[r.sessionId] ?? []).length, noPokemon: noPokemon(r), shell: r.shell }, workMode)
               // What is left of the context window (the tick and the tooltip in 간략)
               const ctxUsed = r.meter?.context.used
               const ctxLeft = r.shell || typeof ctxUsed !== 'number' ? null : Math.max(0, Math.min(100, 100 - ctxUsed))
@@ -1226,16 +1214,13 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                         {dex!.helpers![r.sessionId].length > 3 && <small>+{dex!.helpers![r.sessionId].length - 3}</small>}
                       </span>
                     )}
-                    {parts.helperMark && (
-                      <span className="w-row-helper" role="img" aria-label={t('조력자')} title={`${t('조력자')} · ${t('파티가 모두 일하는 중이라 박스의 포켓몬이 이 세션을 맡았어요')}`}><HelperIcon size={12} /></span>
-                    )}
                     {(r.terminal || monOf(r.sessionId)) && (
                       <span className="w-row-tools">
                         {r.terminal && renaming?.id !== r.sessionId && (
                           <button className="w-row-edit" onClick={e => { e.stopPropagation(); startRename(r.sessionId, 'row') }} title={t('세션 이름 바꾸기')} aria-label={t('세션 이름 바꾸기')}>✎</button>
                         )}
                         {parts.swap && (
-                          <button className="w-row-swap" onClick={e => { e.stopPropagation(); setSwapFor(r.sessionId) }} title={t('교체: 이 세션에서 일할 포켓몬을 바꿔요 (파티나 박스에서)')} aria-label={t('교체')}><SwapIcon size={13} /></button>
+                          <button className="w-row-swap" onClick={e => { e.stopPropagation(); setSwapFor(r.sessionId) }} title={t('교체: 이 세션에서 일할 포켓몬을 바꿔요')} aria-label={t('교체')}><SwapIcon size={13} /></button>
                         )}
                         {closeBtn}
                       </span>
@@ -1302,7 +1287,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             <section className="w-card w-ask" role="alert">
               <div className="w-ask-head">
                 <span className="w-ask-dot" />
-                <b>{sessionLabel(askRow, workMode) ?? t('새 세션')}</b>
+                <b>{sessionLabel({ ...askRow, noPokemon: noPokemon(askRow) }, workMode) ?? t('새 세션')}</b>
                 <span>{t('의 확인이 필요해요')}</span>
                 <button className="w-ask-open" onClick={() => { setTarget(askRow.sessionId); setView('terminal'); setMode('window') }} title={t('창 모드로 펼쳐서 보기')}>{t('펼치기')}</button>
               </div>
@@ -1359,7 +1344,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             <div className="w-sess-bar">
               {shown?.terminal && (
                 <SessionHeader
-                  parts={sessionHeaderParts(shown, workMode)}
+                  parts={sessionHeaderParts({ ...shown, noPokemon: noPokemon(shown) }, workMode)}
                   sprite={shown.sprite}
                   cwd={shown.session?.cwd ?? shown.terminal.cwd}
                   renaming={renaming?.id === shown.sessionId && renaming.at === 'header'}
@@ -1383,7 +1368,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           )}
           <Suspense fallback={null}>
             {view === 'dex' && <div className="w-dex-body"><PokedexView /></div>}
-            {view === 'box' && <div className="w-dex-body"><BoxView resting={restingUids} /></div>}
+            {view === 'box' && <div className="w-dex-body"><BoxView /></div>}
             {view === 'today' && <div className="w-dex-body"><TodayLog /></div>}
             {view === 'rank' && <div className="w-dex-body"><LeaderboardView /></div>}
           </Suspense>
@@ -1447,13 +1432,13 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
       {/* 업무 모드: no "who goes?" pickers (sendOut picks), no Pokémon beside past sessions, and
           the after-update notes wait until it is off (they may speak of the game) */}
       {swapFor && dex && !workMode && (
-        <SwapPicker dex={dex} currentDex={monOf(swapFor)?.dex ?? 0} helper={isHelperSession(dex, swapFor)} onPick={uid => doSwap(swapFor, uid)} onClose={() => setSwapFor(null)} />
+        <SwapPicker dex={dex} currentDex={monOf(swapFor)?.dex ?? 0} onPick={uid => doSwap(swapFor, uid)} onClose={() => setSwapFor(null)} />
       )}
       {picking && <Suspense fallback={null}><ResumePicker onPick={resume} onClose={() => setPicking(false)} openIds={openIds}
         monFor={workMode ? undefined : (sid) => { const uid = dex?.remembered?.[sid]; const m = uid ? dex?.mons?.[uid] : undefined; return m ? { src: spriteUrl(m.dex, m.shiny), name: nameOf(pokemonById(m.dex)) } : null }} /></Suspense>}
       {throwing && dex && !workMode && (
         <ThrowPicker dex={dex} resume={!!throwing.resume} tools={throwing.resume ? [] : sessionTools(settings.session).tools} defaultTool={sessionTools(settings.session).defaultTool}
-          onPick={(uid, tool) => throwBall(uid, { ...throwing, ...(tool && tool !== 'claude' ? { tool } : {}) })} onClose={() => setThrowing(null)} />
+          onPick={(uid, tool) => openSession({ ...throwing, ...(tool && tool !== 'claude' ? { tool } : {}) }, uid)} onClose={() => setThrowing(null)} />
       )}
       {!workMode && <PatchNotes />}
       {notesOpen && !workMode && <PatchNotesHistory onClose={() => setNotesOpen(false)} />}

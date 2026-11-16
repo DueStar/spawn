@@ -755,7 +755,7 @@ const pokedex = createPokedex({
   balls: (() => { const f = join(dirname(fileURLToPath(import.meta.url)), 'balls.json'); return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')).balls : [] })(),
   natures: (() => { const f = join(dirname(fileURLToPath(import.meta.url)), 'natures.json'); return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [] })(),
   broadcast,
-  // A session that ended hands its Pokémon back to the party
+  // A session that ended hands its Pokémon back to rest
   isActive: (sessionId) => { const s = sessions.get(sessionId); return !!s && s.state !== 'ended' },
   onChange: game => cloud?.noteGameChanged(game),
   // Steps wait their turn (a burst of tool calls is met one step at a time), and
@@ -810,13 +810,13 @@ app.post('/leaderboard/profile/set', requireToken, async (req, res) => {
   res.json(await cloud.setLeaderboardProfile({ nickname: typeof nickname === 'string' ? nickname : '', isPublic: isPublic === true, partner: Number.isInteger(partner) ? partner : null }))
 })
 app.get('/pokedex', (_req, res) => res.json(pokedex.publicState()))
-// Throw a party Pokémon out with a session the app is opening (the desktop app sends it, with the token)
+// Throw a resting Pokémon out with a session the app is opening (the desktop app sends it, with the token)
 app.post('/pokedex/throw', requireToken, (req, res) => {
   const { sessionId, uid } = req.body ?? {}
   if (typeof sessionId !== 'string' || typeof uid !== 'string') return res.status(400).json({ ok: false, reason: 'bad-request' })
   res.json(pokedex.throwBall(sessionId.slice(0, 80), uid.slice(0, 40)))
 })
-// The PC: a box Pokémon and a resting party Pokémon trade places
+// The PC: a box Pokémon and a resting party Pokémon trade places (kept for older pages; nothing calls it)
 app.post('/pokedex/exchange', requireToken, (req, res) => {
   const { boxUid, partyUid } = req.body ?? {}
   if (typeof boxUid !== 'string' || typeof partyUid !== 'string') return res.status(400).json({ ok: false, reason: 'bad-request' })

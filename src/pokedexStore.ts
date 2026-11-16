@@ -1,6 +1,6 @@
 /**
  * pokedexStore.ts — the game state from the server (server/pokedex.js): the
- * trainer's party and box, which Pokémon works which session, the Pokédex, and
+ * trainer's box, which Pokémon works which session, the Pokédex, and
  * the latest event for the toast.
  */
 
@@ -78,6 +78,8 @@ export interface Mon {
   metLevel?: number
   workMs?: number
   level?: number
+  /** When it last went out with a session (ms); the "most recently worked" order (src/resting.ts) */
+  outAt?: number
 }
 
 export interface DexEvent {
@@ -112,7 +114,7 @@ export interface DexState {
   seen: Record<string, number>
   trainer: { starter: number; since: number } | null
   mons: Record<string, Mon>
-  party: string[]
+  /** Every caught Pokémon (there is no party) */
   box: string[]
   /** sessionId -> uid, active sessions only */
   assign: Record<string, string>
@@ -120,9 +122,6 @@ export interface DexState {
   remembered?: Record<string, string>
   /** sessionId -> the box Pokémon helping that session's subagents right now */
   helpers?: Record<string, string[]>
-  partySize: number
-  /** Sessions open at once: the party, then box Pokémon as helpers (server SESSION_LIMIT) */
-  sessionLimit?: number
   boxLimit?: number
   encounters: number
   sinceLegend: number
@@ -156,7 +155,7 @@ function emit() { version++; listeners.forEach(l => l()) }
 export function dispatchPokedex(msg: { type?: string; state?: DexState; event?: DexEvent } | null | undefined) {
   if (!msg || msg.type !== 'pokedex' || !msg.state) return
   state = msg.state
-  // Each session is drawn as the party Pokémon working it
+  // Each session is drawn as the Pokémon working it
   for (const [sessionId, uid] of Object.entries(state.assign ?? {})) {
     const mon = state.mons?.[uid]
     if (mon) castSession(sessionId, mon.dex, mon.shiny)
@@ -174,32 +173,8 @@ export function usePokedex(): { state: DexState | null; lastEvent: DexEvent | nu
   return { state, lastEvent }
 }
 
-/** Party Pokémon not working a session right now */
-export function freePartyCount(s: DexState | null): number {
-  if (!s) return Infinity
-  const busy = new Set(Object.values(s.assign ?? {}))
-  return s.party.filter(uid => !busy.has(uid)).length
-}
-
-/** Resting box Pokémon that could work a session as a helper (not working, not helping a subagent) */
-export function freeBoxUids(s: DexState): string[] {
-  const busy = new Set([...Object.values(s.assign ?? {}), ...Object.values(s.helpers ?? {}).flat()])
-  return s.box.filter(uid => s.mons[uid] && !busy.has(uid))
-}
-
-/** How many more sessions may open: the party first, then box helpers, up to the session limit */
-export function freeSessionCount(s: DexState | null): number {
-  if (!s) return Infinity
-  const open = Object.keys(s.assign ?? {}).length
-  const room = (s.sessionLimit ?? s.partySize) - open
-  return Math.max(0, Math.min(room, freePartyCount(s) + freeBoxUids(s).length))
-}
-
-/** A session worked by a box Pokémon: the party was all out when it opened */
-export function isHelperSession(s: DexState | null, sessionId: string): boolean {
-  const uid = s?.assign?.[sessionId]
-  return !!uid && !!s && !s.party.includes(uid) && s.box.includes(uid)
-}
+/** Resting Pokémon (not working a session, not helping a subagent), most recently worked first */
+export { restingUids } from './resting'
 
 // ---------------------------------------------------------------------------
 // Pokédex entries the trainer has opened: a caught species whose entry was

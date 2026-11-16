@@ -1,4 +1,4 @@
-/* pokedex.css — the game in the widget: the dex card, the party, the Pokédex, the box and the log */
+/* pokedex.css — the game in the widget: the dex card, the Pokédex, the box and the log */
 
 .w-side { position: relative; }
 .widget { --w-icon: var(--strip-mon); }
@@ -9,7 +9,7 @@
 
 /* ---------- Modern artwork (Pokémon HOME): smooth scaling, not pixel art ---------- */
 .dex-cell img, .dex-card-art img,
-.w-dex-recent img, .w-party-slots img, .w-swap-item img, .w-row img {
+.w-dex-recent img, .w-row img {
   image-rendering: auto !important;
 }
 
@@ -31,7 +31,7 @@
 .w-dex .w-label { grid-column: 1; grid-row: 1; white-space: nowrap; }
 .w-dex-count { grid-column: 2; grid-row: 1; font-size: var(--t-meta); color: var(--ink-3); white-space: nowrap; }
 .w-dex-count b { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--num-ink); }
-/* The latest catches and the party share one icon size (--w-icon) */
+/* The latest catches share one icon size (--w-icon) */
 .w-dex-recent { grid-column: 3; grid-row: 1; display: flex; gap: 3px; justify-content: flex-end; align-items: center; min-width: 0; overflow: hidden; }
 .w-dex-recent img { width: var(--w-icon); height: var(--w-icon); object-fit: contain; flex: none; }
 .w-dex-recent img:nth-child(n+5) { display: none; }
@@ -260,34 +260,12 @@
 .dex-release:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .dex-release.confirm { background: var(--danger); color: #fff; border-color: var(--danger); }
 
-/* ---------- Party lineup and swaps ---------- */
-/* One line: the label in a 36px column, the party right-aligned; a line under it, card edge to card edge */
-.w-party-head { display: grid; grid-template-columns: 36px 1fr; align-items: center; gap: 10px; margin: 0 -12px 8px; padding: 0 12px 8px; border-bottom: 1px solid var(--line); }
-.w-party-slots { display: flex; gap: 4px; justify-content: flex-end; align-items: center; min-width: 0; }
-.w-party-slots img { width: var(--w-icon); height: var(--w-icon); flex: none; object-fit: contain; opacity: 0.45; filter: grayscale(0.3); }
-.w-party-mon { padding: 0; border: 0; background: none; border-radius: var(--r-s); display: grid; place-items: center; }
-.w-party-mon:not(:disabled) { cursor: pointer; }
-.w-party-mon:not(:disabled):hover { background: var(--hover); }
-.w-party-mon:not(:disabled):hover img { opacity: 0.9; filter: none; }
-.w-party-mon:disabled { cursor: default; }
-.w-party-mon.out img { opacity: 1; filter: none; }
+/* ---------- Swaps ---------- */
 .w-row-swap {
   display: inline-grid; place-items: center; padding: 3px; border-radius: var(--r-s); border: 0;
   background: none; color: var(--ink-3); cursor: pointer;
 }
 .w-row-swap:hover { color: var(--ink); background: var(--hover); }
-.w-swap-list { overflow-y: auto; padding: 8px; display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
-/* The pickers (교체, 던지기): no card in the card; a faint grey and a hairline when hovered */
-.w-swap-item {
-  display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; align-items: center; column-gap: 8px;
-  padding: 6px 8px; text-align: left; font: inherit; color: inherit; cursor: pointer;
-  background: none; border: 1px solid transparent; border-radius: var(--r-m);
-}
-.w-swap-item:hover:not(:disabled) { border-color: var(--line-hover); background: var(--hover); }
-.w-swap-item.busy, .w-swap-item:disabled { opacity: 0.4; cursor: default; }
-.w-swap-item img { grid-row: 1 / span 2; width: 40px; height: 40px; object-fit: contain; }
-.w-swap-name { font-weight: var(--w-name); font-size: var(--t-name); color: var(--ink); }
-.w-swap-meta { font-size: var(--t-meta); color: var(--ink-3); }
 .w-row-mon { width: var(--row-mon); height: var(--row-mon); object-fit: contain; flex-shrink: 0; image-rendering: auto; }
 .w-row-lv { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--ink-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .w-throw-hint { padding: 8px 14px 0; font-size: var(--t-ui); color: var(--amber); }
@@ -337,11 +315,9 @@
 .box { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; min-height: 0; }
 .box-main { flex: 1; min-height: 0; display: flex; }
 .box-left { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.box-party { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .box-title { font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink); display: flex; gap: 6px; align-items: baseline; white-space: nowrap; }
 .box-title span { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .box-title span.full { color: var(--amber); font-weight: var(--w-name); }
-.box-party-row { display: flex; gap: 8px; flex-wrap: wrap; }
 /* The count on the left, the tools on the right */
 .box-toolbar { padding: 8px 20px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 8px 10px; flex-wrap: wrap; }
 .box-tools { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
@@ -368,15 +344,11 @@
 .box-cell:hover { background: var(--mon-bg-hover); }
 /* Chosen: the 1px yellow line, as the 도감 */
 .box-cell.picked { box-shadow: inset 0 0 0 1px var(--accent); }
-/* Dragging a box Pokémon onto the party: the target gets the same line and grows a little */
+/* The Pokémon being dragged fades while it is carried */
 .box-cell.dragging { opacity: 0.4; }
-.box-cell.drop { box-shadow: inset 0 0 0 1px var(--accent); background: var(--mon-bg-hover); transform: scale(1.05); }
-.box-cell.nodrop { opacity: 0.45; }
 .box-cell { transition: transform 0.12s ease, background 0.12s ease; }
-.box-cell:disabled { opacity: 0.4; cursor: not-allowed; }
 /* up to 1200 cells: off-screen ones skip paint */
 .box-grid .box-cell { width: auto; height: auto; aspect-ratio: 1; content-visibility: auto; contain-intrinsic-size: auto 96px; }
-.box-party-row .box-cell { width: 88px; height: 88px; }
 .box-shiny { position: absolute; right: 5px; top: 3px; font-size: var(--t-micro); color: var(--shiny); }
 /* bottom-left, clear of the shiny mark (top-right) */
 .box-working { position: absolute; left: 6px; bottom: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--green); }
@@ -390,7 +362,6 @@
 /* The icons come at the games' own size, small Pokémon small: never scaled up (a 30px icon
    blown up to the cell went blurry), big ones scaled down into the cell */
 .box.look-icon .box-cell img:not(.pokeball) { width: auto; height: auto; max-width: 48px; max-height: 48px; }
-.box.look-icon .box-party-row .box-cell { width: 76px; height: 76px; padding: 14px; }
 /* The detail card */
 .box .dex-card { position: relative; }
 .box .dex-card-name b { font-weight: inherit; }
@@ -407,7 +378,6 @@
 .box-act.danger { color: var(--ink-3); }
 .box-act.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .box-act.danger.confirm { background: var(--danger); border-color: var(--danger); color: #fff; }
-.box-choose { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 
 /* ---------- The log (calm: a ruled list, numbers by brightness, line tags) ---------- */
 .today { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -581,18 +551,21 @@ html.qa-mode #root { min-height: 100vh; }
 .w-row-helpers img { width: auto; height: auto; max-width: 22px; max-height: 22px; margin-left: -4px; }
 .w-row-helpers img:first-child { margin-left: 0; }
 .w-row-helpers small { font-size: var(--t-micro); color: var(--ink-3); margin-left: 2px; font-variant-numeric: tabular-nums; }
-/* The swap dialog: the party, then the box (working ones dimmed) */
+/* The pickers (교체, 던지기): the search, then one grid of the resting Pokémon */
 .w-swap-section { display: flex; align-items: center; gap: 8px; padding: 12px 12px 0; font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink-2); }
-.w-swap-section small { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--ink-3); }
 /* As the 도감 search */
 .w-swap-section input { margin-left: auto; font: inherit; font-size: var(--t-ui); font-weight: var(--w-body); color: var(--ink); width: 120px; padding: 4px 8px; border-radius: var(--r-s); border: 1px solid var(--line); background: var(--card); }
 .w-swap-section input:focus { outline: none; border-color: var(--ink-3); }
 .w-swap-box { overflow-y: auto; max-height: 260px; padding: 8px 12px 12px; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; }
+/* (its empty state spans the grid, not one cell) */
+.w-swap-box .resume-empty { grid-column: 1 / -1; }
 /* As the 박스 cells: the picture grey, no ring until hovered */
 .w-swap-cell { display: grid; place-items: center; gap: 2px; padding: 8px 4px 6px; border-radius: var(--r-m); border: 1px solid transparent; background: var(--mon-bg); color: var(--ink-3); font: inherit; font-size: var(--t-micro); cursor: pointer; content-visibility: auto; contain-intrinsic-size: auto 72px; }
 .w-swap-cell img { width: auto; height: auto; max-width: 40px; max-height: 40px; }
-.w-swap-cell:hover:not(:disabled) { border-color: var(--line-hover); background: var(--mon-bg-hover); }
-.w-swap-cell.busy, .w-swap-cell:disabled { opacity: 0.4; cursor: default; }
+.w-swap-cell:hover { border-color: var(--line-hover); background: var(--mon-bg-hover); }
+/* The next page of cells, across the grid under the last row */
+.w-swap-more { grid-column: 1 / -1; justify-self: center; font: inherit; font-size: var(--t-ui); padding: 4px 12px; border-radius: var(--r-s); border: 1px solid var(--line); background: transparent; color: var(--ink-2); cursor: pointer; }
+.w-swap-more:hover { color: var(--ink); background: var(--hover); }
 /* Arranging the box: a bar in the gap it would go into */
 .box-cell.ins-before::before, .box-cell.ins-after::after {
   content: ''; position: absolute; top: 8px; bottom: 8px; width: 3px; border-radius: 2px;
@@ -610,6 +583,5 @@ html.qa-mode #root { min-height: 100vh; }
 .w-throw-tools button.on { background: var(--sel-bg); color: var(--ink); border-color: var(--line-hover); }
 /* A session running another AI tool than Claude Code: its name, quiet */
 .w-row-tool { flex: none; font-size: var(--t-micro); color: var(--ink-3); padding: 1px 6px; border-radius: var(--r-s); border: 1px solid var(--line); margin-left: 6px; white-space: nowrap; }
-/* A session worked by a box Pokémon (the party was all out): its tag in the accent */
 /* A plain shell row: a prompt mark where the Pokémon would be */
 .w-row-shell { display: inline-grid; place-items: center; box-sizing: border-box; font: 500 10px/1 'Monaspace Neon Var', Consolas, monospace; font-weight: var(--w-mono); color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-s); background: none; }

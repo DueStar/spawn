@@ -125,6 +125,12 @@ describe('the session header', () => {
     expect(sessionHeaderParts({ ...row, shell: true }, true).picture).toBe('shell')
     expect(sessionHeaderParts({ ...row, title: '타입 정리', branch: undefined }, false)).toEqual({ picture: 'pokemon', name: '타입 정리', branch: null, project: 'shop-web' })
   })
+
+  it('a session with no Pokémon shows the plain glyph, as in 업무 모드', () => {
+    expect(sessionHeaderParts({ ...row, noPokemon: true }, false).picture).toBe('glyph')
+    expect(sessionHeaderParts({ ...row, noPokemon: true }, true).picture).toBe('glyph')
+    expect(sessionHeaderParts({ ...row, shell: true, noPokemon: true }, false).picture).toBe('shell')
+  })
 })
 
 describe('the session tab row is gone', () => {

@@ -12,6 +12,7 @@ import { usePokedex } from '../pokedexStore'
 import { iconUrl, pokemonById } from '../theme'
 import { t, locale, nameOf, josa, useLang } from '../i18n'
 import { npcsFor, npcValue } from '../npcTrainers'
+import { recentPartnerDex } from '../resting'
 
 /** A row as shown: a trainer from the database, or an NPC (marked as one) */
 interface Shown { key: string; place: number; nickname: string; partner: number | null; value: number; me: boolean; npc: boolean }
@@ -69,11 +70,12 @@ const LeaderboardView: React.FC = () => {
   useEffect(() => { loadBoard(board) }, [board, loadBoard, signedIn])
   useEffect(() => { loadProfile() }, [loadProfile])
 
-  // The partner to suggest: the one already chosen, else the party's first
-  const partyDex = (state?.party ?? []).map(uid => state?.mons[uid]?.dex).filter((d): d is number => !!d)
+  // The partners to choose from: the six most recently worked species (the chosen one kept);
+  // the one to suggest is the one already chosen, else the most recent
+  const partnerDex = state ? recentPartnerDex(state, profile?.partner ?? null) : []
   const startEdit = () => {
     setNickname(profile?.nickname ?? '')
-    setPartner(profile?.partner ?? partyDex[0] ?? null)
+    setPartner(profile?.partner ?? partnerDex[0] ?? null)
     setNote(null)
     setEditing(true)
   }
@@ -136,7 +138,7 @@ const LeaderboardView: React.FC = () => {
             <div className="rank-field">
               <span>{t('대표 포켓몬')}</span>
               <div className="rank-partners">
-                {partyDex.map((d, i) => (
+                {partnerDex.map((d, i) => (
                   <button key={`${d}-${i}`} className={partner === d ? 'on' : ''} onClick={() => setPartner(d)} title={nameOf(pokemonById(d))}><img src={iconUrl(d)} alt={nameOf(pokemonById(d))} /></button>
                 ))}
               </div>

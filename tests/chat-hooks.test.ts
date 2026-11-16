@@ -9,6 +9,7 @@ import http from 'node:http'
 import { createRequire } from 'node:module'
 import { Worker } from 'node:worker_threads'
 import { afterEach, describe, expect, it } from 'vitest'
+import { budget } from './timing'
 
 const require = createRequire(import.meta.url)
 const { createChatEndpoint, chatHookEntries, CHAT_HOOK_EVENTS } = require('../electron/chatHooks.cjs')
@@ -114,7 +115,7 @@ describe('the endpoint', () => {
     expect((await post(port, `/chat/${token}/${TID}/Stop`, '{}')).status).toBe(200)
   })
 
-  it('answers first: with a handler that blocks for 500 ms, the first of two posts is answered in < 50 ms', async () => {
+  it('answers first: with a handler that blocks for 500 ms, the first of two posts is answered in < 50 ms (×4 on CI)', async () => {
     const { port, token } = await endpoint(() => { const end = Date.now() + 500; while (Date.now() < end) { /* busy */ } })
     // the client runs in its own thread: this one is the one being blocked
     const code = `
@@ -133,7 +134,9 @@ describe('the endpoint', () => {
     const results: { status: number; ms: number }[] = await new Promise((resolve, reject) => { worker.once('message', resolve); worker.once('error', reject) })
     await worker.terminate()
     expect(results.map(r => r.status)).toEqual([200, 200])
-    expect(Math.min(...results.map(r => r.ms))).toBeLessThan(50)
+    // ×4 on a CI runner (budget(), tests/timing.ts): the handler blocks 500 ms, so 200 ms still proves the post is
+    // answered before the handler runs
+    expect(Math.min(...results.map(r => r.ms))).toBeLessThan(budget(50))
   })
 
   it('draining: still 200, and nothing is handed on', async () => {

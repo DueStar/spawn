@@ -10,7 +10,7 @@ import { join } from 'node:path'
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { effectiveMode, lensAvailability, readLensModes, writeLensMode, LENS_KEEP } from '../src/chat/lensMode'
+import { chatWho, effectiveMode, lensAvailability, readLensModes, writeLensMode, LENS_KEEP } from '../src/chat/lensMode'
 import type { TerminalInfo } from '../src/desktop'
 import { SessionHeader } from '../src/components/SessionHeader'
 
@@ -48,6 +48,14 @@ describe('effectiveMode', () => {
     expect(effectiveMode(term({ tool: 'shell' }), 'window', 'chat')).toBe('terminal')
     expect(effectiveMode(term(), 'window', 'chat')).toBe('terminal') // turned off: the key is gone
     expect(effectiveMode(undefined, 'window', 'chat')).toBe('terminal')
+  })
+})
+
+describe('chatWho', () => {
+  it('a session with no Pokémon: the glyph and 에이전트, in either mode', () => {
+    expect(chatWho({ name: '피카츄', sprite: 'x', noPokemon: true }, false)).toEqual({ picture: 'glyph', name: '에이전트' })
+    expect(chatWho({ name: '피카츄', sprite: 'x', noPokemon: true }, true)).toEqual({ picture: 'glyph', name: '에이전트' })
+    expect(chatWho({ name: '피카츄', sprite: 'x' }, false)).toEqual({ picture: 'pokemon', sprite: 'x', name: '피카츄' })
   })
 })
 

@@ -1,5 +1,5 @@
 /**
- * theme.ts — the Pokédex data and who each session is drawn as: the party
+ * theme.ts — the Pokédex data and who each session is drawn as: the
  * Pokémon the server sent out with it (src/pokedexStore.ts casts it), a Poké
  * Ball until then. The cast is kept in localStorage so a reload does not
  * flash a ball, and shared between the app's windows through the storage event.

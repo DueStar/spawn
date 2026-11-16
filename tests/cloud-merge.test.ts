@@ -1,12 +1,15 @@
 /**
  * server/merge.js — the cloud sync's union of two saved games: nothing caught
- * on either PC is lost, the party stays valid, the box keeps its limit, and
- * merging again changes nothing.
+ * on either PC is lost, every individual is in the box once (a 1.5.4 copy's
+ * party included), the box keeps its limit, and merging again changes nothing.
  */
 
-import { describe, expect, it } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterAll, describe, expect, it } from 'vitest'
 import { mergeGames, sameGame } from '../server/merge.js'
-import { BOX_LIMIT, PARTY_SIZE, monKey } from '../server/pokedex.js'
+import { BOX_LIMIT, createPokedex, monKey } from '../server/pokedex.js'
 
 const DAY = 86_400_000
 const T0 = Date.UTC(2026, 0, 1)
@@ -49,13 +52,11 @@ const individuals = (g: any) => Object.values(g.mons).map((m: any) => `${m.dex}@
 
 /** The invariants every merge result keeps */
 function expectValid(g: any) {
-  expect(g.party.length).toBeLessThanOrEqual(PARTY_SIZE)
-  expect(new Set(g.party).size).toBe(g.party.length)
-  for (const u of g.party) expect(g.mons[u]).toBeTruthy()
+  expect(g.party).toEqual([])
   expect(new Set(g.box).size).toBe(g.box.length)
-  for (const u of g.box) { expect(g.mons[u]).toBeTruthy(); expect(g.party).not.toContain(u) }
-  // every individual is in exactly one place
-  expect([...g.party, ...g.box].sort()).toEqual(Object.keys(g.mons).sort())
+  for (const u of g.box) expect(g.mons[u]).toBeTruthy()
+  // every individual is in the box exactly once
+  expect([...g.box].sort()).toEqual(Object.keys(g.mons).sort())
   expect(g.box.length).toBeLessThanOrEqual(BOX_LIMIT)
   for (const [u, m] of Object.entries<any>(g.mons)) expect(m.uid).toBe(u)
   for (const u of Object.values(g.assign)) expect(g.mons[u as string]).toBeTruthy()
@@ -117,32 +118,54 @@ describe('mergeGames: individuals', () => {
     expectValid(onB)
     expect(individuals(onB)).toEqual(individuals(cloud))
     expect(onB.mons).toEqual(cloud.mons)
-    // B's party and box now point at the merged uids
-    expect(onB.party).toEqual(['m1', 'm2'])
+    // B's old party leads the box, and everything points at the merged uids
+    expect(onB.party).toEqual([])
+    expect(onB.box.slice(0, 2)).toEqual(['m1', 'm2'])
     expect(onB.box).toContain('m6')
     expect(onB.box).not.toContain(undefined)
   })
 })
 
-describe('mergeGames: party', () => {
-  it('keeps this PC\'s party; the other PC\'s party members live on in the box', () => {
-    const a = game([mon('m1', 1, T0), mon('m2', 10, T0 + 1)], [mon('m3', 16, T0 + 2)])
-    const b = game([mon('m3', 16, T0 + 2), mon('m1', 1, T0)], [mon('m2', 10, T0 + 1), mon('m4', 19, T0 + 3)])
-    const m = mergeGames(a, b)
-    expectValid(m)
-    expect(m.party).toEqual(['m1', 'm2'])
-    expect(m.box).toEqual(expect.arrayContaining(['m3', 'm4']))
+describe('mergeGames: no party', () => {
+  it("a 1.5.4 copy's party joins the box; this PC's folded box keeps its order first", () => {
+    const [m1, m2, m3] = [mon('m1', 1, T0), mon('m2', 10, T0 + 1), mon('m3', 16, T0 + 2)]
+    const here = game([], [m3, m1, m2]) // 1.6.0: the party was folded into the box
+    const old = game([mon('m4', 19, T0 + DAY), m1], [m2, m3, mon('m5', 21, T0 + 2 * DAY)]) // 1.5.4
+    for (const m of [mergeGames(here, old), mergeGames(here, mergeGames(here, old))]) {
+      expectValid(m)
+      expect(m.box).toEqual(['m3', 'm1', 'm2', 'm4', 'm5'])
+    }
+    // the other way round: the 1.5.4 copy's party leads, then its box, then this one's
+    const back = mergeGames(old, here)
+    expectValid(back)
+    expect(back.box).toEqual(['m4', 'm1', 'm2', 'm3', 'm5'])
+    expect(back.mons).toEqual(mergeGames(here, old).mons)
   })
 
-  it('a broken local party is cleaned: no repeats, no missing uids, never more than six', () => {
+  it('both sides with a party (an old merge): both go to the box front, local first, each once', () => {
+    const [m1, m2, m3] = [mon('m1', 1, T0), mon('m2', 10, T0 + 1), mon('m3', 16, T0 + 2)]
+    const a = game([m1, m2], [m3, mon('m4', 19, T0 + 3)])
+    // one of A's individuals is in neither list: it still joins, after the lists, by catch time
+    a.mons.m7 = mon('m7', 25, T0 - 1)
+    a.nextUid = 8
+    const b = game([mon('m6', 23, T0 + DAY), m3, m1], [m2, mon('m5', 21, T0 + 4)])
+    const m = mergeGames(a, b)
+    expectValid(m)
+    expect(m.box).toEqual(['m1', 'm2', 'm3', 'm4', 'm6', 'm5', 'm7'])
+    const ba = mergeGames(b, a)
+    expectValid(ba)
+    expect(ba.box).toEqual(['m6', 'm3', 'm1', 'm2', 'm5', 'm4', 'm7'])
+    expect(ba.mons).toEqual(m.mons)
+  })
+
+  it('a broken party is cleaned: no repeats, no missing uids; past six, the rest still join the box', () => {
     const mons = Array.from({ length: 8 }, (_, i) => mon(`m${i + 1}`, 10 + i, T0 + i))
     const a = game(mons.slice(0, 6), mons.slice(6))
     a.party = ['m1', 'm1', 'm99', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7']
     a.box = ['m8']
     const m = mergeGames(a, game([mons[0]]))
     expectValid(m)
-    expect(m.party).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6'])
-    expect(m.box).toEqual(expect.arrayContaining(['m7', 'm8']))
+    expect(m.box).toEqual(['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm8', 'm7'])
   })
 
   it('this PC\'s session assignments follow renamed uids and never point at nothing', () => {
@@ -153,32 +176,47 @@ describe('mergeGames: party', () => {
     b.projects = { s1: 'proj' }
     const m = mergeGames(b, a)
     expectValid(m)
-    expect(m.party).toEqual(['m1', 'm6'])
+    expect(m.box.slice(0, 2)).toEqual(['m1', 'm6'])
     expect(m.assign).toEqual({ s1: 'm6' })
     expect(m.projects).toEqual({ s1: 'proj' })
   })
 
-  it('a new PC signing in (fresh trainer, party never used) gets the old trainer and team; its fresh six join the box', () => {
+  it('a new PC signing in: every individual of both sides in the box, the older trainer kept', () => {
     const old = game([mon('m1', 7, T0, { how: 'starter', steps: 900, workMs: 50 * 3_600_000 }), mon('m2', 10, T0, { how: 'gift', steps: 20 })], [mon('m3', 16, T0 + DAY)])
     const freshSix = Array.from({ length: 6 }, (_, i) => mon(`m${i + 1}`, 19 + 2 * i, T0 + 30 * DAY, { how: i ? 'gift' : 'starter', place: '여행의 시작' }))
-    const fresh = game(freshSix, [], { trainer: { starter: 19, since: T0 + 30 * DAY } })
+    const fresh = game([], freshSix, { trainer: { starter: 19, since: T0 + 30 * DAY } }) // 1.6.0: the gift is in the box
     const m = mergeGames(fresh, old)
     expectValid(m)
     expect(m.trainer).toEqual(old.trainer)
-    expect(m.party.map((u: string) => m.mons[u].dex)).toEqual([7, 10])
     expect(Object.keys(m.mons)).toHaveLength(9) // 3 old + the fresh six, all kept
-    // and the old PC keeps its own party when it merges the new PC's upload
+    expect(m.box.map((u: string) => m.mons[u].dex)).toEqual([19, 21, 23, 25, 27, 29, 7, 10, 16])
+    // and the old PC keeps its own order first when it merges the new PC's upload
     const back = mergeGames(old, m)
-    expect(back.party).toEqual(['m1', 'm2'])
+    expectValid(back)
+    expect(back.box.map((u: string) => back.mons[u].dex)).toEqual([7, 10, 16, 19, 21, 23, 25, 27, 29])
     expect(back.mons).toEqual(m.mons)
+  })
+
+  it('outAt: the later copy wins', () => {
+    const base = mon('m1', 4, T0, { how: 'starter' })
+    // A's copy is further along (more steps), so it is the base; B's later outAt still wins
+    const a = game([], [{ ...base, outAt: T0 + 5 * DAY, steps: 10 }])
+    const b = game([], [{ ...base, outAt: T0 + 9 * DAY }])
+    const none = game([], [base])
+    for (const m of [mergeGames(a, b), mergeGames(b, a)]) expect(m.mons.m1.outAt).toBe(T0 + 9 * DAY)
+    for (const m of [mergeGames(a, none), mergeGames(none, a)]) expect(m.mons.m1.outAt).toBe(T0 + 5 * DAY)
+    expect(mergeGames(none, none).mons.m1.outAt).toBeUndefined()
+    expect(mergeGames(a, b).mons).toEqual(mergeGames(b, a).mons)
   })
 })
 
 describe('mergeGames: box limit', () => {
-  it('past BOX_LIMIT the newest catches go to the professor: kept in the Pokédex and the log, never in either party', () => {
+  it("past BOX_LIMIT the newest catches go to the professor: kept in the Pokédex and the log, never a member of either side's party", () => {
     const party = [mon('m1', 1, T0)]
-    const boxA = Array.from({ length: BOX_LIMIT - 2 }, (_, i) => mon(`m${i + 2}`, 10, T0 + 10 + i))
-    const a = game(party, boxA)
+    const boxA = Array.from({ length: BOX_LIMIT - 3 }, (_, i) => mon(`m${i + 2}`, 10, T0 + 10 + i))
+    // A (a 1.5.4 copy) has a party member newer than every catch but B's party member
+    const aParty = mon('m1199', 149, T0 + 15 * DAY)
+    const a = game([party[0], aParty], boxA)
     // B shares m1..m3, and has five newer catches of its own (uids A also used)
     // plus a party member that is the very newest
     const newer = Array.from({ length: 5 }, (_, i) => mon(`m${i + 4}`, 151, T0 + 10 * DAY + i))
@@ -187,18 +225,86 @@ describe('mergeGames: box limit', () => {
     const m = mergeGames(a, b)
     expectValid(m)
     expect(m.box).toHaveLength(BOX_LIMIT)
-    // 1 + 1198 + 5 + 1 = 1205 individuals, party of 1: box would be 1204, four go
-    expect(Object.keys(m.mons)).toHaveLength(BOX_LIMIT + 1)
+    // 2 + 1197 + 5 + 1 = 1205 individuals, the box holds 1200: five go
+    expect(Object.keys(m.mons)).toHaveLength(BOX_LIMIT)
     const gone = m.log.filter((e: any) => e.kind === 'professor')
-    expect(gone).toHaveLength(4)
+    expect(gone).toHaveLength(5)
     expect(gone.every((e: any) => e.id === 151 && e.toProfessor)).toBe(true)
-    // B's party member stays (in A's box), though it is the newest of all
+    // both parties' members stay, though they are the newest of all
     expect(Object.values<any>(m.mons).some(x => x.dex === 150)).toBe(true)
+    expect(Object.values<any>(m.mons).some(x => x.dex === 149)).toBe(true)
+    expect(m.box.slice(0, 2)).toEqual(['m1', 'm1199'])
     // the species stays caught, its first catch kept
     expect(m.caught[151]).toMatchObject({ count: 5, firstAt: T0 + 10 * DAY })
     // and merging again sends no one else away
     const again = mergeGames(a, m)
     expect(again).toEqual(m)
+  })
+})
+
+describe('mergeGames: box limit never evicts what this PC holds', () => {
+  // A 1.5.4 PC with a full box and a party of six: 1206 individuals. The
+  // party members are the oldest, so the newest catches are box members.
+  const all = Array.from({ length: BOX_LIMIT + 6 }, (_, i) => mon(`m${i + 1}`, 10, T0 + i))
+  const cloud154 = () => structuredClone(game(all.slice(0, 6), all.slice(6)))
+  // The same PC on 1.6.0 after its load folded the party into the box
+  const folded = () => structuredClone(game([], all))
+  const professorLog = (g: any) => g.log.filter((e: any) => e.kind === 'professor')
+
+  it('a folded 1206 against its 1.5.4 cloud copy (box 1200 + party 6) keeps all 1206, no one to the professor', () => {
+    const m = mergeGames(folded(), cloud154())
+    expect(Object.keys(m.mons)).toHaveLength(BOX_LIMIT + 6)
+    expect(individuals(m)).toEqual(individuals(folded()))
+    expect(m.box).toHaveLength(BOX_LIMIT + 6)
+    expect(new Set(m.box).size).toBe(m.box.length)
+    expect(m.party).toEqual([])
+    expect(professorLog(m)).toEqual([])
+  })
+
+  it('a folded 1206 against itself keeps all 1206, no one to the professor', () => {
+    const m = mergeGames(folded(), folded())
+    expect(Object.keys(m.mons)).toHaveLength(BOX_LIMIT + 6)
+    expect(individuals(m)).toEqual(individuals(folded()))
+    expect(professorLog(m)).toEqual([])
+    expect(sameGame(mergeGames(m, m), m)).toBe(true)
+  })
+
+  it('past the limit only individuals new to this PC go to the professor', () => {
+    const extra = Array.from({ length: 3 }, (_, i) => mon(`m${BOX_LIMIT + 7 + i}`, 151, T0 + 30 * DAY + i))
+    const other = structuredClone(game([], [...all, ...extra]))
+    const m = mergeGames(folded(), other)
+    expect(Object.keys(m.mons)).toHaveLength(BOX_LIMIT + 6)
+    expect(individuals(m)).toEqual(individuals(folded()))
+    expect(professorLog(m).map((e: any) => e.id)).toEqual([151, 151, 151])
+    expect(m.caught[151]).toMatchObject({ count: 3 })
+    // the merge stays pure and idempotent
+    expect(mergeGames(folded(), other)).toEqual(m)
+    expect(mergeGames(m, other)).toEqual(m)
+  })
+
+  it('1.5.4 save -> load (fold) -> sync with the 1.5.4 cloud copy -> sync with its own copy: the count never drops', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'merge-roundtrip-'))
+    afterAll(() => rmSync(dir, { recursive: true, force: true }))
+    const file = join(dir, 'pokedex.json')
+    writeFileSync(file, JSON.stringify(cloud154()))
+    const species = [{ id: 1, ko: '이상해씨', types: ['grass'], tier: 'rare', captureRate: 45, evolvesFrom: null }, { id: 10, ko: '캐터피', types: ['bug'], tier: 'common', captureRate: 255, evolvesFrom: null }]
+    const dex = createPokedex({ file, species, broadcast: () => {}, random: () => 0.99, now: () => T0 + 60 * DAY })
+    const count = () => Object.keys(dex.exportState().mons).length
+    expect(count()).toBe(BOX_LIMIT + 6)
+    expect(dex.exportState().party).toEqual([])
+    // first sync on 1.6.0: the cloud still has the 1.5.4 copy
+    const first = mergeGames(structuredClone(dex.exportState()), cloud154())
+    expect(Object.keys(first.mons)).toHaveLength(BOX_LIMIT + 6)
+    expect(dex.importState(first)).toBe(true)
+    expect(count()).toBe(BOX_LIMIT + 6)
+    // every later sync: the cloud has this PC's own folded copy
+    const own = structuredClone(dex.exportState())
+    const second = mergeGames(structuredClone(dex.exportState()), own)
+    expect(Object.keys(second.mons)).toHaveLength(BOX_LIMIT + 6)
+    expect(dex.importState(second)).toBe(true)
+    expect(count()).toBe(BOX_LIMIT + 6)
+    expect(professorLog(dex.exportState())).toEqual([])
+    dex.flush()
   })
 })
 

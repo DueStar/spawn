@@ -12,6 +12,7 @@
  */
 
 import { isMac } from './platform'
+import { pickResting, type RestingDex } from './resting'
 
 /** On the document element of every page while the mode is on */
 export const WORK_MODE_CLASS = 'work-mode'
@@ -59,8 +60,8 @@ export interface SessionRowInput {
   level: number | null
   /** Box Pokémon helping its subagents */
   helpers: number
-  /** Worked by a box Pokémon (the party was all out) */
-  helperSession?: boolean
+  /** No Pokémon works it yet (none rested when it opened; one comes when one rests) */
+  noPokemon?: boolean
   /** A plain shell tab */
   shell?: boolean
 }
@@ -74,8 +75,6 @@ export interface SessionRowParts {
   label: string
   /** The helpers' pictures */
   helpers: boolean
-  /** The mark of a session worked by a box Pokémon */
-  helperMark: boolean
   /** The swap button (another Pokémon for the session) */
   swap: boolean
   /** The context bar's label: 'HP', or in work mode '컨텍스트' (a Korean key, through t()) */
@@ -85,49 +84,42 @@ export interface SessionRowParts {
 /**
  * What a session row in the side panel shows. In work mode it keeps the session's
  * name, folder, branch, status, model and tokens; the context bar stays, as a
- * plain context bar.
+ * plain context bar. A session no Pokémon works yet shows the plain glyph and its
+ * folder (as in work mode), with its HP bar and any subagent helpers.
  */
 export function sessionRowParts(row: SessionRowInput, workMode: boolean): SessionRowParts {
   if (workMode) {
-    return { picture: row.shell ? 'shell' : 'glyph', level: null, label: row.project, helpers: false, helperMark: false, swap: false, barLabel: '컨텍스트' }
+    return { picture: row.shell ? 'shell' : 'glyph', level: null, label: row.project, helpers: false, swap: false, barLabel: '컨텍스트' }
+  }
+  if (row.noPokemon && !row.shell) {
+    return { picture: 'glyph', level: null, label: row.project, helpers: row.helpers > 0, swap: false, barLabel: 'HP' }
   }
   return {
     picture: row.shell ? 'shell' : 'pokemon', level: row.level, label: row.name,
-    helpers: row.helpers > 0, helperMark: row.helperSession === true, swap: row.level !== null, barLabel: 'HP',
+    helpers: row.helpers > 0, swap: row.level !== null, barLabel: 'HP',
   }
 }
 
 /**
  * The name a session goes by in a notification, the question card and notes: the
- * trainer's name for it, else its Pokémon's, in work mode its folder. null: none
- * (the caller says 새 세션).
+ * trainer's name for it, else its Pokémon's, in work mode (or while no Pokémon works
+ * it: its picture may still be the last one's) its folder. null: none (the caller
+ * says 새 세션).
  */
-export function sessionLabel(row: { title: string | null; name: string; project: string }, workMode: boolean): string | null {
+export function sessionLabel(row: { title: string | null; name: string; project: string; noPokemon?: boolean }, workMode: boolean): string | null {
   if (row.title) return row.title
-  return workMode ? (row.project || null) : row.name
-}
-
-interface PartnerDex {
-  party: string[]
-  box: string[]
-  mons: Record<string, unknown>
-  assign?: Record<string, string>
-  helpers?: Record<string, string[]>
+  return workMode || row.noPokemon ? (row.project || null) : row.name
 }
 
 /**
  * Work mode opens a session without the "who goes?" picker: the Pokémon goes out
- * all the same, picked as a restored session picks it (`prefer` if it is resting
- * in the party, else the first resting party one, else a resting box one as a
- * helper). null: nobody is free.
+ * all the same, picked as the server picks one for a session nobody threw for
+ * (src/resting.ts pickResting: `prefer` if it rests, else the resting one that
+ * worked most recently, else a random resting one). null: nobody rests (the
+ * session opens without one and gets the next to rest).
  */
-export function autoPartner(dex: PartnerDex, prefer?: string | null): string | null {
-  const busy = new Set(Object.values(dex.assign ?? {}))
-  const party = dex.party.filter(uid => dex.mons[uid] && !busy.has(uid))
-  if (prefer && party.includes(prefer)) return prefer
-  if (party.length) return party[0]
-  const helping = new Set([...busy, ...Object.values(dex.helpers ?? {}).flat()])
-  return dex.box.find(uid => dex.mons[uid] && !helping.has(uid)) ?? null
+export function autoPartner(dex: RestingDex, prefer?: string | null, random?: () => number): string | null {
+  return pickResting(dex, prefer, random)
 }
 
 /**

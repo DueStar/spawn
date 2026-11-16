@@ -159,6 +159,7 @@ interface spawnBridge {
   game: {
     throw(sessionId: string, uid: string): Promise<{ ok: boolean; reason?: string }>
     release(uid: string): Promise<{ ok: boolean; reason?: string }>
+    /** Kept for older pages; nothing calls it; always refused now that party is [] */
     exchange(boxUid: string, partyUid: string): Promise<{ ok: boolean; reason?: string }>
     /** The box in the trainer's own order (every box Pokémon, each once) */
     arrange(order: string[]): Promise<{ ok: boolean; reason?: string }>

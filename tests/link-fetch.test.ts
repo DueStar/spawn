@@ -22,7 +22,7 @@ import { join } from 'node:path'
 import zlib from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { FIX } from './chat-helpers'
-import { growth, GROWTH_LINEAR, showGrowth } from './timing'
+import { growth, GROWTH_LINEAR, memoryBudget, showGrowth } from './timing'
 
 const require = createRequire(import.meta.url)
 const LF = require('../electron/linkFetch.cjs')
@@ -754,7 +754,7 @@ describe('Size: 1 MB / 2 MB read, 512 KB of HTML, stop at </head> or <body, zlib
     expect(edge.bytes.length).toBe(2 << 20)
   })
   const bomb = (enc: string, body: () => Buffer, type = 'text/html'): Handler => (_q, res) => { res.writeHead(200, { 'content-type': type, 'content-encoding': enc }); res.end(body()) }
-  it.each([['gzip', () => GZIP_BOMB], ['deflate', () => DEFLATE_BOMB], ['br', () => BROTLI_BOMB]] as const)('a %s bomb (1 GB inside): the inflater stops at 512 KB, RSS grows < 50 MB', async (enc, body) => {
+  it.each([['gzip', () => GZIP_BOMB], ['deflate', () => DEFLATE_BOMB], ['br', () => BROTLI_BOMB]] as const)('a %s bomb (1 GB inside): the inflater stops at 512 KB, RSS grows < 50 MB (×4 on CI)', async (enc, body) => {
     expect(body().length).toBeLessThan(1.1 * (1 << 20))
     route(`/bomb-${enc}`, bomb(enc, body))
     route(`/bomb-${enc}.png`, bomb(enc, body, 'image/png'))
@@ -767,7 +767,9 @@ describe('Size: 1 MB / 2 MB read, 512 KB of HTML, stop at </head> or <body, zlib
     expect(r.read).toBeLessThanOrEqual(1 << 20)
     const img = await fetchLimited(at(`/bomb-${enc}.png`), { kind: 'image', ...local() })
     expect(img).toEqual({ ok: false, why: 'size' })
-    expect(process.memoryUsage().rss - rss0).toBeLessThan(50 << 20)
+    // ×4 on a CI runner (memoryBudget(), tests/timing.ts): the bomb is 1 GB inside, so 200 MB still proves the
+    // inflater stopped
+    expect(process.memoryUsage().rss - rss0).toBeLessThan(memoryBudget(50 << 20))
     expect(Date.now() - t0).toBeLessThan(3000)
   })
   it('Content-Encoding: gzip with garbage → encoding; an unknown or stacked encoding → encoding', async () => {

@@ -54,9 +54,9 @@ export function writeLensMode(sessionId: string, m: LensMode): Record<string, Le
 /** sprite: the small icon (a turn's head); art: the large picture (the empty state) */
 export interface ChatWho { picture: 'pokemon' | 'glyph'; sprite?: string; art?: string; name: string }
 
-/** Who answers in the conversation: never a Pokémon picture or name in 업무 모드 */
-export function chatWho(row: { name: string; sprite: string; art?: string }, workMode: boolean): ChatWho {
-  if (workMode) return { picture: 'glyph', name: t('에이전트') }
+/** Who answers in the conversation: never a Pokémon picture or name in 업무 모드, nor while no Pokémon works the session */
+export function chatWho(row: { name: string; sprite: string; art?: string; noPokemon?: boolean }, workMode: boolean): ChatWho {
+  if (workMode || row.noPokemon) return { picture: 'glyph', name: t('에이전트') }
   return { picture: 'pokemon', sprite: row.sprite, ...(row.art ? { art: row.art } : {}), name: row.name || t('에이전트') }
 }
 

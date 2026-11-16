@@ -1,14 +1,15 @@
 /**
- * server/pokedex.js — the game, trainer style: a starter and a party of six,
- * one party Pokémon per session, growth that belongs to the Pokémon, swaps for
- * the fully evolved, and gacha-style encounters with pities.
+ * server/pokedex.js — the game, trainer style: a starter and five companions in
+ * the box, any resting Pokémon per session (the most recently out first), no
+ * session limit, growth that belongs to the Pokémon, swaps, and gacha-style
+ * encounters with pities.
  */
 
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest'
-import { createPokedex, catchSource, STARTERS, RATES, CATCH, PITY, PITY_MYTHICAL, PARTY_SIZE, BOX_LIMIT, ballBoosts, isFullMoon, levelFrom, minutesForLevel, THINK_STEP_MS, SESSION_LIMIT } from '../server/pokedex.js'
+import { createPokedex, catchSource, STARTERS, RATES, CATCH, PITY, PITY_MYTHICAL, BOX_LIMIT, ballBoosts, isFullMoon, levelFrom, minutesForLevel, THINK_STEP_MS, byRecentWork } from '../server/pokedex.js'
 
 const S = (id: number, ko: string, tier: string, evolvesFrom: number | null, types = ['normal'], captureRate = 255) =>
   ({ id, ko, types, tier, captureRate, evolvesFrom })
@@ -60,22 +61,27 @@ describe('pokedex', () => {
     expect(PITY_MYTHICAL).toBeGreaterThan(PITY)
   })
 
-  it('starts the trainer with a random starter and a party of six, the starter first', () => {
+  it('a first run gifts six into the box, the starter first; the party stays empty', () => {
     const { dex } = setup([0.5]) // middle starter; companions from the fallback
     const st = dex.publicState()
     expect(st.trainer.starter).toBe(STARTERS[1])
-    expect(st.party).toHaveLength(PARTY_SIZE)
-    expect(st.mons[st.party[0]].dex).toBe(4)
+    expect(st.box).toHaveLength(6)
+    expect(st.mons[st.box[0]].dex).toBe(4)
+    expect(st.mons[st.box[0]].how).toBe('starter')
     expect(st.caught[4].how).toBe('starter')
+    expect(dex._state().party).toEqual([])
+    expect(st.party).toBeUndefined()
+    expect(st.partySize).toBeUndefined()
+    expect(st.sessionLimit).toBeUndefined()
     // the companions are common base forms that can evolve, never a starter
-    for (const uid of st.party.slice(1)) {
+    for (const uid of st.box.slice(1)) {
       const d = st.mons[uid].dex
       expect([1, 4, 7]).not.toContain(d)
       expect(SPECIES.find(s => s.id === d)!.evolvesFrom).toBeNull()
       expect(SPECIES.find(s => s.id === d)!.tier).toBe('common')
     }
     // all six set out at Lv.5 in a plain Poké Ball, and the Pokédex records say so too
-    for (const uid of st.party) {
+    for (const uid of st.box) {
       const m = st.mons[uid]
       expect(m.ball).toBe('poke-ball')
       expect(m.metLevel).toBe(5)
@@ -95,7 +101,7 @@ describe('pokedex', () => {
     const first = setup([0.5])
     first.dex.publicState() // the journey starts on the first look
     const st = first.dex._state()
-    const gift = st.party[1]
+    const gift = st.box[1]
     const giftDex = st.mons[gift].dex
     delete st.caught[giftDex].ball
     delete st.caught[4].ball
@@ -108,17 +114,23 @@ describe('pokedex', () => {
     expect(after.mons[gift].metLevel).toBe(12)
   })
 
-  it('sends the starter with the first session, the next free one with the next, and none past six', () => {
+  it('no session limit: 20 sessions each get a Pokémon while any rests', () => {
     const { dex, sent } = setup([0])
-    for (let i = 1; i <= PARTY_SIZE + 1; i++) dex.noteEvent({ type: 'session_started', sessionId: `s${i}` }, { project: `p${i}` })
+    attended(dex)
+    const st0 = dex._state()
+    for (let i = 0; st0.box.length < 25; i++) {
+      const id = `x${i}`
+      st0.mons[id] = { ...st0.mons[st0.box[0]], uid: id }
+      st0.box.push(id)
+    }
+    for (let i = 1; i <= 20; i++) dex.noteEvent({ type: 'session_started', sessionId: `s${i}` }, { project: `p${i}` })
     const st = dex.publicState()
-    expect(st.mons[st.assign.s1].dex).toBe(1)
-    expect(new Set(Object.values(st.assign)).size).toBe(PARTY_SIZE)
-    expect(st.assign.s7).toBeUndefined()
+    expect(Object.keys(st.assign)).toHaveLength(20)
+    expect(new Set(Object.values(st.assign)).size).toBe(20)
     expect(sent.find(m => m.event?.sessionId === 's1')?.event.kind).toBe('sendout')
   })
 
-  it('an ended session hands its Pokémon back to the party', () => {
+  it('an ended session hands its Pokémon back to rest', () => {
     const ended = new Set<string>()
     const { dex } = setup([0], 0.99, sid => !ended.has(sid))
     dex.noteEvent({ type: 'session_started', sessionId: 'a' }, {})
@@ -138,6 +150,7 @@ describe('pokedex', () => {
     const queue = [0] // starter: 이상해씨
     const dex = createPokedex({ file: join(dir, 'p.json'), species, broadcast: (m: any) => sent.push(m), random: () => (queue.length ? queue.shift()! : 0.99), now: () => t })
     dex.publicState(); (dex as any)._state().attendedOn = '2026-11-06'
+    dex.throwBall('s1', dex.publicState().box[0]) // the starter goes out
     dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     const uid = dex.publicState().assign.s1
     const mon = () => (dex as any)._state().mons[uid]
@@ -171,9 +184,10 @@ describe('pokedex', () => {
     const dex = createPokedex({ file: join(dir, 'p.json'), species: SPECIES, broadcast: () => {}, random: () => (queue.length ? queue.shift()! : 0.99), now: () => t })
     dex.publicState(); (dex as any)._state().attendedOn = '2026-11-06'
     const st0 = (dex as any)._state()
+    st0.box = st0.box.slice(0, 1) // only the starter rests, so the box has one free helper below
+    dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0, metLevel: 5, workMs: 0 }
     st0.box.push('mbox')
-    dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     const partner = dex.publicState().assign.s1
     const partnerSteps = st0.mons[partner].steps
     for (let i = 0; i < 3; i++) { t += 60_000; dex.noteEvent({ ...work('s1'), agentId: 'ag1' }, {}) }
@@ -190,99 +204,265 @@ describe('pokedex', () => {
     expect(dex.release('mbox')).toEqual({ ok: true })
   })
 
-  it('swaps in a resting party Pokémon, or a box one that trades places with the working one', () => {
+  it('swaps in any resting Pokémon; the box order does not change', () => {
     const { dex } = setup([0])
     attended(dex)
     dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     const st0 = (dex as any)._state()
-    const starterUid = st0.assign.s1
+    const first = st0.assign.s1
     st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }
     st0.box.push('mbox')
-    // a box Pokémon takes the working one's party slot and session; that one goes to the box
-    const slot = dex.publicState().party.indexOf(starterUid)
+    const order = [...st0.box]
+    // any resting Pokémon takes the session; nobody moves within the box
     expect(dex.swap('s1', 'mbox')).toEqual({ ok: true })
     let st = dex.publicState()
     expect(st.assign.s1).toBe('mbox')
-    expect(st.party[slot]).toBe('mbox')
-    expect(st.box).toContain(starterUid)
-    expect(st.box).not.toContain('mbox')
-    // a party Pokémon that is resting can be swapped in, even unevolved; the party stays as it was
-    const party = [...st.party]
-    expect(dex.swap('s1', party[1])).toEqual({ ok: true })
+    expect(st.box).toEqual(order)
+    // another resting one, even unevolved
+    const other = order.find(u => u !== first && u !== 'mbox')!
+    expect(dex.swap('s1', other)).toEqual({ ok: true })
     st = dex.publicState()
-    expect(st.assign.s1).toBe(party[1])
-    expect(st.party).toEqual(party)
+    expect(st.assign.s1).toBe(other)
+    expect(st.box).toEqual(order)
+    // refusals: one working in another session, an unknown one, the same one, a session with none
+    dex.noteEvent({ type: 'session_started', sessionId: 's2' }, {})
+    const elsewhere = dex.publicState().assign.s2
+    expect(elsewhere).toBeTruthy()
+    expect(dex.swap('s1', elsewhere)).toEqual({ ok: false, reason: 'busy' })
+    expect(dex.swap('s1', 'nope')).toEqual({ ok: false, reason: 'unknown-pokemon' })
+    expect(dex.swap('s1', other)).toEqual({ ok: false, reason: 'same' })
+    expect(dex.swap('none', other)).toEqual({ ok: false, reason: 'no-pokemon' })
+    expect(dex.publicState().box).toEqual(order)
   })
 
-  it('throws a chosen party Pokémon with a session before its first event, and holds it', () => {
+  it('throws any resting Pokémon, and holds it', () => {
     const { dex, sent } = setup([0])
     attended(dex)
-    const party = dex.publicState().party
-    expect(dex.throwBall('new-1', party[3])).toEqual({ ok: true })
-    expect(sent.at(-1).event).toMatchObject({ kind: 'sendout', sessionId: 'new-1', uid: party[3] })
+    const st0 = dex._state()
+    st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0, metLevel: 5, workMs: 0 }
+    st0.box.push('mbox')
+    const box = [...dex.publicState().box]
+    expect(dex.throwBall('new-1', box[3])).toEqual({ ok: true })
+    expect(sent.at(-1).event).toMatchObject({ kind: 'sendout', sessionId: 'new-1', uid: box[3] })
     // held: another throw of the same Pokémon is refused, the session's first event keeps it
-    expect(dex.throwBall('new-2', party[3])).toMatchObject({ ok: false, reason: 'busy' })
+    expect(dex.throwBall('new-2', box[3])).toEqual({ ok: false, reason: 'busy' })
     dex.noteEvent({ type: 'session_started', sessionId: 'new-1' }, {})
-    expect(dex.publicState().assign['new-1']).toBe(party[3])
-    // a box Pokémon cannot be thrown, only party members
-    expect(dex.throwBall('new-3', 'nope')).toMatchObject({ ok: false })
-    expect(dex.publicState().remembered['new-1']).toBe(party[3])
+    expect(dex.publicState().assign['new-1']).toBe(box[3])
+    expect(dex.throwBall('new-3', 'nope')).toEqual({ ok: false, reason: 'unknown-pokemon' })
+    expect(dex.publicState().remembered['new-1']).toBe(box[3])
+    // one helping a subagent is busy too (the helper is the last free one: random 0.99)
+    dex.noteEvent({ ...work('new-1'), agentId: 'ag1' }, {})
+    expect(dex.publicState().helpers).toEqual({ 'new-1': ['mbox'] })
+    expect(dex.throwBall('new-4', 'mbox')).toEqual({ ok: false, reason: 'busy' })
+    // any other resting one goes, with no limit and no party
+    expect(dex.throwBall('new-5', box[5])).toEqual({ ok: true })
   })
 
-  it('past the party of six, box Pokémon work sessions as helpers, up to the session limit', () => {
+  it('exchange is refused: there is no party', () => {
     const { dex } = setup([0])
     attended(dex)
-    const st = dex._state()
-    const party = dex.publicState().party
-    const boxIds = Array.from({ length: SESSION_LIMIT - PARTY_SIZE + 1 }, (_, i) => `box${i}`)
-    for (const id of boxIds) { st.mons[id] = { ...st.mons[party[0]], uid: id }; st.box.push(id) }
-    // a box Pokémon is not sent while the party has someone resting
-    expect(dex.throwBall('early', boxIds[0])).toMatchObject({ ok: false, reason: 'party-free' })
-    party.forEach((uid: string, i: number) => expect(dex.throwBall(`p${i}`, uid)).toEqual({ ok: true }))
-    // the party is all out: a chosen box Pokémon goes, and a session's first event takes a resting one
-    expect(dex.throwBall('h0', boxIds[0])).toEqual({ ok: true })
-    dex.noteEvent({ type: 'session_started', sessionId: 'h1' }, {})
-    const auto = dex.publicState().assign.h1
-    expect(boxIds).toContain(auto)
-    expect(auto).not.toBe(boxIds[0])
-    // the party stays six
-    expect(dex.publicState().party).toEqual(party)
-    for (let i = 2; i < SESSION_LIMIT - PARTY_SIZE; i++) dex.noteEvent({ type: 'session_started', sessionId: `h${i}` }, {})
-    expect(Object.keys(dex.publicState().assign)).toHaveLength(SESSION_LIMIT)
-    // twelve open: no thirteenth, though one box Pokémon still rests
-    const spare = boxIds.find(id => !Object.values(dex.publicState().assign).includes(id))!
-    expect(spare).toBeDefined()
-    expect(dex.throwBall('over', spare)).toMatchObject({ ok: false, reason: 'full' })
-    dex.noteEvent({ type: 'session_started', sessionId: 'over2' }, {})
-    expect(dex.publicState().assign.over2).toBeUndefined()
-    expect(dex.publicState().sessionLimit).toBe(SESSION_LIMIT)
+    const st0 = dex._state()
+    st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }
+    st0.box.push('mbox')
+    const order = [...st0.box]
+    expect(dex.exchange('mbox', order[0])).toEqual({ ok: false, reason: 'bad-request' })
+    expect(dex.publicState().box).toEqual(order)
+    expect(st0.party).toEqual([])
   })
 
-  it('a helper session swaps its worker without moving anyone between party and box', () => {
-    const { dex } = setup([0])
-    attended(dex)
-    const st = dex._state()
-    const party = dex.publicState().party
-    for (const id of ['bx1', 'bx2']) { st.mons[id] = { ...st.mons[party[1]], uid: id, dex: party.length }; st.box.push(id) }
-    party.forEach((uid: string, i: number) => dex.throwBall(`p${i}`, uid))
-    expect(dex.throwBall('h', 'bx1')).toEqual({ ok: true })
-    expect(dex.swap('h', 'bx2')).toEqual({ ok: true })
-    const after = dex.publicState()
-    expect(after.assign.h).toBe('bx2')
-    expect(after.party).toEqual(party)
-    expect(after.box).toEqual(expect.arrayContaining(['bx1', 'bx2']))
-  })
-
-  it('a throw held by the last run does not keep the party busy after a restart', () => {
+  it('a throw held by the last run does not keep a Pokémon busy after a restart', () => {
     const { dex, file } = setup([0], 0.99, () => false)
     attended(dex)
-    const party = dex.publicState().party
-    expect(dex.throwBall('gone-1', party[0])).toEqual({ ok: true })
-    expect(dex.publicState().assign['gone-1']).toBe(party[0]) // held while it starts up
+    const box = dex.publicState().box
+    expect(dex.throwBall('gone-1', box[0])).toEqual({ ok: true })
+    expect(dex.publicState().assign['gone-1']).toBe(box[0]) // held while it starts up
     writeFileSync(file, JSON.stringify(dex._state()))
     const again = createPokedex({ file, species: SPECIES, broadcast: () => {}, isActive: () => false, now: () => new Date('2026-11-06T14:02:00').getTime() })
     expect(again.publicState().assign).toEqual({})
-    expect(again.publicState().remembered['gone-1']).toBe(party[0])
+    expect(again.publicState().remembered['gone-1']).toBe(box[0])
+  })
+
+  it('folds a 1.5.4 party into the front of the box, in order, once', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pokedex-'))
+    dirs.push(dir)
+    const file = join(dir, 'pokedex.json')
+    const mon = (uid: string, dex: number) => ({ uid, dex, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 1, ball: 'poke-ball', metLevel: 5, workMs: 0 })
+    const v2 = (party: string[], box: string[]) => ({
+      version: 2, trainer: { starter: 1, since: 1 }, caught: {}, seen: {},
+      mons: { m1: mon('m1', 1), m2: mon('m2', 10), m3: mon('m3', 16) }, party, box, assign: {}, nextUid: 4, log: [],
+    })
+    const open = (onChange = () => {}) => createPokedex({ file, species: SPECIES, broadcast: () => {}, onChange, random: () => 0.99, now: () => new Date('2026-11-06T14:00:00').getTime() })
+    writeFileSync(file, JSON.stringify(v2(['m1', 'm2'], ['m3'])))
+    const first = open()
+    expect(first._state().box).toEqual(['m1', 'm2', 'm3'])
+    expect(first._state().party).toEqual([])
+    first.flush() // the fold is saved
+    const saved = JSON.parse(readFileSync(file, 'utf8'))
+    expect(saved.box).toEqual(['m1', 'm2', 'm3'])
+    expect(saved.party).toEqual([])
+    // a second load changes nothing and writes nothing
+    let writes = 0
+    const second = open(() => { writes++ })
+    expect(second._state().box).toEqual(['m1', 'm2', 'm3'])
+    expect(second._state().party).toEqual([])
+    second.flush()
+    expect(writes).toBe(0)
+    // a party member that is also in the box appears once; one that does not exist is not added
+    writeFileSync(file, JSON.stringify(v2(['m1', 'm3', 'm99', 'm1'], ['m3', 'm2'])))
+    const third = open()
+    expect(third._state().box).toEqual(['m1', 'm3', 'm2'])
+    expect(third._state().party).toEqual([])
+    expect(Object.keys(third._state().mons).sort()).toEqual(['m1', 'm2', 'm3'])
+    third.flush()
+  })
+
+  it('a full box plus a party of six folds to 1206 in the box: the fold drops no one', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'pokedex-'))
+    dirs.push(dir)
+    const file = join(dir, 'pokedex.json')
+    const mons: Record<string, any> = {}
+    const ids = Array.from({ length: BOX_LIMIT + 6 }, (_, i) => `m${i + 1}`)
+    for (const u of ids) mons[u] = { uid: u, dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 1, ball: 'poke-ball', metLevel: 5, workMs: 0, gender: 'male', nature: 1 }
+    const party = ids.slice(BOX_LIMIT)
+    const box = ids.slice(0, BOX_LIMIT)
+    writeFileSync(file, JSON.stringify({ version: 2, trainer: { starter: 1, since: 1 }, caught: {}, seen: {}, mons, party, box, assign: {}, nextUid: BOX_LIMIT + 7, log: [] }))
+    const dex = createPokedex({ file, species: SPECIES, broadcast: () => {}, random: () => 0.99, now: () => new Date('2026-11-06T14:00:00').getTime() })
+    const st = dex._state()
+    expect(st.party).toEqual([])
+    expect(st.box).toHaveLength(BOX_LIMIT + 6)
+    expect(st.box).toEqual([...party, ...box])
+    expect(Object.keys(st.mons).sort()).toEqual([...ids].sort())
+    dex.flush()
+  })
+
+  it('a synced game with a party is folded too', () => {
+    const { dex } = setup([0])
+    dex.publicState()
+    const mon = (uid: string, d: number) => ({ uid, dex: d, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 1, ball: 'poke-ball', metLevel: 5, workMs: 0 })
+    expect(dex.importState({ version: 2, trainer: { starter: 1, since: 1 }, caught: {}, seen: {}, mons: { m9: mon('m9', 1), m3: mon('m3', 10) }, party: ['m9'], box: ['m3'], nextUid: 10 })).toBe(true)
+    expect(dex._state().box.slice(0, 2)).toEqual(['m9', 'm3'])
+    expect(dex._state().party).toEqual([])
+  })
+
+  it('outAt: stamped when a Pokémon goes out; backfilled from the log on load', () => {
+    let t = new Date('2026-11-06T14:00:00').getTime()
+    const dir = mkdtempSync(join(tmpdir(), 'pokedex-'))
+    dirs.push(dir)
+    const dex = createPokedex({ file: join(dir, 'p.json'), species: SPECIES, broadcast: () => {}, random: () => 0.99, now: () => t })
+    dex.publicState(); (dex as any)._state().attendedOn = '2026-11-06'
+    const st = (dex as any)._state()
+    const box = [...st.box]
+    for (const u of box) expect(st.mons[u].outAt).toBeUndefined()
+    // a throw
+    t += 1000
+    expect(dex.throwBall('s1', box[2])).toEqual({ ok: true })
+    expect(st.mons[box[2]].outAt).toBe(t)
+    // a session's first event (none has worked: random 0.99 takes the last resting one)
+    t += 1000
+    dex.noteEvent({ type: 'session_started', sessionId: 's2' }, {})
+    expect(st.assign.s2).toBe(box[5])
+    expect(st.mons[box[5]].outAt).toBe(t)
+    // a helper for a subagent does not go out with a session: no outAt
+    t += 1000
+    dex.noteEvent({ ...work('s2'), agentId: 'ag1' }, {})
+    expect(dex.publicState().helpers).toEqual({ s2: [box[4]] })
+    expect(st.mons[box[4]].outAt).toBeUndefined()
+    // a swap stamps the incoming one; the one swapped out keeps when it went out
+    const outBefore = st.mons[box[5]].outAt
+    t += 1000
+    expect(dex.swap('s2', box[3])).toEqual({ ok: true })
+    expect(st.mons[box[3]].outAt).toBe(t)
+    expect(st.mons[box[5]].outAt).toBe(outBefore)
+    // a save from before outAt: the newest sendout / swap / exchange onto a session in the log, never a helper
+    // nor a plain PC exchange (no sessionId: it never went out)
+    const file = join(dir, 'old.json')
+    const mon = (uid: string, extra: Record<string, unknown> = {}) => ({ uid, dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 1, ball: 'poke-ball', metLevel: 5, workMs: 0, ...extra })
+    writeFileSync(file, JSON.stringify({
+      version: 2, trainer: { starter: 1, since: 1 }, caught: {}, seen: {}, party: [], assign: {}, nextUid: 9,
+      mons: { m1: mon('m1', { outAt: 100 }), m2: mon('m2'), m3: mon('m3'), m4: mon('m4'), m5: mon('m5'), m6: mon('m6') },
+      box: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'],
+      log: [
+        { kind: 'sendout', uid: 'm1', at: 200 },
+        { kind: 'sendout', uid: 'm2', at: 3 },
+        { kind: 'sendout', uid: 'm2', at: 5 },
+        { kind: 'swap', uid: 'm3', at: 7 },
+        { kind: 'exchange', uid: 'm5', sessionId: 's9', at: 8 },
+        { kind: 'exchange', uid: 'm6', at: 11 },
+        { kind: 'helper', uid: 'm4', at: 9 },
+        { kind: 'catch', uid: 'm4', at: 10 },
+      ],
+    }))
+    const old = createPokedex({ file, species: SPECIES, broadcast: () => {}, random: () => 0.99, now: () => t })
+    const mons = old._state().mons
+    expect(mons.m1.outAt).toBe(100) // kept as it was
+    expect(mons.m2.outAt).toBe(5)
+    expect(mons.m3.outAt).toBe(7)
+    expect(mons.m5.outAt).toBe(8)
+    expect(mons.m4.outAt).toBeUndefined()
+    expect(mons.m6.outAt).toBeUndefined()
+  })
+
+  it('byRecentWork: outAt first, then workMs, then the given order', () => {
+    const cases: [string[], Record<string, { outAt?: number; workMs?: number }>, string[]][] = [
+      // a later outAt first
+      [['a', 'b'], { a: { outAt: 1 }, b: { outAt: 3 } }, ['b', 'a']],
+      // any outAt before any work without one
+      [['a', 'b'], { a: { workMs: 999 }, b: { outAt: 1 } }, ['b', 'a']],
+      // no outAt: more work first, none last
+      [['c', 'a', 'b'], { a: { workMs: 5 }, b: { workMs: 9 }, c: {} }, ['b', 'a', 'c']],
+      // ties keep the given order (equal outAt; no outAt and no work; a missing one)
+      [['b', 'a', 'd', 'c', 'z'], { a: { outAt: 2 }, b: { outAt: 2 }, c: { workMs: 0 }, d: {} }, ['b', 'a', 'd', 'c', 'z']],
+    ]
+    for (const [uids, mons, want] of cases) {
+      const given = [...uids]
+      expect(byRecentWork(given, mons)).toEqual(want)
+      expect(given).toEqual(uids) // a new array; the given one is untouched
+    }
+  })
+
+  it('a session goes out with the resting one that went out most recently; never one working; random only when none has worked', () => {
+    let t = new Date('2026-11-06T14:00:00').getTime()
+    const dir = mkdtempSync(join(tmpdir(), 'pokedex-'))
+    dirs.push(dir)
+    let rolls: number[] = []
+    const active = new Set<string>()
+    const dex = createPokedex({ file: join(dir, 'p.json'), species: SPECIES, broadcast: () => {}, isActive: (sid: string) => active.has(sid), random: () => (rolls.length ? rolls.shift()! : 0.99), now: () => t })
+    dex.publicState(); (dex as any)._state().attendedOn = '2026-11-06'
+    const st = (dex as any)._state()
+    const box = [...st.box]
+    const start = (sid: string) => { active.add(sid); dex.noteEvent({ type: 'session_started', sessionId: sid }, {}) }
+    // none has worked: a random one of all resting (a roll of 0 takes the first)
+    rolls = [0]
+    start('s2')
+    expect(st.assign.s2).toBe(box[0])
+    // s2 ends; another worked once but never went out, and one went out long ago
+    active.delete('s2'); dex.noteEvent({ type: 'session_ended', sessionId: 's2' }, {})
+    st.mons[box[2]].workMs = 60_000
+    st.mons[box[4]].outAt = t - 3_600_000
+    t += 1000
+    // the most recently out of the resting ones goes, with no roll
+    start('s1')
+    expect(st.assign.s1).toBe(box[0])
+    // s2 resumes: the one it remembers works in s1, so it takes the next resting one
+    active.add('s2')
+    dex.noteEvent(work('s2'), {})
+    expect(st.assign.s2).toBe(box[4])
+    expect(st.assign.s1).toBe(box[0])
+    // and keeps it from then on
+    dex.noteEvent(work('s2'), {})
+    expect(st.assign.s2).toBe(box[4])
+    expect(st.assign.s1).toBe(box[0])
+    // the next one: worked, never out
+    start('s3')
+    expect(st.assign.s3).toBe(box[2])
+    // everyone out: a new session gets none, and a remembered one working elsewhere is let go
+    start('s4'); start('s5'); start('s6')
+    expect(new Set([st.assign.s1, st.assign.s2, st.assign.s3, st.assign.s4, st.assign.s5, st.assign.s6]).size).toBe(6)
+    start('s7')
+    expect(st.assign.s7).toBeUndefined()
+    st.assign.s8 = box[0]
+    start('s8')
+    expect('s8' in st.assign).toBe(false)
   })
 
   it('a step may meet a wild Pokémon in the terrain of the tool; a caught one goes to the box', () => {
@@ -315,7 +495,7 @@ describe('pokedex', () => {
     st.sinceLegend = PITY - 1
     dex.noteEvent(work('s1', 'Read'), { project: 'x' })
     expect(sent.at(-1).event).toMatchObject({ kind: 'catch', tier: 'legendary', pity: true, id: 150 })
-    expect(dex.publicState().box.length).toBe(2)
+    expect(dex.publicState().box.length).toBe(6 + 2) // the first run's six, then the two catches
   })
 
   it('a sure legendary is one not caught yet while any is left; after that any of the tier', () => {
@@ -426,7 +606,7 @@ describe('pokedex', () => {
     const rolls = [0.4, 0.5, 0.3, 0.9, 0.2]
     const dex = createPokedex({ file: join(dir, 'p.json'), species, natures, broadcast: () => {}, random: () => rolls[i++ % rolls.length] })
     const st = dex.publicState()
-    for (const uid of st.party) {
+    for (const uid of st.box) {
       const m = st.mons[uid]
       const rate = species.find(s => s.id === m.dex)!.genderRate
       if (rate === -1) expect(m.gender).toBe('none')
@@ -442,7 +622,7 @@ describe('pokedex', () => {
     attended(dex)
     dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     const st0 = (dex as any)._state()
-    for (let i = 0; i < BOX_LIMIT; i++) { st0.mons[`f${i}`] = { uid: `f${i}`, dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }; st0.box.push(`f${i}`) }
+    while (st0.box.length < BOX_LIMIT) { const u = `f${st0.box.length}`; st0.mons[u] = { uid: u, dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }; st0.box.push(u) }
     const before = Object.keys(st0.mons).length
     dex.noteEvent(work('s1', 'Bash'), {})
     const ev = sent.map(m => m.event).find(e => e?.kind === 'catch')
@@ -453,56 +633,40 @@ describe('pokedex', () => {
     expect(dex.publicState().boxLimit).toBe(BOX_LIMIT)
   })
 
-  it('releases a box Pokémon, never a party one', () => {
+  it('releases a resting Pokémon, never a working or helping one', () => {
     const { dex } = setup([0])
-    attended(dex)
-    const st0 = (dex as any)._state()
-    st0.mons.mbox = { uid: 'mbox', dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }
-    st0.box.push('mbox')
-    expect(dex.release(dex.publicState().party[0])).toMatchObject({ ok: false, reason: 'in-party' })
-    expect(dex.release('nope')).toMatchObject({ ok: false })
-    expect(dex.release('mbox')).toEqual({ ok: true })
-    const st = dex.publicState()
-    expect(st.box).not.toContain('mbox')
-    expect(st.mons.mbox).toBeUndefined()
-  })
-
-  it('the PC trades a box Pokémon with a resting party one, never a working one; one whose session rests hands it over', () => {
-    const main: Record<string, any> = { s1: { state: 'working' } }
-    const { dex } = setup([0], 0.99, () => true, sid => ({ main: main[sid] }))
     attended(dex)
     dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     const st0 = (dex as any)._state()
-    st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }
+    st0.mons.mbox = { uid: 'mbox', dex: 10, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }
     st0.box.push('mbox')
     const working = dex.publicState().assign.s1
-    expect(dex.exchange('mbox', working)).toMatchObject({ ok: false, reason: 'busy' })
-    const resting = dex.publicState().party.find((u: string) => u !== working)!
-    const slot = dex.publicState().party.indexOf(resting)
-    expect(dex.exchange('mbox', resting)).toEqual({ ok: true })
+    expect(dex.release(working)).toEqual({ ok: false, reason: 'busy' })
+    expect(dex.release('nope')).toMatchObject({ ok: false })
+    // one that rests goes, the first run's companions as well as a catch
+    const resting = st0.box.find((u: string) => u !== working && u !== 'mbox')
+    expect(dex.release(resting)).toEqual({ ok: true })
+    expect(dex.release('mbox')).toEqual({ ok: true })
     const st = dex.publicState()
-    expect(st.party[slot]).toBe('mbox')
-    expect(st.box).toContain(resting)
     expect(st.box).not.toContain('mbox')
-    // the session's turn is over: its Pokémon may go, and the box one takes over the session
-    main.s1 = { state: 'needs-you', needsYou: { kind: 'permission' } }
-    expect(dex.exchange(resting, working)).toMatchObject({ ok: false, reason: 'busy' })
-    main.s1 = { state: 'idle' }
-    expect(dex.exchange(resting, working)).toEqual({ ok: true })
-    expect(dex.publicState().assign.s1).toBe(resting)
+    expect(st.box).not.toContain(resting)
+    expect(st.mons.mbox).toBeUndefined()
+    expect(st.mons[resting]).toBeUndefined()
+    expect(st.mons[working]).toBeTruthy()
   })
 
   it('the trainer arranges the box: the same Pokémon, each once, in a new order', () => {
     const { dex } = setup([0])
     attended(dex)
     const st0 = (dex as any)._state()
+    const gifts = [...st0.box] // the first run's six
     for (const u of ['b1', 'b2', 'b3']) { st0.mons[u] = { uid: u, dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0 }; st0.box.push(u) }
-    expect(dex.arrangeBox(['b3', 'b1', 'b2'])).toEqual({ ok: true })
-    expect(dex.publicState().box).toEqual(['b3', 'b1', 'b2'])
-    expect(dex.arrangeBox(['b3', 'b1'])).toMatchObject({ ok: false })
-    expect(dex.arrangeBox(['b3', 'b1', 'b1'])).toMatchObject({ ok: false })
-    expect(dex.arrangeBox(['b3', 'b1', 'zz'])).toMatchObject({ ok: false })
-    expect(dex.publicState().box).toEqual(['b3', 'b1', 'b2'])
+    expect(dex.arrangeBox(['b3', 'b1', 'b2', ...gifts])).toEqual({ ok: true })
+    expect(dex.publicState().box).toEqual(['b3', 'b1', 'b2', ...gifts])
+    expect(dex.arrangeBox(['b3', 'b1', ...gifts])).toMatchObject({ ok: false })
+    expect(dex.arrangeBox(['b3', 'b1', 'b1', ...gifts])).toMatchObject({ ok: false })
+    expect(dex.arrangeBox(['b3', 'b1', 'zz', ...gifts])).toMatchObject({ ok: false })
+    expect(dex.publicState().box).toEqual(['b3', 'b1', 'b2', ...gifts])
   })
 
   it('every catch comes in a ball drawn by the balls’ weights', () => {
@@ -526,7 +690,7 @@ describe('pokedex', () => {
     expect(dex.publicState().mons[ev.uid].ball).toBe('master-ball')
     // the starter came in a plain Poké Ball
     const st = dex.publicState()
-    expect(st.mons[st.party[0]].ball).toBe('poke-ball')
+    expect(st.mons[st.box[0]].ball).toBe('poke-ball')
   })
 
   it('a species already caught comes back less: ×0.9 per catch', () => {
@@ -702,7 +866,8 @@ describe('pokedex', () => {
     const saved = JSON.parse(readFileSync(file, 'utf8'))
     expect(saved.version).toBe(2)
     expect(saved.trainer.starter).toBe(1)
-    expect(saved.assign.s1).toBe(saved.party[0])
+    expect(saved.box).toContain(saved.assign.s1)
+    expect(saved.party).toEqual([])
   })
 
   it("takes a synced (merged) game: the game before it is backed up, this PC's assignments in it are kept, old individuals upgraded", () => {
@@ -749,7 +914,7 @@ describe('pokedex saves', () => {
     await vi.advanceTimersByTimeAsync(1000)
     const before = steps(file)
     dex.noteEvent(work('s1'))
-    dex.noteEvent(work('s2')) // a second session: a party Pokémon is sent out (a meaningful change)
+    dex.noteEvent(work('s2')) // a second session: a resting Pokémon is sent out (a meaningful change)
     await vi.advanceTimersByTimeAsync(400)
     expect(steps(file)).toBeGreaterThan(before)
   })
@@ -775,9 +940,10 @@ describe('helpers and late subagent calls', () => {
     const dex = createPokedex({ file: join(dir, 'p.json'), species: SPECIES, broadcast: () => {}, random: () => 0.99, now: () => t })
     dex.publicState(); (dex as any)._state().attendedOn = '2026-11-06'
     const st0 = (dex as any)._state()
+    st0.box = st0.box.slice(0, 1) // only the starter rests, so the box has one free helper below
+    dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     st0.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0, metLevel: 5, workMs: 0 }
     st0.box.push('mbox')
-    dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
     dex.noteEvent({ ...work('s1'), agentId: 'ag1', at: t }, {})
     expect(dex.publicState().helpers).toEqual({ s1: ['mbox'] })
     dex.noteEvent({ type: 'agent_completed', sessionId: 's1', agentId: 'ag1' }, {})
@@ -786,5 +952,224 @@ describe('helpers and late subagent calls', () => {
     expect(dex.publicState().helpers).toEqual({})
     dex.noteEvent({ ...work('s1'), agentId: 'ag1', at: t + 1 }, {})
     expect(dex.publicState().helpers).toEqual({ s1: ['mbox'] })
+  })
+})
+
+describe('a session with no Pokémon', () => {
+  /**
+   * A box of two Pokémon (or `box`). `ended` sessions are not active (the registry's view);
+   * the clock moves with `advance`.
+   */
+  function twoMons(fallback = 0.99, { box = 2, ...opts }: { box?: number; stepSpacingMs?: number; sessionOf?: (sid: string) => any } = {}) {
+    let t = new Date('2026-11-06T14:00:00').getTime()
+    const dir = mkdtempSync(join(tmpdir(), 'pokedex-'))
+    dirs.push(dir)
+    const sent: any[] = []
+    const ended = new Set<string>()
+    const rolls: number[] = []
+    const dex = createPokedex({
+      file: join(dir, 'p.json'), species: SPECIES, broadcast: (m: any) => sent.push(m),
+      isActive: (sid: string) => !ended.has(sid),
+      random: () => (rolls.length ? rolls.shift()! : fallback), now: () => t, ...opts,
+    })
+    dex.publicState()
+    const st = (dex as any)._state()
+    st.box = st.box.slice(0, box)
+    const start = (sid: string) => dex.noteEvent({ type: 'session_started', sessionId: sid }, {})
+    const end = (sid: string) => { ended.add(sid); dex.noteEvent({ type: 'session_ended', sessionId: sid }, {}) }
+    const met = (sid: string) => [...sent.map(m => m.event), ...st.log].filter(e => e && (e.kind === 'catch' || e.kind === 'flee') && e.sessionId === sid)
+    const advance = (ms: number) => { t += ms }
+    return { dex, sent, st, ended, rolls, start, end, met, advance }
+  }
+
+  it('opens with none when every Pokémon works, and meets nothing: no attendance, no wild, no queued step', () => {
+    // every roll 0: any step would meet and catch, any thinking step would be due
+    const { dex, st, met, advance, end } = twoMons(0, { sessionOf: () => ({ main: { state: 'working' } }) })
+    expect(dex.throwBall('a', st.box[0])).toEqual({ ok: true })
+    expect(dex.throwBall('b', st.box[1])).toEqual({ ok: true })
+    // c's events are the day's first
+    for (let i = 0; i < 50; i++) dex.noteEvent(work('c'), {})
+    for (let i = 0; i < 3; i++) { advance(THINK_STEP_MS); dex.tick() }
+    expect(st.assign.c).toBeUndefined()
+    expect(met('c')).toEqual([])
+    expect(st.attendedOn).toBeNull()
+    expect(st.box).toHaveLength(2)
+    // once it has one, its next event takes the day's attendance
+    end('a')
+    expect(st.assign.c).toBeTruthy()
+    dex.noteEvent(work('c'), {})
+    expect(st.attendedOn).toBe('2026-11-06')
+    expect(met('c').find(e => e.attendance)).toBeTruthy()
+  })
+
+  it('gets the next one to rest, oldest waiting first', () => {
+    const { dex, sent, st, start, end } = twoMons()
+    attended(dex)
+    start('a'); start('b')
+    const [ma, mb] = [st.assign.a, st.assign.b]
+    expect(new Set([ma, mb]).size).toBe(2)
+    start('c'); start('d')
+    expect(st.assign.c).toBeUndefined()
+    expect(st.assign.d).toBeUndefined()
+    end('a')
+    expect(st.assign.c).toBe(ma)
+    expect(st.assign.d).toBeUndefined()
+    expect(dex.publicState().assign.c).toBe(ma)
+    end('b')
+    expect(st.assign.d).toBe(mb)
+    expect(sent.map(m => m.event).find(e => e?.kind === 'sendout' && e.sessionId === 'c')).toMatchObject({ uid: ma })
+  })
+
+  it('a catch elsewhere goes straight to the waiting session', () => {
+    const { dex, sent, st, rolls, start } = twoMons()
+    attended(dex)
+    start('a'); start('b'); start('c')
+    expect(st.assign.c).toBeUndefined()
+    // a's step: met, common, a species, not shiny, caught
+    rolls.push(0, 0.9, 0.5, 0.99, 0.1)
+    dex.noteEvent(work('a'), {})
+    const caught = sent.map(m => m.event).find(e => e?.kind === 'catch')
+    expect(caught).toMatchObject({ sessionId: 'a' })
+    expect(caught.uid).toBeTruthy()
+    expect(st.assign.c).toBe(caught.uid)
+  })
+
+  it('a swap frees one for the waiting session', () => {
+    const { dex, st, start } = twoMons()
+    attended(dex)
+    start('a'); start('b'); start('c')
+    const ma = st.assign.a
+    st.mons.mbox = { uid: 'mbox', dex: 150, steps: 0, evos: 0, shiny: false, how: 'wild', place: 'x', at: 0, metLevel: 5, workMs: 0 }
+    st.box.push('mbox')
+    expect(dex.swap('a', 'mbox')).toEqual({ ok: true })
+    expect(st.assign.a).toBe('mbox')
+    expect(st.assign.c).toBe(ma)
+  })
+
+  it('a waiting session that ended is skipped', () => {
+    const { dex, st, ended, start, end } = twoMons()
+    attended(dex)
+    start('a'); start('b'); start('c'); start('d')
+    const ma = st.assign.a
+    ended.add('c') // the registry ended it without a hook
+    end('a')
+    expect(st.assign.c).toBeUndefined()
+    expect(st.assign.d).toBe(ma)
+  })
+
+  it('auto-assign never takes a Pokémon held by a throw', () => {
+    const { dex, st, ended, start, end, advance } = twoMons()
+    attended(dex)
+    start('a')
+    const ma = st.assign.a
+    const other = st.box.find((u: string) => u !== ma)
+    // the registry does not know e until its first event: only the throw holds it.
+    // Thrown later, it went out most recently: picked first if it were free
+    ended.add('e')
+    advance(1000)
+    expect(dex.throwBall('e', other)).toEqual({ ok: true })
+    start('c')
+    expect(st.assign.c).toBeUndefined()
+    dex.tick()
+    expect(st.assign.c).toBeUndefined()
+    end('a')
+    expect(st.assign.c).toBe(ma)
+    expect(st.assign.e).toBe(other)
+  })
+
+  it('steps from before it had a Pokémon are not met after', () => {
+    // every roll 0: a queued step would meet
+    const { dex, st, start, end, met, advance } = twoMons(0, { stepSpacingMs: 8000 })
+    st.attendedOn = '2026-11-06'
+    start('a'); start('b'); start('c')
+    expect(st.assign.c).toBeUndefined()
+    for (let i = 0; i < 5; i++) dex.noteEvent(work('c', 'Bash'), {})
+    end('a')
+    expect(st.assign.c).toBeTruthy()
+    for (let i = 0; i < 6; i++) { advance(8000); dex.tick() }
+    expect(met('c')).toEqual([])
+  })
+
+  /** Wild encounters logged for a session (each once) */
+  const wild = (st: any, sid: string) => st.log.filter((e: any) => (e.kind === 'catch' || e.kind === 'flee') && e.sessionId === sid)
+
+  it("an open session that loses its Pokémon drops its waiting steps", () => {
+    // every roll 0: every step meets
+    const { dex, st, start, advance } = twoMons(0, { stepSpacingMs: 8000 })
+    st.attendedOn = '2026-11-06'
+    start('a')
+    for (let i = 0; i < 5; i++) dex.noteEvent(work('a', 'Bash'), {})
+    expect(wild(st, 'a')).toHaveLength(1) // the first step; four wait their turn
+    // a synced game without a's assignment: a is open and has none
+    delete st.assign.a
+    for (let i = 0; i < 6; i++) { advance(8000); dex.tick() }
+    expect(wild(st, 'a')).toHaveLength(1)
+  })
+
+  it("an ended session's late tool calls take no steps", () => {
+    const { dex, st, start, end, advance } = twoMons(0, { stepSpacingMs: 8000 })
+    st.attendedOn = '2026-11-06'
+    start('a')
+    end('a')
+    // hooks that ran in the background arrive after the end: a remembers a resting Pokémon, but holds none
+    for (let i = 0; i < 3; i++) dex.noteEvent(work('a', 'Bash'), {})
+    for (let i = 0; i < 4; i++) { advance(8000); dex.tick() }
+    expect(wild(st, 'a')).toEqual([])
+  })
+
+  it("an ended session's waiting steps are still met, with the Pokémon each was taken with", () => {
+    // every roll 0: every step meets and catches
+    const { dex, st, start, end, advance } = twoMons(0, { stepSpacingMs: 8000 })
+    st.attendedOn = '2026-11-06'
+    start('a'); start('b')
+    const ma = st.assign.a
+    const dexA = st.mons[ma].dex
+    for (let i = 0; i < 5; i++) dex.noteEvent(work('a', 'Bash'), {})
+    expect(wild(st, 'a')).toHaveLength(1) // the first step; four wait their turn
+    // a's catch rests in the box: c takes it, d waits
+    start('c'); start('d')
+    expect(st.assign.c).toBeTruthy()
+    expect(st.assign.d).toBeUndefined()
+    // a ends with steps still waiting; its Pokémon goes on to d
+    end('a')
+    expect(st.assign.d).toBe(ma)
+    for (let i = 0; i < 6; i++) { advance(8000); dex.tick() }
+    const met = wild(st, 'a')
+    expect(met).toHaveLength(5)
+    for (const e of met) expect(e.partner).toBe(dexA)
+  })
+
+  it("a helper back to rest goes to the oldest waiting session, before a newer one's event", () => {
+    const { dex, st, start } = twoMons(0.99, { box: 3 })
+    attended(dex)
+    start('a'); start('b')
+    dex.noteEvent({ ...work('a'), agentId: 'ag1' }, {})
+    const helper = dex.publicState().helpers.a?.[0]
+    expect(helper).toBeTruthy()
+    start('c'); start('d')
+    expect(st.assign.c).toBeUndefined()
+    expect(st.assign.d).toBeUndefined()
+    dex.noteEvent({ type: 'agent_completed', sessionId: 'a', agentId: 'ag1' }, {})
+    expect(st.assign.c).toBe(helper)
+    dex.noteEvent(work('d'), {})
+    expect(st.assign.c).toBe(helper)
+    expect(st.assign.d).toBeUndefined()
+  })
+
+  it("a Pokémon whose throw hold ran out goes to the oldest waiting session, not to a newer one's event", () => {
+    const { dex, st, ended, start, advance } = twoMons()
+    attended(dex)
+    start('a')
+    const other = st.box.find((u: string) => u !== st.assign.a)
+    ended.add('e') // never opened: only the throw holds its Pokémon
+    expect(dex.throwBall('e', other)).toEqual({ ok: true })
+    start('c'); start('d')
+    expect(st.assign.c).toBeUndefined()
+    advance(10 * 60_000 + 1) // the hold ran out, with no call here
+    dex.noteEvent(work('d'), {})
+    expect(st.assign.c).toBe(other)
+    expect(st.assign.d).toBeUndefined()
+    start('f')
+    expect(st.assign.f).toBeUndefined()
   })
 })

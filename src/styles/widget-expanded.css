@@ -1,4 +1,4 @@
-/* widget-expanded.css — the widget as the app: the launcher, party controls,
+/* widget-expanded.css — the widget as the app: the launcher, session controls,
    and the terminal card that grows beside the widget when it is expanded. */
 
 .widget { flex-direction: row; gap: 6px; }
@@ -71,11 +71,9 @@
 /* one line: a narrow panel at a large step ends the words in an ellipsis */
 .w-launch-main { min-width: 0; }
 .w-launch-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* Full (the session limit): the same row, quieter */
-.w-launch-main.full { color: var(--ink-3); }
 .w-launch-alt.wide { width: auto; padding: 9px 14px; font-size: var(--t-ui); font-weight: var(--w-body); }
 
-/* ---------- Party extras ---------- */
+/* ---------- Session row extras ---------- */
 .w-row { cursor: pointer; }
 /* 확인 필요 as a button: the same dot and words, a little brighter on hover */
 /* 1px above and below: 16px tall, main's target (the pill's 2px 7px drew a box; the words now sit bare) */
@@ -381,11 +379,8 @@
 .widget.mode-window .w-bento, .widget.mode-fullscreen .w-bento { gap: 0; }
 .widget.mode-window .w-side .w-limits, .widget.mode-fullscreen .w-side .w-limits { padding: 12px 16px; }
 .widget.mode-window .w-side .w-launch, .widget.mode-fullscreen .w-side .w-launch { padding: 6px 8px; }
-/* The Pokédex strip and the party strip read as one block: no line between them; the party's
-   line runs the panel's full width */
+/* The Pokédex strip and the session list read as one block: no line between them */
 .widget.mode-window .w-side .w-dex, .widget.mode-fullscreen .w-side .w-dex { padding-bottom: 12px; border-bottom: 0; }
-.widget.mode-window .w-side .w-party:has(> .w-party-head), .widget.mode-fullscreen .w-side .w-party:has(> .w-party-head) { padding-top: 0; }
-.widget.mode-window .w-party-head, .widget.mode-fullscreen .w-party-head { margin: 0 -16px 10px; padding: 0 16px 10px; }
 /* A row with no fill shows the panel */
 .widget.mode-window .w-row, .widget.mode-fullscreen .w-row { --row-base: var(--side-bg); }
 .widget.mode-window .w-side .w-compose textarea, .widget.mode-fullscreen .w-side .w-compose textarea { background: var(--card); }
@@ -570,7 +565,6 @@
   color: var(--ink-3); cursor: pointer; font: inherit;
 }
 .w-rail-btn:hover { background: var(--hover); color: var(--ink); }
-.w-rail-btn.full { opacity: 0.45; }
 .w-rail-brand { width: 56px; height: var(--head-h, 46px); border-radius: 0; margin-bottom: 2px; }
 .w-rail-brand:hover { background: transparent; }
 /* 업무 모드: the ball's slot, kept empty */
@@ -619,7 +613,7 @@
 .w-row.dragging { z-index: 3; transition: none; cursor: grabbing; --row-tint: var(--hover); background: linear-gradient(var(--row-tint), var(--row-tint)), var(--row-base); }
 .w-row input, .w-row textarea { user-select: text; }
 /* ---------- 업무 모드 (src/workMode.ts): nothing Pokémon on screen. The pictures, the logo, the
-   Pokédex card and the party are not drawn at all; this only fills their places ---------- */
+   Pokédex card and the Pokémon in the session list are not drawn at all; this only fills their places ---------- */
 /* A plain session glyph in the Pokémon's box, the same size, so nothing moves */
 .w-row-glyph { display: inline-grid; place-items: center; box-sizing: border-box; color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-s); background: none; }
 .w-rail-glyph { display: grid; place-items: center; width: 26px; height: 26px; color: var(--ink-3); }

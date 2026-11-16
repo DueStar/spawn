@@ -229,10 +229,11 @@ Before: npx vite build   (the harness reads dist/, it never builds)
   --help           this
 
 Surfaces (each at 1440x900 and 1100x720 unless noted):
-  session session-compact session-12 session-12-compact size-small size-xlarge dex box log rank settings rail
+  session session-compact session-12 session-12-compact session-nomon size-small size-xlarge dex box log rank settings rail
+                   (session-nomon: the last session has no Pokémon yet, the plain glyph)
   resume throw swap notes find   (opened by a click: 이어하기, 던지기, 교체, 패치노트, the terminal's find bar)
   widget widget-plain widget-xlarge (340x820; widget-plain: nobody waiting, no question card, as the lab)   toast qa (full page, 1440 wide)   status-card (300x96)
-  -work: session-work session-compact-work rail-work widget-work widget-plain-work settings-work
+  -work: session-work session-compact-work session-nomon-work rail-work widget-work widget-plain-work settings-work
   -mac:  session-mac rail-mac chat-mac
   chat chat-long chat-tools chat-diff chat-failed chat-agent chat-stream chat-waiting chat-banner chat-empty
                    (the chat view: the first session as chat, conversations from chatFixture.mjs)
@@ -278,6 +279,8 @@ const SURFACES = {
   'session-compact': { view: 'terminal', local: { 'spawn-list-mode': 'compact' } },
   'session-12': { view: 'terminal', twelve: true },
   'session-12-compact': { view: 'terminal', twelve: true, local: { 'spawn-list-mode': 'compact' } },
+  // The last session has no Pokémon yet (none rested when it opened): the plain glyph, no Lv, no swap
+  'session-nomon': { view: 'terminal', noMon: 1 },
   // spawn-text-size arrives in Task 7 (harmless before); spawn-term-font is today's terminal size
   // and the key the step migrates from, so the before set shows the terminal at that size too
   'size-small': { view: 'terminal', local: { 'spawn-text-size': 'small', 'spawn-term-font': '12' } },
@@ -290,9 +293,9 @@ const SURFACES = {
   settings: { view: 'terminal', settings: true },
   // The pickers and dialogs, opened by a click as a user would (window mode, the session view)
   resume: { view: 'terminal', open: async page => { await page.locator('.w-side .w-launch-alt').nth(1).click() }, ready: '.resume-item' },
-  throw: { view: 'terminal', open: async page => { await page.locator('.w-side .w-launch-main').click() }, ready: '.w-swap-item' },
+  throw: { view: 'terminal', open: async page => { await page.locator('.w-side .w-launch-main').click() }, ready: '.w-swap-cell' },
   swap: {
-    view: 'terminal', ready: '.w-swap-item',
+    view: 'terminal', ready: '.w-swap-cell',
     open: async page => { const row = page.locator('.w-party .w-row').first(); await row.hover(); await row.locator('.w-row-swap').click() },
   },
   notes: { view: 'terminal', open: async page => { await page.locator('.w-side .w-brand').click() }, ready: '.w-notes-body h3' },
@@ -416,7 +419,7 @@ const SURFACES = {
   } },
 }
 const ASK_SURFACES = ['chat-ask-bash', 'chat-ask-edit', 'chat-ask-agent', 'chat-ask-question', 'chat-ask-plan', 'chat-ask-timeout', 'chat-ask-longpath', 'chat-ask-longline', 'chat-ask-sandbox', 'chat-ask-overwrite', 'chat-ask-long']
-const WORK = ['session', 'session-compact', 'rail', 'widget', 'widget-plain', 'settings', 'chat', 'chat-banner', 'chat-empty', 'chat-compose', 'chat-compose-fail', 'chat-compose-pending', ...ASK_SURFACES, 'chat-changes', 'chat-thinking', 'chat-all', 'chat-foot', 'chat-wild', 'chat-link', 'chat-new-version', 'chat-help-settings']
+const WORK = ['session', 'session-compact', 'session-nomon', 'rail', 'widget', 'widget-plain', 'settings', 'chat', 'chat-banner', 'chat-empty', 'chat-compose', 'chat-compose-fail', 'chat-compose-pending', ...ASK_SURFACES, 'chat-changes', 'chat-thinking', 'chat-all', 'chat-foot', 'chat-wild', 'chat-link', 'chat-new-version', 'chat-help-settings']
 const MAC = ['session', 'rail', 'chat', 'chat-compose', ...ASK_SURFACES, 'chat-changes', 'chat-thinking', 'chat-foot', 'chat-wild', 'chat-find', 'chat-link', 'chat-new-version']
 const SIZES = [[1440, 900], [1100, 720]]
 
@@ -5082,9 +5085,10 @@ const flowPageErrors = []
 /** The app with the fixture in a page of its own, for a flow (window mode) */
 /**
  * A page of the app with the fixture. lang: 'en' / 'ja' (the page's locale); update: the bridge's
- * update state (an update on offer); ended: the index of a terminal that has exited (its session ended)
+ * update state (an update on offer); ended: the index of a terminal that has exited (its session ended);
+ * noMon: the last n sessions have no Pokémon yet (fixture.snapshotNoMon)
  */
-async function openApp(browser, { local = {}, twelve = false, size = [1440, 900], work = false, mac = false, smoke = false, mode = 'window', commits = false, lang = null, update = null, ended = null, chat = undefined, armed = {}, chatMode = true, chatOpts = null, init = null, settings = null } = {}) {
+async function openApp(browser, { local = {}, twelve = false, noMon = 0, size = [1440, 900], work = false, mac = false, smoke = false, mode = 'window', commits = false, lang = null, update = null, ended = null, chat = undefined, armed = {}, chatMode = true, chatOpts = null, init = null, settings = null } = {}) {
   const base0 = twelve ? fixture.terminals12 : fixture.terminals
   // chat: a conversation's name (chatFixture.mjs), or null for armed terminals with nothing to show;
   // left out: no terminal has the chat key (the app as 1.4.0). chatMode: 채팅 chosen in the carry
@@ -5101,7 +5105,7 @@ async function openApp(browser, { local = {}, twelve = false, size = [1440, 900]
     ...(settings ? { settings } : {}),
   }
   // (a conversation's wild Pokémon: its game events in the snapshot; pushDex sends more, kept for a reload)
-  let snapshot = withDex(twelve ? fixture.snapshot12 : fixture.snapshot, chat ? chatFixture.wild(chat, shot.terminals[0].sessionId) : null)
+  let snapshot = withDex(twelve ? fixture.snapshot12 : noMon ? fixture.snapshotNoMon(noMon) : fixture.snapshot, chat ? chatFixture.wild(chat, shot.terminals[0].sessionId) : null)
   const sockets = new Set()
   const all = {
     'spawn-carry': JSON.stringify({ view: 'terminal', target: shot.terminals[0].sessionId, ...(chatData && chatMode ? { chatModes: chatData.chatModes } : {}) }),
@@ -5531,7 +5535,7 @@ async function fitProblems(page) {
     const ROWS = '.w-head, .w-launch, .w-term-tabs, .w-list-head, .w-sess-bar, .w-row, ' +
       // the views: 도감's numbers and filters, 박스's bars, 기록's summary and rows, 랭킹's rows
       '.dex-stats, .dex-stat, .dex-tiers, .dex-tiercol, .dex-filterbar, .dex-fgroup, .dex-card-tags, .dex-owned-top, ' +
-      '.box-party, .box-party-row, .box-toolbar, .box-tools, .box-actions, .today-sum, .today-row, .today-text, ' +
+      '.box-toolbar, .box-tools, .box-actions, .today-sum, .today-row, .today-text, ' +
       '.rank-top, .rank-me, .rank-row, ' +
       // the chat view: the flip, tool rows, the banner, a diff's head, every row of the conversation
       '.w-lens, .chat-tool-head, .chat-banner, .chat-banner-acts, .chat-diff-head, .chat-row, .chat-status, .chat-empty'
@@ -5699,6 +5703,7 @@ async function shoot(browser, s, [W, H], opts, report) {
   const sizeName = `${W}x${H}`
   const label = `${s.id} ${sizeName}`
   const twelve = !!s.twelve
+  const noMon = s.noMon ?? 0
   const chat = s.chat ? chatShot(fixture.terminals, s.chat) : null
   const shot = {
     mode: s.mode ?? 'window', workMode: s.work, version: VERSION,
@@ -5710,7 +5715,7 @@ async function shoot(browser, s, [W, H], opts, report) {
     ...(s.appSettings ? { settings: s.appSettings } : {}),
   }
   // (a conversation's wild Pokémon: its game events for the first session, chatFixture.mjs wild)
-  const snapshot = withDex(twelve ? fixture.snapshot12 : s.plain ? fixture.snapshotPlain : fixture.snapshot, s.chat ? chatFixture.wild(s.chat, shot.terminals[0].sessionId) : null)
+  const snapshot = withDex(twelve ? fixture.snapshot12 : noMon ? fixture.snapshotNoMon(noMon) : s.plain ? fixture.snapshotPlain : fixture.snapshot, s.chat ? chatFixture.wild(s.chat, shot.terminals[0].sessionId) : null)
   const local = {
     'spawn-carry': JSON.stringify({ view: s.view ?? 'terminal', target: shot.terminals[0].sessionId, ...(chat ? { chatModes: chat.chatModes } : {}) }),
     'spawn-side-hidden': '0',

@@ -19,6 +19,7 @@ import { ToastCard } from './Toast'
 import TodayLog from './components/TodayLog'
 import { TextSizeControl } from './components/TextSizeControl'
 import { hpTone } from './sessionList'
+import { TerminalIcon } from './components/Icons'
 import QaChat, { QaAnswers, QaComposer } from './qaChat'
 import type { DexEvent, Tier } from './pokedexStore'
 
@@ -93,6 +94,30 @@ const QaRows: React.FC<{ compact?: boolean }> = ({ compact = false }) => (
           )}
         </div>
       ))}
+      {/* No Pokémon yet (none rested when it opened): the plain glyph and the folder, no Lv, its HP bar */}
+      <div className="w-row mood-working">
+        <div className="w-row-head">
+          <span className="w-row-mon w-row-glyph" aria-hidden="true"><TerminalIcon size={compact ? 14 : 18} /></span>
+          {compact ? (
+            <div className="w-row-line1">
+              <span className="w-row-name">포켓몬을 기다리는 세션</span>
+              <span className={`w-row-tick ${hpTone(74)}`} aria-hidden="true" />
+              <span className="w-row-state"><Pill mood="working" /></span>
+            </div>
+          ) : <>
+            <div className="w-row-line1"><span className="w-row-name">포켓몬을 기다리는 세션</span><Pill mood="working" /></div>
+            <div className="w-row-line2"><span className="w-row-meta"><span className="w-row-project">shop-api</span><span className="w-row-branch">main</span></span></div>
+          </>}
+        </div>
+        {!compact && (
+          <div className="w-row-bottom">
+            <span className="w-hp-label" aria-hidden="true">HP</span>
+            <div className={`w-ctx w-hp ${hpTone(74)}`}><span style={{ width: '74%' }} /></div>
+            <span className="w-row-model">Sonnet 5.5</span>
+            <span className="w-row-num">148k</span>
+          </div>
+        )}
+      </div>
       {/* A plain shell: the prompt mark where the Pokémon would be, no context bar */}
       <div className="w-row mood-idle">
         <div className="w-row-head">
@@ -143,7 +168,7 @@ const QaPage: React.FC = () => (
 
     <Section title="세션 줄">
       <div className="qa-item qa-narrow">
-        <div className="qa-label"><b>상세</b><span>일하는 중 · 확인 필요 · 쉬는 중 · 오류 · 종료 · 셸 (맨 위가 고른 세션)</span></div>
+        <div className="qa-label"><b>상세</b><span>일하는 중 · 확인 필요 · 쉬는 중 · 오류 · 종료 · 포켓몬 없음 · 셸 (맨 위가 고른 세션)</span></div>
         <QaRows />
       </div>
       <div className="qa-item qa-narrow">

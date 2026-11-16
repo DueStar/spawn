@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { FIX } from './chat-helpers'
+import { budget } from './timing'
 
 const require = createRequire(import.meta.url)
 const { splitLines, createTail } = require('../electron/chatTail.cjs')
@@ -194,7 +195,8 @@ describe('createTail', () => {
     expect(r.lines.length).toBeGreaterThanOrEqual(150)
     expect(r.lines.every((l: any) => keep(l.text))).toBe(true)
     expect(counter.bytes).toBeLessThanOrEqual(16 * 1024 * 1024)
-    expect(worst).toBeLessThan(100)
+    // a wall-clock number: ×4 on a CI runner (tests/timing.ts; the macos-15-intel runner's worst was 107–130 ms)
+    expect(worst).toBeLessThan(budget(100))
     rmSync(file)
   }, 60_000)
 })

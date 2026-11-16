@@ -17,7 +17,7 @@ import { createChatStore, EMPTY_CHAT } from '../src/chat/store'
 import { toolMeta } from '../src/chat/toolLabel'
 import { askChatFocus, forgetChatTerminal, onChatForget, takeChatFocus } from '../src/chat/lensMode'
 import type { ChatItem, ChatUpdate, LensStatus, ToolItem } from '../src/chat/types'
-import { growth, GROWTH_LINEAR, showGrowth } from './timing'
+import { growth, growthLimit, showGrowth } from './timing'
 
 const require = createRequire(import.meta.url)
 const { chatOpenPlan, vscodeUrl } = require('../electron/links.cjs')
@@ -67,12 +67,12 @@ describe('M10: a link with a title, an address in angle brackets', () => {
     expect(textOf('a <b> c')).toBe('a <b> c')
   })
   it('the title and bracket paths stay linear on hostile input', () => {
-    // by growth (tests/timing.ts): n to 4n near ×4, the 4n input (each attack's size before, under MD_CAP) within a
-    // generous second
+    // by growth (tests/timing.ts): n to 4n near ×4 (held below growthLimit(): 8, 12 on a CI runner), the 4n input
+    // (each attack's size before, under MD_CAP) within a generous second
     for (const [unit, n] of [['[a](', 10_000], ['[a](x "', 5_000], ['<h', 20_000], ['<https://', 5_000]] as const) {
       expect(unit.repeat(4 * n).length).toBeLessThanOrEqual(MD_CAP)
       const g = growth(k => unit.repeat(k), parseMarkdown, n)
-      expect(g.ratio, `${unit}: ${showGrowth(g)}`).toBeLessThan(GROWTH_LINEAR)
+      expect(g.ratio, `${unit}: ${showGrowth(g)}`).toBeLessThan(growthLimit())
       expect(g.large, `${unit}: ${showGrowth(g)}`).toBeLessThan(1000)
     }
   })

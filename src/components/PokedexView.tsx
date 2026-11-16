@@ -133,7 +133,7 @@ const PokedexView: React.FC = () => {
         <div className="dex-stats">
           <Stat label={t('포획')} value={caughtCount} total={total} />
           <Stat label={t('발견')} value={seenCount} total={total} hint={t('만났지만 아직 못 잡은 종도 포함')} />
-          <Stat label={t('박스')} value={state?.box.length ?? 0} total={state?.boxLimit ?? 1200} hint={t('파티 6마리 별도. 꽉 차면 새로 잡은 개체는 박사님께 가요')} />
+          <Stat label={t('박스')} value={state?.box.length ?? 0} total={state?.boxLimit ?? 1200} hint={t('꽉 차면 새로 잡은 개체는 박사님께 가요')} />
           <div className="dex-stat dex-stat-tiers">
             <div className="dex-tiers">
               {byTier.map(({ t: k, total: n, caught: c }) => (
@@ -256,7 +256,8 @@ const PokedexView: React.FC = () => {
                   {(() => {
                     const mine = Object.values(state?.mons ?? {}).filter(m => m.dex === detail.id)
                     if (!mine.length) return null
-                    const busy = new Set(Object.values(state?.assign ?? {}))
+                    // working for a session or helping one of its sub-agents (as BoxView): no release offered
+                    const busy = new Set([...Object.values(state?.assign ?? {}), ...Object.values(state?.helpers ?? {}).flat()])
                     return (
                       <div className="dex-owned">
                         <div className="dex-owned-title">{t('보유 개체 {n}마리', { n: mine.length })}</div>
@@ -270,7 +271,7 @@ const PokedexView: React.FC = () => {
                                 <b>{m.shiny ? '✦ ' : ''}{nameOf(detail)}{genderMark(m.gender)}{m.gender === 'none' ? ` (${t('무성')})` : ''}</b>
                                 {n && <span className="dex-nature" title={n.up ? `${statName(n.up)}↑ ${statName(n.down ?? '')}↓` : t('능력 보정 없음')}>{nameOf(n)}{n.up ? ` · ${statName(n.up)}↑ ${statName(n.down ?? '')}↓` : ''}</span>}
                               </div>
-                              {!state?.party.includes(m.uid) && !busy.has(m.uid) && (
+                              {!busy.has(m.uid) && (
                                 <button
                                   className={`dex-release${releasing === m.uid ? ' confirm' : ''}`}
                                   onClick={() => { if (releasing !== m.uid) { setReleasing(m.uid); return } setReleasing(null); bridge?.game.release(m.uid) }}
@@ -279,7 +280,7 @@ const PokedexView: React.FC = () => {
                                 >{releasing === m.uid ? t('정말 놓아주기') : t('놓아주기')}</button>
                               )}
                               <div className="dex-owned-sub">
-                                {state?.party.includes(m.uid) ? t('파티') : t('박스')}{busy.has(m.uid) ? ` · ${t('일하는 중')}` : ''} · {t('{n}걸음', { n: m.steps })}
+                                {t('박스')}{busy.has(m.uid) ? ` · ${t('일하는 중')}` : ''} · {t('{n}걸음', { n: m.steps })}
                                 {m.via ? ` · ${t('{how} 포획', { how: sourceText(m.via) })}` : m.how === 'starter' ? ` · ${t('스타팅')}` : m.how === 'gift' ? ` · ${t('여행의 시작')}` : ''}
                               </div>
                             </div>

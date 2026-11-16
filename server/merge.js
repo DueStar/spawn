@@ -9,18 +9,22 @@
  *   - individuals (state.mons) are unioned; the same individual on both sides
  *     keeps its furthest progress;
  *   - the Pokédex (caught / seen) is unioned per species;
- *   - the party stays this PC's own; every other member lives in the box;
+ *   - there is no party: every individual is in the box once. A party kept by
+ *     a 1.5.4 copy (or an older merge) joins the box: this PC's party, its
+ *     box, the other side's party, its box, then the rest by catch time;
  *   - counters take the larger side, device-local state stays local.
  *
  * It is pure (no I/O, no clock, inputs untouched), idempotent
  * (merge(a, merge(a, b)) equals merge(a, b)), and the individuals and the
- * Pokédex come out the same whichever side is passed first.
+ * Pokédex come out the same whichever side is passed first, until the box
+ * limit: past it, only individuals new to this PC (`local`) go to the
+ * professor, so everything this PC already holds stays.
  *
  *   mergeGames(local, remote)  -> a new game
  *   sameGame(a, b)             -> deep equality, key order ignored
  */
 
-import { BOX_LIMIT, PARTY_SIZE, LOG_LIMIT, RELEASED_LIMIT, monKey } from './pokedex.js'
+import { BOX_LIMIT, LEGACY_PARTY_SIZE, LOG_LIMIT, RELEASED_LIMIT, monKey } from './pokedex.js'
 
 const clone = (v) => (v === undefined ? undefined : JSON.parse(JSON.stringify(v)))
 const isGame = (g) => !!g && typeof g === 'object' && g.version === 2
@@ -97,15 +101,16 @@ function mergeReleased(a, b) {
 }
 
 // Fields the merge sets itself; everything else comes whole from one copy
-const MON_MERGED_FIELDS = ['uid', 'originUid', 'steps', 'workMs', 'gender', 'nature']
+const MON_MERGED_FIELDS = ['uid', 'originUid', 'steps', 'workMs', 'gender', 'nature', 'outAt']
 
 /**
  * One individual seen on both sides: the copy furthest along (more
  * evolutions, then more work time, then more steps) is the base, so its
  * species and evolution stay consistent; steps and work time take the larger
- * side (level comes from work time, so the higher level wins); a gender or
- * nature only one side has rolled is kept. Ties fall back to comparing the
- * remaining fields, which keeps the choice the same in either argument order.
+ * side (level comes from work time, so the higher level wins); the last time
+ * it went out with a session (outAt) is the later side's; a gender or nature
+ * only one side has rolled is kept. Ties fall back to comparing the remaining
+ * fields, which keeps the choice the same in either argument order.
  */
 function mergeMon(copies) {
   const ordered = copies.slice().sort((x, y) =>
@@ -116,6 +121,9 @@ function mergeMon(copies) {
   const out = clone(ordered[0])
   out.steps = Math.max(...copies.map(c => num(c.steps)))
   out.workMs = Math.max(...copies.map(c => num(c.workMs)))
+  const outs = copies.map(c => c.outAt).filter(t => typeof t === 'number' && Number.isFinite(t))
+  if (outs.length) out.outAt = Math.max(...outs)
+  else delete out.outAt
   for (const k of ['gender', 'nature']) {
     if (out[k] === null || out[k] === undefined) {
       const other = ordered.find(c => c[k] !== null && c[k] !== undefined)
@@ -179,23 +187,18 @@ function mergeMons(L, R, released = {}) {
   return { mons, nextUid: next, mapL: map.l, mapR: map.r }
 }
 
-/** A party list through a uid map: existing members only, no repeats, at most PARTY_SIZE */
+/**
+ * A 1.5.4 party list through a uid map: existing members only, no repeats, at
+ * most LEGACY_PARTY_SIZE (anyone past that still joins the box with the rest)
+ */
 function cleanParty(list, map, mons) {
   const out = []
   for (const u of Array.isArray(list) ? list : []) {
     const f = map[u]
     if (f && mons[f] && !out.includes(f)) out.push(f)
-    if (out.length === PARTY_SIZE) break
+    if (out.length === LEGACY_PARTY_SIZE) break
   }
   return out
-}
-
-/**
- * A party nobody has used: a PC that just started its own trainer (every
- * first run makes a starter and five gifts) and never took a step with them.
- */
-function untouchedParty(g, party) {
-  return party.every(u => num(g.mons?.[u]?.steps) === 0)
 }
 
 // ---------------------------------------------------------------------------
@@ -304,34 +307,31 @@ export function mergeGames(local, remote) {
   const { mons, nextUid, mapL, mapR } = mergeMons(L, R, released)
   const trainer = mergeTrainer(L.trainer, R.trainer)
 
-  // The party is this PC's own (what it shows and sends out), cleaned to be
-  // valid. Exception: a PC whose trainer is newer than the other side's and
-  // whose party never took a step (a fresh install signing in) gets the other
-  // side's party, so signing in on a new PC brings your team along; its own
-  // fresh six still join the box below.
-  let party = cleanParty(L.party, mapL, mons)
+  // There is no party: every individual is in the box, once. A side that
+  // still keeps a party (a 1.5.4 copy, or an older merge) has it folded in
+  // front of its box, as pokedex.js does on load: this PC's party and box
+  // first, then the other side's, then anyone in neither list by catch time.
+  const localParty = cleanParty(L.party, mapL, mons)
   const remoteParty = cleanParty(R.party, mapR, mons)
-  const localIsNew = L.trainer && R.trainer && num(L.trainer.since) > num(R.trainer.since)
-  if (!party.length || (localIsNew && remoteParty.length && untouchedParty(L, (Array.isArray(L.party) ? L.party : []).filter(u => L.mons?.[u])))) party = remoteParty
-
-  // Every individual not in the party is in the box (the other side's party
-  // included): this PC's box order first, then the other side's, then the rest
-  // by catch time.
-  const inParty = new Set(party)
   const box = []
   const inBox = new Set()
-  const put = (u) => { if (u && mons[u] && !inParty.has(u) && !inBox.has(u)) { inBox.add(u); box.push(u) } }
+  const put = (u) => { if (u && mons[u] && !inBox.has(u)) { inBox.add(u); box.push(u) } }
+  for (const u of localParty) put(u)
   for (const u of Array.isArray(L.box) ? L.box : []) put(mapL[u])
+  for (const u of remoteParty) put(u)
   for (const u of Array.isArray(R.box) ? R.box : []) put(mapR[u])
   Object.values(mons).sort((x, y) => num(x.at) - num(y.at) || uidCompare(x.uid, y.uid)).forEach(m => put(m.uid))
 
-  // The box holds BOX_LIMIT. Past that, the newest catches go to the
-  // professor, as a catch into a full box does in the game: the Pokédex keeps
-  // them (their species stay caught) and the log says so. Anyone in either
-  // side's party is kept.
+  // The box holds BOX_LIMIT. Past that, the newest catches NEW to this PC go
+  // to the professor, as a catch into a full box does in the game: the
+  // Pokédex keeps them (their species stay caught) and the log says so. What
+  // this PC already holds is never sent away, even past the limit (a 1.5.4
+  // full box plus its party folds to 1206 on load, and every sync must keep
+  // all of them); anyone in the other side's (1.5.4) party is kept too. So
+  // past the limit the result depends on which side is this PC's.
   const professor = []
   if (box.length > BOX_LIMIT) {
-    const kept = new Set([...party, ...remoteParty])
+    const kept = new Set([...Object.values(mapL), ...localParty, ...remoteParty])
     const victims = box
       .filter(u => !kept.has(u))
       .sort((x, y) => num(mons[y].at) - num(mons[x].at) || uidCompare(y, x))
@@ -360,7 +360,7 @@ export function mergeGames(local, remote) {
     seen: mergeSeen(L.seen, R.seen),
     trainer,
     mons,
-    party,
+    party: [],                              // kept in the save so 1.5.4 can still read it; always empty now
     box,
     assign,
     projects: L.projects ?? {},             // device-local: which session ran in which project

@@ -121,6 +121,7 @@ contextBridge.exposeInMainWorld('spawn', {
   game: {
     throw: (sessionId, uid) => ipcRenderer.invoke('game:throw', { sessionId, uid }),
     release: (uid) => ipcRenderer.invoke('game:release', uid),
+    // Kept for older pages; nothing calls it; always refused now that party is []
     exchange: (boxUid, partyUid) => ipcRenderer.invoke('game:exchange', { boxUid, partyUid }),
     arrange: (order) => ipcRenderer.invoke('game:arrange', order),
     swap: (sessionId, uid) => ipcRenderer.invoke('game:swap', { sessionId, uid }),

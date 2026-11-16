@@ -87,7 +87,8 @@ describe('cloud', () => {
     const game = getGame()
     expect(Object.keys(game.caught).sort()).toEqual(['1', '2', '25', '3'])
     expect(Object.values<any>(game.mons).map(m => m.dex).sort((a, b) => a - b)).toEqual([1, 2, 3, 25])
-    expect(game.party).toEqual(['m1'])
+    expect(game.party).toEqual([])
+    expect(game.box[0]).toBe('m1') // this PC's old party leads the box
     expect(game.assign).toEqual({ s1: 'm1' }) // this PC's sessions keep their Pokémon
     expect(game.encounters).toBe(9)
     const upload = calls.find(c => c.url.includes('on_conflict=user_id'))

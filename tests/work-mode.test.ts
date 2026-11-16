@@ -25,7 +25,7 @@ const { translator } = require('../electron/i18n.cjs')
 const { macWindowOptions } = require('../electron/macWindow.cjs')
 
 const noon = new Date(2026, 10, 13, 12)
-const ROW = { title: null, name: '모래두지', project: 'todo-cli', level: 17, helpers: 2, helperSession: true }
+const ROW = { title: null, name: '모래두지', project: 'todo-cli', level: 17, helpers: 2 }
 
 describe('the setting', () => {
   it('is app.workMode, off by default, and kept as a yes/no', () => {
@@ -73,12 +73,19 @@ describe('views', () => {
 describe('a session row', () => {
   it('in work mode: a plain glyph, the folder, no level, helpers or swap, the bar labelled 컨텍스트', () => {
     const p = sessionRowParts(ROW, true)
-    expect(p).toEqual({ picture: 'glyph', level: null, label: 'todo-cli', helpers: false, helperMark: false, swap: false, barLabel: '컨텍스트' })
+    expect(p).toEqual({ picture: 'glyph', level: null, label: 'todo-cli', helpers: false, swap: false, barLabel: '컨텍스트' })
     expect(JSON.stringify(p)).not.toContain('모래두지')
   })
 
   it('as before with it off: the Pokémon, Lv, its name, helpers, swap, HP', () => {
-    expect(sessionRowParts(ROW, false)).toEqual({ picture: 'pokemon', level: 17, label: '모래두지', helpers: true, helperMark: true, swap: true, barLabel: 'HP' })
+    expect(sessionRowParts(ROW, false)).toEqual({ picture: 'pokemon', level: 17, label: '모래두지', helpers: true, swap: true, barLabel: 'HP' })
+  })
+
+  it('with no Pokémon (none rested when it opened): the plain glyph and the folder, helpers kept, no Lv or swap', () => {
+    expect(sessionRowParts({ ...ROW, noPokemon: true }, false)).toEqual({ picture: 'glyph', level: null, label: 'todo-cli', helpers: true, swap: false, barLabel: 'HP' })
+    expect(JSON.stringify(sessionRowParts({ ...ROW, noPokemon: true }, false))).not.toContain('모래두지')
+    // 업무 모드: exactly a 업무 모드 row
+    expect(sessionRowParts({ ...ROW, noPokemon: true }, true)).toEqual(sessionRowParts(ROW, true))
   })
 
   it('a shell tab keeps its prompt mark either way', () => {
@@ -98,25 +105,31 @@ describe("a session's name in notifications and notes", () => {
     expect(sessionLabel({ ...ROW, project: '' }, true)).toBeNull()
     expect(sessionLabel(ROW, false)).toBe('모래두지')
   })
+
+  it('a session with no Pokémon is never named after one (a stale cast): its folder, as in work mode', () => {
+    expect(sessionLabel({ ...ROW, noPokemon: true }, false)).toBe('todo-cli')
+    expect(sessionLabel({ ...ROW, project: '', noPokemon: true }, false)).toBeNull()
+    expect(sessionLabel({ ...ROW, title: 'api 고치기', noPokemon: true }, false)).toBe('api 고치기')
+  })
 })
 
 describe('a new session in work mode (no picker)', () => {
+  // c went out after b; a, x and y never went out
   const dex = {
-    party: ['a', 'b', 'c'], box: ['x', 'y'],
-    mons: { a: {}, b: {}, c: {}, x: {}, y: {} },
-    assign: { s1: 'a' }, helpers: { s1: ['x'] },
+    box: ['a', 'b', 'c', 'x', 'y'],
+    mons: { a: {}, b: { outAt: 1 }, c: { outAt: 2 }, x: {}, y: {} },
+    assign: { s1: 'a' } as Record<string, string>, helpers: { s1: ['x'] },
   }
 
-  it('the remembered one if it rests in the party, else the first resting party one', () => {
+  it('the remembered one if it rests, else the resting one that went out most recently', () => {
     expect(autoPartner(dex, 'c')).toBe('c')
-    expect(autoPartner(dex, 'a')).toBe('b') // a is working
-    expect(autoPartner(dex)).toBe('b')
+    expect(autoPartner(dex, 'a')).toBe('c') // a is working
+    expect(autoPartner(dex)).toBe('c')
   })
 
-  it('a resting box one as a helper once the party is all out, none when nobody is free', () => {
-    const out = { ...dex, assign: { s1: 'a', s2: 'b', s3: 'c' } }
-    expect(autoPartner(out)).toBe('y') // x helps a subagent
-    expect(autoPartner({ ...out, assign: { ...out.assign, s4: 'y' } })).toBeNull()
+  it('never one helping a subagent; none when nobody rests', () => {
+    expect(autoPartner({ ...dex, assign: { s1: 'a', s2: 'b', s3: 'c' } }, null, () => 0.99)).toBe('y') // x helps
+    expect(autoPartner({ ...dex, assign: { s1: 'a', s2: 'b', s3: 'c', s4: 'y' } })).toBeNull()
   })
 })
 

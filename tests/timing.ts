@@ -8,12 +8,21 @@
  * up to 10× what it takes alone, and missed the 40 ms find by 0.2 ms), and the claim is about the code, not the
  * runner. Run with SPAWN_PERF=1 to hold a CI runner to the strict numbers.
  *
+ * memoryBudget(bytes) — the same for memory (a process's RSS growth while it reads a decompression bomb): `bytes`
+ * here, ×CI_SLOWDOWN on a CI runner, where a process's RSS under the whole suite moves more than on a desktop (the
+ * macos-15-intel runner went past 50 MB on the brotli bomb). The bombs are 1 GB inside, so a few hundred MB still
+ * proves the inflater stopped.
+ *
  * growth(make, run, n) — for a test that exists to prove there is no super-linear (catastrophic) work: the best
  * time of an input of size n and of one of size 4n, measured in turns so a busy spell of the machine falls on
  * both. Linear work grows ×4 (n·log n a little more), quadratic ×16: GROWTH_LINEAR (8) sits between, so a
  * quadratic path fails it on any machine however fast, and a slow machine passes it if the work is linear. Each
  * such test keeps a generous absolute cap on the large input too (a quadratic path over these sizes takes
  * seconds to minutes).
+ *
+ * growthLimit() — the ratio such a test holds a growth to: GROWTH_LINEAR here, ×1.5 (12) on a CI runner. When the
+ * small input takes only a few ms, one busy spell of a shared runner during the large input's turns moves the
+ * ratio a lot (the macos-15-intel runner measured ×8.7 on a 2.5 ms input); 12 is still below quadratic's ×16.
  */
 
 /** How much wider a budget is on a CI runner */
@@ -22,9 +31,13 @@ export const CI_SLOWDOWN = 4
 export const STRICT = !process.env.CI || process.env.SPAWN_PERF === '1'
 /** A wall-clock budget in ms: `ms` here, ×CI_SLOWDOWN on a CI runner */
 export const budget = (ms: number): number => (STRICT ? ms : ms * CI_SLOWDOWN)
+/** A memory budget in bytes: `bytes` here, ×CI_SLOWDOWN on a CI runner */
+export const memoryBudget = (bytes: number): number => (STRICT ? bytes : bytes * CI_SLOWDOWN)
 
 /** The growth from n to 4n above which work is not linear (linear 4, quadratic 16) */
 export const GROWTH_LINEAR = 8
+/** The growth a test holds work to: GROWTH_LINEAR here, ×1.5 (12) on a CI runner, still below quadratic's 16 */
+export const growthLimit = (): number => (STRICT ? GROWTH_LINEAR : GROWTH_LINEAR * 1.5)
 /** Below this a time is the timer's and the machine's noise, not the work's: a ratio's floor */
 const FLOOR_MS = 1
 

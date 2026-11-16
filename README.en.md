@@ -2,15 +2,15 @@
 
 [한국어](README.md) · **English** · [日本語](README.ja.md)
 
-A Windows desktop app for running Claude Code sessions with Pokémon. Each session is worked by one Pokémon from your party, and while Claude works you meet wild Pokémon and fill your Pokédex. There is no battling: it is about **collecting**.
+A Windows desktop app for running Claude Code sessions with Pokémon. Each session is worked by one of your Pokémon, and while Claude works you meet wild Pokémon and fill your Pokédex. There is no battling: it is about **collecting**.
 
 > A non-commercial fan project. The rights to Pokémon names and artwork belong to Nintendo / Creatures Inc. / GAME FREAK inc. See [NOTICE.md](NOTICE.md).
 
 ## What it does
 
 ### Sessions are Pokémon
-- On first launch you get a party of six: one starter from any of the nine generations and five common Pokémon, all at Lv.5 in a Poké Ball.
-- Press **New session** and pick a Pokémon from the party: it takes on a new Claude Code session. A party holds six; when all six are working, a Box Pokémon takes the next one as a helper, so up to 12 sessions can be open.
+- On first launch you get six Pokémon: one starter from any of the nine generations and five common Pokémon, all at Lv.5 in a Poké Ball.
+- Press **New session** and pick any resting Pokémon (most recent first, searchable): it takes on a new Claude Code session. If none is resting, the session opens without one and the next Pokémon to rest joins it.
 - A session remembers its Pokémon. Resume it and the same Pokémon comes back out.
 - Rename a session by double-clicking it or with ✎.
 - You can swap the working Pokémon for any other one you caught, at any time.
@@ -55,7 +55,7 @@ A Windows desktop app for running Claude Code sessions with Pokémon. Each sessi
 
 ### Pokédex and Box
 - **Pokédex**: all 1025 species by generation and tier. Pokémon you caught but have not opened yet get a red dot.
-- **Box**: holds up to 1200. Sort, search and a Shiny filter, plus swapping places with the party and releasing. When it is full, new catches are only registered in the Pokédex and sent to the Professor.
+- **Box**: holds up to 1200. Sort, search and a Shiny filter, plus releasing. When it is full, new catches are only registered in the Pokédex and sent to the Professor.
 
 ### The app
 - **Widget / window / full screen**: the widget stays on top; the window and full screen are normal windows. Full screen stops at the taskbar.
@@ -135,7 +135,7 @@ spawn starts Claude Code as `claude --session-id <id> --settings %APPDATA%\spawn
 
 | Where | What |
 |---|---|
-| `~/.spawn/pokedex.json` | The whole game: party, box, Pokédex, log. A catch record holds the project folder name, the tool in use and the start of its argument (e.g. the first 32 characters of a Bash command), and the first 40 characters of the request at the time |
+| `~/.spawn/pokedex.json` | The whole game: box, Pokédex, log. A catch record holds the project folder name, the tool in use and the start of its argument (e.g. the first 32 characters of a Bash command), and the first 40 characters of the request at the time |
 | `~/.spawn/agents.json` | The open sessions (folder, model, the first 200 characters of the last request and reply, …), so a restarted server can carry on |
 | `~/.spawn/usage-limits.json` | The last 5-hour and weekly usage heard, with reset times |
 | `~/.spawn/auth-token` | The local server's token (a random value), used by the hooks and the app to talk to the server |

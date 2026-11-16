@@ -98,7 +98,7 @@ const mon = (uid, dex, lv, extra = {}) => ({
   gender: 'male', nature: 3, ball: 'poke-ball', metLevel: lv, workMs: 0, level: lv, ...extra,
 })
 
-/** The party: 모래두지, 별가사리, 연꽃몬, 꼬마돌 (out with sessions 1–4), 나몰빼미, 고라파덕 */
+/** The six that work the first sessions: 모래두지, 별가사리, 연꽃몬, 꼬마돌 (out with sessions 1–4), 나몰빼미, 고라파덕 (all in the box: there is no party) */
 const PARTY = [[27, 17], [120, 12], [270, 8], [74, 21], [722, 9], [54, 14]]
 const partyMons = PARTY.map(([dex, lv], i) => mon(`p${i + 1}`, dex, lv, i === 4 ? { how: 'starter', place: 'spawn' } : {}))
 
@@ -155,24 +155,33 @@ const log = [
 export const NEW_SPECIES = 19
 export const VIEWED = CAUGHT_IDS.filter(id => id !== NEW_SPECIES)
 
-function dexState(sessions) {
+/**
+ * The game's state for these sessions. Every Pokémon is in the box (no party); each one working a
+ * session went out then (outAt). noMon: the last n sessions have no Pokémon yet (none rested when
+ * they opened: the plain glyph, waiting for the next to rest)
+ */
+function dexState(sessions, { noMon = 0 } = {}) {
   const mons = {}
   for (const m of [...partyMons, ...boxMons]) mons[m.uid] = { ...m }
   const assign = {}
-  // Sessions 1–6 take the party in order; past six a box Pokémon works the session as a helper
-  const helperUids = boxMons.map(m => m.uid)
+  // Sessions 1–6 take the first six in order; past six another box Pokémon works the session
+  const otherUids = boxMons.map(m => m.uid)
   sessions.forEach((s, i) => {
+    if (i >= sessions.length - noMon) return
     if (i < 6) { assign[sid(s.n)] = partyMons.find(m => m.dex === s.dex)?.uid ?? partyMons[i].uid; return }
-    const m = boxMons.find(b => b.dex === s.dex) ?? mons[helperUids[i]]
+    const m = boxMons.find(b => b.dex === s.dex) ?? mons[otherUids[i]]
     assign[sid(s.n)] = m.uid
   })
-  // Levels shown in the rows come from the Pokémon: make each match its session's
-  for (const s of sessions) { const m = mons[assign[sid(s.n)]]; if (m) { m.metLevel = s.lv; m.level = s.lv } }
+  // Levels shown in the rows come from the Pokémon: make each match its session's; it went out with its session
+  for (const s of sessions) {
+    const m = mons[assign[sid(s.n)]]
+    if (m) { m.metLevel = s.lv; m.level = s.lv; m.outAt = at('09:00') + s.n * 60_000 }
+  }
   return {
     caught, seen, trainer: { starter: 722, since: at('09:00', -40) }, mons,
-    party: partyMons.map(m => m.uid), box: boxMons.map(m => m.uid),
+    party: [], box: [...partyMons, ...boxMons].map(m => m.uid),
     assign, remembered: { ...assign }, helpers: {},
-    partySize: 6, sessionLimit: 12, boxLimit: 1200,
+    boxLimit: 1200,
     encounters: 412, sinceLegend: 37, sinceMythical: 120, pity: 4, pityMythical: 9,
     total: 1025, log, today: log.filter(e => e.at >= at('00:00')),
   }
@@ -180,12 +189,12 @@ function dexState(sessions) {
 
 const cloud = { enabled: true, user: null, lastSyncAt: null, error: null }
 
-function snapshotOf(sessions) {
+function snapshotOf(sessions, opts = {}) {
   return {
     type: 'snapshot',
     sessions: sessions.map(sessionOf),
     statuses: { sessions: sessions.map(statusOf), rateLimits },
-    pokedex: dexState(sessions),
+    pokedex: dexState(sessions, opts),
     cloud,
   }
 }
@@ -197,6 +206,8 @@ export const terminals = [...BASE.map(terminalOf), shellTerminal]
 /** The same four with nobody waiting (session 1 working): the widget opens no question card, as in the lab's widget */
 export const snapshotPlain = snapshotOf(BASE.map(s => s.mood === 'needs-you' ? { ...s, mood: 'working' } : s))
 export const snapshot12 = snapshotOf(TWELVE)
+/** The four with the last n waiting for a Pokémon (none rested when they opened): session-nomon */
+export const snapshotNoMon = (n) => snapshotOf(BASE, { noMon: n })
 export const terminals12 = [...TWELVE.map(terminalOf), shellTerminal]
 
 /** cwd -> branch, for terminals.branches() */

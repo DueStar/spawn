@@ -341,19 +341,7 @@ function maybeCaptureScreenshot() {
   if (auto && terminals) {
     const [cwd, instruction] = auto.split('|')
     const t = terminals.create({ cwd })
-    // Like the widget: a resting party Pokémon is thrown with the session
-    http.get(`${SERVER_URL}/pokedex`, (res) => {
-      let out = ''
-      res.on('data', (c) => { out += c })
-      res.on('end', () => {
-        try {
-          const dex = JSON.parse(out)
-          const busy = new Set(Object.values(dex.assign ?? {}))
-          const uid = (dex.party ?? []).find((u) => !busy.has(u))
-          if (uid) serverPost('/pokedex/throw', { sessionId: t.sessionId, uid })
-        } catch {}
-      })
-    }).on('error', () => {})
+    // No throw: the server sends the most recent resting Pokémon on the session's first event
     if (instruction) setTimeout(() => terminals.sendInstruction(t.id, instruction), Math.max(500, delay / 2))
     // SPAWN_AUTOTEST_KEYS: raw keys typed 5 s in; the words DOWN and ENTER stand for those keys
     const keys = process.env.SPAWN_AUTOTEST_KEYS
@@ -1301,6 +1289,7 @@ function registerTerminalIpc() {
   ipcMain.on('toast:done', guard(() => hideToast()))
   ipcMain.on('toast:ready', guard((_arg, event) => { if (toastWin && event.sender === toastWin.webContents) toastPageReady() }))
   ipcMain.on('toast:open', guard((id) => openDexAt(Number(id))))
+  // Kept for older pages; nothing calls it; always refused now that party is []
   ipcMain.handle('game:exchange', guard((o) => serverPost('/pokedex/exchange', { boxUid: String(o?.boxUid), partyUid: String(o?.partyUid) })))
   ipcMain.handle('game:arrange', guard((order) => serverPost('/pokedex/arrange', { order: Array.isArray(order) ? order.slice(0, 5000).map(String) : [] })))
   ipcMain.handle('game:release', guard((uid) => serverPost('/pokedex/release', { uid: String(uid) })))

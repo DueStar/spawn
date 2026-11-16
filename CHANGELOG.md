@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.6.0
+- 파티가 없어졌어요. 잡은 포켓몬은 모두 박스에 있어요. 파티에 있던 포켓몬은 박스 맨 앞으로 옮겨지고, 사라지는 포켓몬은 없어요.
+- 새 세션을 열거나 이어할 때, 지금 쉬고 있는 포켓몬 모두에서 골라요. 최근에 일한 포켓몬이 먼저 나오고 이름으로 찾을 수 있어요. 교체도 같은 목록이에요.
+- 한 번에 열 수 있는 세션 수(12개) 제한이 없어졌어요.
+- 쉬는 포켓몬이 없어도 세션은 열려요. 포켓몬 없이 시작해서 아무것도 만나지 않다가, 한 마리가 쉬게 되면 가장 오래 기다린 세션부터 바로 함께해요.
+
 ### 1.5.4
 - 채팅에서 보내기가 여전히 막히던 문제를 고쳤어요. 일부 환경에서는 Claude Code가 입력칸 앞 표시를 ❯ 대신 >로 그리는데, 이걸 입력칸으로 알아보지 못했어요.
 - 채팅에서 보내기가 막히면, 그 이유와 입력칸 주변 모양을 앱 기록(spawn.log)에 남겨요. 쓰신 글 내용은 남기지 않아요.
@@ -413,6 +419,12 @@
 
 ## spawn (English)
 
+### 1.6.0
+- The party is gone. Every Pokémon you have caught is in the Box. The ones that were in your party move to the front of the Box; none is lost.
+- Opening or resuming a session, you pick from every Pokémon that is resting now: the most recently worked come first, and you can search by name. Swap uses the same list.
+- There is no longer a limit of 12 open sessions.
+- A session opens even when no Pokémon is resting. It starts without one and meets nothing; as soon as a Pokémon is free, it joins the session that has waited longest.
+
 ### 1.5.4
 - Sending from the chat works where it was still refused: on some setups Claude Code draws the input's mark as > instead of ❯, and it was not recognised as the input box.
 - When a send from the chat is refused, the app log (spawn.log) says why, with the shape of the lines around the input. What you wrote is never logged.
@@ -683,6 +695,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.6.0
+- 手持ちがなくなりました。捕まえたポケモンはすべてボックスにいます。手持ちにいたポケモンはボックスの先頭に移り、いなくなるポケモンはいません。
+- セッションを開くときや再開するときは、いま休んでいるポケモン全員から選びます。最近働いたポケモンが先に並び、名前で探せます。入れ替えも同じ一覧です。
+- 同時に開けるセッション数(12個)の上限がなくなりました。
+- 休んでいるポケモンがいなくてもセッションは開きます。ポケモンなしで始まって何にも出会わず、ポケモンが1匹休むと、いちばん長く待っているセッションからすぐに加わります。
 
 ### 1.5.4
 - チャットから送れないままだった問題を直しました。環境によって Claude Code が入力欄の印を ❯ ではなく > で描くことがあり、それを入力欄として認識できていませんでした。

@@ -111,7 +111,7 @@ export function rowKeyAction(key: string, composing = false): 'open' | 'rename' 
 }
 
 export interface SessionHeaderParts {
-  /** The same rule as a row's picture (sessionRowParts): the Pokémon, in 업무 모드 a glyph, a shell's prompt */
+  /** The same rule as a row's picture (sessionRowParts): the Pokémon, in 업무 모드 or with none a glyph, a shell's prompt */
   picture: 'pokemon' | 'glyph' | 'shell'
   /** The session's own name; null: none yet (the caller says 새 세션). Never the Pokémon's name */
   name: string | null
@@ -121,11 +121,11 @@ export interface SessionHeaderParts {
 
 /** What the bar above the terminal shows for the session in view */
 export function sessionHeaderParts(
-  row: { title: string | null; name: string; project: string; branch?: string | null; shell?: boolean },
+  row: { title: string | null; name: string; project: string; branch?: string | null; shell?: boolean; noPokemon?: boolean },
   workMode: boolean,
 ): SessionHeaderParts {
   return {
-    picture: row.shell ? 'shell' : workMode ? 'glyph' : 'pokemon',
+    picture: row.shell ? 'shell' : workMode || row.noPokemon ? 'glyph' : 'pokemon',
     name: row.title || null,
     branch: row.branch ?? null,
     project: row.project,
