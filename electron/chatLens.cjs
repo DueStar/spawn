@@ -29,6 +29,7 @@ const { createItemBuilder, toolInput, CAPS, LIVE_BASE, LIVE_ORDER, unwrapPasted,
 const { createTail } = require('./chatTail.cjs')
 const { CHANGE_CAPS, createChangeIndex, scanChanges, readEdit, hashOf } = require('./chatChanges.cjs')
 const { errWord } = require('./chatLog.cjs')
+const { readFull } = require('./chatFull.cjs')
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const keep = (text) => !quickSkip(text)
@@ -1780,6 +1781,21 @@ function createLens({
     return { ok: true, file: got.file, edits, more: got.more }
   }
 
+  /**
+   * chat:full (2026-11-17) — one item of the view read again whole from its transcript line (src/chat… "전체 보기"
+   * in place of "see the terminal"), only while the transcript is the one the items came from (the tailer's guard)
+   */
+  async function full(id, itemId) {
+    const t = terms.get(id)
+    if (!t || !t.path || !t.tail || typeof itemId !== 'string') return { ok: false, reason: 'gone' }
+    const item = t.items.get(itemId)
+    if (!item) return { ok: false, reason: 'unknown' }
+    let intact = false
+    try { intact = await t.tail.verify() } catch { intact = false }
+    if (!intact) return { ok: false, reason: 'gone' }
+    return readFull(fs.promises, t.path, item)
+  }
+
   /** Every queued read finished (tests; an orderly stop) */
   async function idle() {
     for (let i = 0; i < 20; i++) {
@@ -1840,7 +1856,7 @@ function createLens({
     return false
   }
 
-  return { setTerminals, hook, holdState, open, close, older, reload, resync, agent, changes, changeFile, idle, dispose, sizes, setVersion, linkInView }
+  return { setTerminals, hook, holdState, open, close, older, reload, resync, agent, changes, changeFile, full, idle, dispose, sizes, setVersion, linkInView }
 }
 
 module.exports = { createLens, conversationOf, terminalFor, transcriptAllowed, findTranscript, liveMatches, LIVE_BASE, LIVE_ORDER }

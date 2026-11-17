@@ -228,7 +228,9 @@ describe('the thinking row', () => {
     expect(html).toContain('The Amazon drains the')
     expect(html).toContain('<code>largest</code>')
     expect(html).not.toContain('기록에 남지 않았어요')
-    expect(html).toContain('글이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요')
+    expect(html).toContain('글이 길어서 앞부분만 보여요')
+    // (2026-11-17: the rest is read again from the record, 전체 보기, never "see the terminal")
+    expect(html).not.toContain('터미널에서 보세요')
   })
 })
 

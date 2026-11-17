@@ -9,6 +9,7 @@ import React from 'react'
 import { t } from '../../i18n'
 import type { ShellItem } from '../../chat/types'
 import { useRowOpen } from './context'
+import { FullButton } from './FullView'
 
 const FOLD_LINES = 12
 
@@ -37,7 +38,7 @@ export const ShellRow: React.FC<{ item: ShellItem; time: string | null }> = ({ i
             {open ? t('접기') : t('{n}줄 더 보기', { n: lines - FOLD_LINES })}
           </button>
         )}
-        {item.truncated && <p className="chat-tool-note">{t('출력이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요')}</p>}
+        {item.truncated && <p className="chat-tool-note">{t('출력이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={`! ${item.command}`} /></p>}
       </div>
       {time && <span className="chat-time">{time}</span>}
     </div>

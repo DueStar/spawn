@@ -29,6 +29,9 @@ const SHIFT_TAB = '\x1b[Z'
 /** ↑ / ↓: a terminal dialog's mark moved from the chat's dialog card (2026-11-17) */
 const ARROW_UP = '\x1b[A'
 const ARROW_DOWN = '\x1b[B'
+/** Ctrl+E (the caret to its line's end) and Backspace: words left on the prompt row cleared from the chat */
+const LINE_END = '\x05'
+const BACKSPACE = '\x7f'
 const PASTE_START = '\x1b[200~'
 const PASTE_END = '\x1b[201~'
 const INPUT_CAPS = Object.freeze({ chars: 20_000, images: 8 })
@@ -235,4 +238,4 @@ function busyReason(d) {
   return d === 'dirty' ? 'prompt-busy' : 'prompt-unknown'
 }
 
-module.exports = { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, isCommand, literalPrefix, quotePath, pastablePath, encodeSend, tokens, isRealInput, nextDraft, mayType, busyReason }
+module.exports = { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, LINE_END, BACKSPACE, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, isCommand, literalPrefix, quotePath, pastablePath, encodeSend, tokens, isRealInput, nextDraft, mayType, busyReason }

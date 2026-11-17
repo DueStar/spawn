@@ -44,7 +44,7 @@
 const path = require('path')
 const { chatHookEntries, createChatEndpoint } = require('./chatHooks.cjs')
 const { versionVerdict } = require('./chatSchema.cjs')
-const { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, encodeSend, nextDraft, mayType, busyReason, isRealInput, pastablePath } = require('./chatInput.cjs')
+const { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, LINE_END, BACKSPACE, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, encodeSend, nextDraft, mayType, busyReason, isRealInput, pastablePath } = require('./chatInput.cjs')
 const { createImageStore } = require('./chatImages.cjs')
 const { scan: scanFiles, matchFiles } = require('./chatFiles.cjs')
 const { createHolds, HOLD } = require('./chatHolds.cjs')
@@ -924,10 +924,11 @@ function createChatHost({
    * The chat's dialog card (2026-11-17): a dialog Claude Code draws that no hold covers (a `/model` confirmation,
    * the folder trust, a plan's choices) is read from the screen by the page (src/chat/dialog.ts), which moves its
    * mark one key at a time and checks the screen between keys. Here only the keys: ↑, ↓, Enter, Esc, or one line
-   * of words pasted (an option that takes them). Not while a hold waits (its card answers it) nor while a send is
-   * being typed; at most one key every 40 ms.
+   * of words pasted (an option that takes them). Also Ctrl+E and up to 4000 Backspaces at once: words left on the
+   * prompt row cleared from the chat (src/chat/clearRow.ts reads the row before and after). Not while a hold waits
+   * (its card answers it) nor while a send is being typed; at most one key every 40 ms.
    */
-  const DIALOG_KEYS = Object.freeze({ up: ARROW_UP, down: ARROW_DOWN, enter: ENTER, esc: ESC })
+  const DIALOG_KEYS = Object.freeze({ up: ARROW_UP, down: ARROW_DOWN, enter: ENTER, esc: ESC, end: LINE_END })
   const DIALOG_MS = 40
   function dialogKey(p) {
     const id = typeof p?.id === 'string' ? p.id : ''
@@ -943,6 +944,10 @@ function createChatHost({
       const text = sanitize(typeof p.text === 'string' ? p.text.slice(0, 4000) : '').replace(/\s*\n\s*/g, ' ')
       if (!text.trim() || text.length > 2000) return { ok: false, reason: 'empty' }
       data = PASTE_START + text + PASTE_END
+    } else if (p?.key === 'backspace') {
+      const n = Number.isInteger(p.n) && p.n >= 1 && p.n <= 4000 ? p.n : 0
+      if (!n) return { ok: false, reason: 'invalid' }
+      data = BACKSPACE.repeat(n)
     } else if (Object.prototype.hasOwnProperty.call(DIALOG_KEYS, p?.key)) data = DIALOG_KEYS[p.key]
     if (data === null) return { ok: false, reason: 'invalid' }
     if (!terminals.typeForChat(id, data)) return { ok: false, reason: 'no-session' }
@@ -1053,6 +1058,8 @@ function createChatHost({
     ipcMain.handle('chat:agent', guard((arg) => request('agent', { id: idOf(arg?.id), toolId: idOf(arg?.toolId) }, { ok: false })))
     // the changes panel (Phase 5): the worker's change index; a file's edits read again from the transcript
     ipcMain.handle('chat:changes', guard((id) => request('changes', { id: idOf(id) }, { ok: false })))
+    // "전체 보기" (2026-11-17): an item read again whole from the transcript, in place of "see the terminal"
+    ipcMain.handle('chat:full', guard((arg) => request('full', { id: idOf(arg?.id), itemId: String(arg?.itemId ?? '').slice(0, 200) }, { ok: false, reason: 'gone' })))
     ipcMain.handle('chat:change-file', guard((arg) => request('change-file', {
       id: idOf(arg?.id), file: String(arg?.file ?? '').slice(0, 4096),
       ...(typeof arg?.before === 'number' && Number.isFinite(arg.before) ? { before: arg.before } : {}),

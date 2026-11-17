@@ -588,4 +588,4 @@ function permissionDiff(tool, input, cwd) {
   return { file, kind: 'edit', added, removed, hunks: lines.length ? [{ oldStart: 1, newStart: 1, lines }] : [], hidden: 0, ...eol }
 }
 
-module.exports = { sessionRules, alwaysRules, EDIT_TOOLS, ruleLabel, permissionDiff, CARD_DIFF_LINES, CAPS, LIVE_BASE, LIVE_ORDER, createItemBuilder, toolInput, toolOutput, buildDiff, relFile, lexicalPath, foldsCase, unwrapPasted }
+module.exports = { resultText, sessionRules, alwaysRules, EDIT_TOOLS, ruleLabel, permissionDiff, CARD_DIFF_LINES, CAPS, LIVE_BASE, LIVE_ORDER, createItemBuilder, toolInput, toolOutput, buildDiff, relFile, lexicalPath, foldsCase, unwrapPasted }

@@ -24,6 +24,7 @@ import { termDim, termText } from '../../termMetrics'
 import { footerMode, promptRow, suggestionOf, type FooterMode } from '../../chat/promptRow'
 import { parseDialog } from '../../chat/dialog'
 import { switchMode } from '../../chat/modeSwitch'
+import { clearPromptRow } from '../../chat/clearRow'
 import { createImeTracker, keyAction, mentionAt } from '../../chat/composerKeys'
 import { onChatForget, takeChatFocus, type ChatWho } from '../../chat/lensMode'
 import { baselineOf, outboxFor } from '../../chat/outbox'
@@ -59,7 +60,7 @@ export interface ComposerHandle {
 
 type ChatBridge = NonNullable<typeof bridge>['chat']
 export interface ComposerDeps {
-  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded' | 'cycleMode'>>) | null
+  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded' | 'cycleMode' | 'dialogKey'>>) | null
   termText(id: string): string | null
   /** (1.6.2) the same lines' dim marks; absent: none (the ledger decides in main) */
   termDim?(id: string): string | null
@@ -67,7 +68,8 @@ export interface ComposerDeps {
   sleep(ms: number): Promise<void>
 }
 
-export interface Note { key: string; vars?: Record<string, string | number>; terminal?: boolean; image?: true }
+/** row: words left on the terminal's prompt row stopped the send; the note offers to take them or clear them (2026-11-17) */
+export interface Note { key: string; vars?: Record<string, string | number>; terminal?: boolean; image?: true; row?: string }
 
 export interface ComposerProps {
   term: TerminalInfo
@@ -126,11 +128,12 @@ function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who
       if (card === 'terminal') return { key: '{name}{iga} 답을 기다리고 있어요. 터미널에서 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
       return { key: '{name}{iga} 답을 기다리고 있어요. 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
     // (1.6.2) what is there, quoted: the terminal is hidden behind the chat, so the note shows it
-    case 'prompt-busy': return row?.trim()
-      ? { key: '터미널 입력란에 쓰던 글이 있어요: “{text}”. 터미널에서 보내거나 지운 뒤 다시 보내 주세요', vars: { text: rowQuote(row) }, terminal: true }
-      : { key: '터미널 입력란에 쓰던 글이 있어요. 터미널에서 보내거나 지운 뒤 다시 보내 주세요', terminal: true }
-    // the ledger cannot tell a greyed suggestion from typed text: what to do, in the terminal, no restart
-    case 'prompt-unknown': return { key: '터미널 입력란 상태를 알 수 없어요. 터미널에서 입력란을 비우거나 한 번 보내면 다시 보낼 수 있어요', terminal: true }
+    // (2026-11-17: the note offers to take those words into this box, or to clear them and send: never the terminal)
+    case 'prompt-busy': case 'prompt-unknown': return row?.trim()
+      ? { key: 'Claude Code 입력란에 쓰던 글이 남아 있어요: “{text}”', vars: { text: rowQuote(row) }, row }
+      : reason === 'prompt-busy'
+        ? { key: 'Claude Code 입력란에 쓰던 글이 남아 있어요', row: '' }
+        : { key: 'Claude Code 입력란 상태를 알 수 없어요', row: '' }
     case 'sending': case 'duplicate': case 'not-in-flight': return { key: '앞의 메시지를 보내는 중이에요' }
     case 'no-session': return { key: '세션이 끝나서 보낼 수 없어요', terminal: true }
     case 'too-long': return { key: '너무 길어요 (최대 {n}자)', vars: { n: MAX_CHARS.toLocaleString() } }
@@ -370,6 +373,39 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     }
   }
 
+  /**
+   * Words left on the terminal's prompt row (prompt-busy): cleared from here (src/chat/clearRow.ts), then either
+   * brought into this box above what is written (take) or the message sent as it is (send)
+   */
+  async function takeRow(row: string, andSend: boolean) {
+    if (sending.current || !chat?.dialogKey) return
+    const key = chat.dialogKey
+    sending.current = true
+    setBusy(true)
+    let cleared = false
+    try {
+      const readScreen = deps?.termText ?? termText
+      const readDim = deps ? deps.termDim : termDim
+      cleared = await clearPromptRow({
+        read: () => ({ screen: readScreen(id), dim: readDim?.(id) ?? null }),
+        key: async (k, n) => { try { return (await key({ id, key: k, ...(n ? { n } : {}) })).ok } catch { return false } },
+        sleep: deps?.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms))),
+      })
+    } finally {
+      sending.current = false
+      setBusy(false)
+    }
+    if (!cleared) { say({ key: 'Claude Code 입력란을 비우지 못했어요. 잠시 뒤 다시 해 주세요' }, 5000); return }
+    say(null)
+    if (!andSend) {
+      const cur = ta.current?.value ?? text
+      setDraft(cur.trim() ? `${row}\n${cur}` : row)
+      requestAnimationFrame(() => ta.current?.focus({ preventScroll: true }))
+      return
+    }
+    void send()
+  }
+
   async function stop() {
     if (!chat) return
     let r: Awaited<ReturnType<ChatBridge['interrupt']>>
@@ -477,6 +513,10 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         <div className="chat-cnote" role="status">
           {note && <>
             <span>{t(note.key, note.vars)}</span>
+            {note.row !== undefined && <>
+              {note.row.trim() && <button type="button" className="chat-btn" disabled={busy} onClick={() => { void takeRow(note.row!, false) }}>{t('가져와서 이어 쓰기')}</button>}
+              <button type="button" className="chat-btn" disabled={busy} onClick={() => { void takeRow(note.row!, true) }}>{t('지우고 보내기')}</button>
+            </>}
             {note.terminal && <button type="button" className="chat-btn" onClick={onTerminal}>{t('터미널로 보기')}</button>}
           </>}
         </div>

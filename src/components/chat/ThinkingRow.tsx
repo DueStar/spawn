@@ -12,6 +12,7 @@ import { formatDuration } from '../../chat/toolLabel'
 import type { ThinkingItem } from '../../chat/types'
 import { useChatContext } from './context'
 import { Markdown } from './Markdown'
+import { FullButton } from './FullView'
 
 /** The time thought, to the nearest second (under a second reads 1초, never 0초) */
 function thoughtFor(ms: number): string {
@@ -31,7 +32,7 @@ export const ThinkingRow: React.FC<{ item: ThinkingItem }> = ({ item }) => {
       {blocks
         ? <div className="chat-prose chat-think-text"><Markdown blocks={blocks} onLink={onLink} onPath={onPath} /></div>
         : <p className="chat-think-none">{t('생각한 내용은 기록에 남지 않았어요')}</p>}
-      {blocks && item.truncated && <p className="chat-cut">{t('글이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요')}</p>}
+      {blocks && item.truncated && <p className="chat-cut">{t('글이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={t('생각 전체')} /></p>}
     </div>
   )
 }

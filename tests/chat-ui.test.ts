@@ -29,7 +29,7 @@ const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[
 
 describe('the chat view sends nothing and changes nothing', () => {
   it('found its files', () => {
-    expect(MAIN.map(f => f.split(/[\\/]/).pop()).sort()).toEqual(['chatChanges.cjs', 'chatFiles.cjs', 'chatHolds.cjs', 'chatHooks.cjs', 'chatHost.cjs', 'chatImages.cjs', 'chatInput.cjs', 'chatItems.cjs', 'chatLens.cjs', 'chatLog.cjs', 'chatSchema.cjs', 'chatTail.cjs', 'chatWorker.cjs'])
+    expect(MAIN.map(f => f.split(/[\\/]/).pop()).sort()).toEqual(['chatChanges.cjs', 'chatFiles.cjs', 'chatFull.cjs', 'chatHolds.cjs', 'chatHooks.cjs', 'chatHost.cjs', 'chatImages.cjs', 'chatInput.cjs', 'chatItems.cjs', 'chatLens.cjs', 'chatLog.cjs', 'chatSchema.cjs', 'chatTail.cjs', 'chatWorker.cjs'])
     expect(PAGE.length).toBeGreaterThanOrEqual(15)
   })
 
@@ -187,7 +187,11 @@ describe('the composer (Phase 3): its look and its safety', () => {
     const src = read(join(ROOT, 'src', 'components', 'chat', 'Composer.tsx'))
     expect(src).toContain('readDim: deps ? deps.termDim : termDim')
     expect(src).toContain('cardNote(shownCard(status?.asks)), r.row)')
-    expect(src).toContain('터미널 입력란에 쓰던 글이 있어요: “{text}”')
+    // (2026-11-17: the words quoted, and offered to be brought here or cleared — never "go to the terminal")
+    expect(src).toContain('Claude Code 입력란에 쓰던 글이 남아 있어요: “{text}”')
+    expect(src).toContain("t('가져와서 이어 쓰기')")
+    expect(src).toContain("t('지우고 보내기')")
+    expect(src).not.toContain('터미널에서 보내거나 지운 뒤')
   })
 })
 

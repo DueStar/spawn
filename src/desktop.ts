@@ -88,6 +88,8 @@ interface spawnBridge {
     resync(id: string): Promise<{ ok: boolean }>
     /** A sub-agent's items, under its Agent row (`parent: toolId`), as an upsert */
     agent(id: string, toolId: string): Promise<{ ok: boolean }>
+    /** "전체 보기": one item read again whole from the transcript (main caps it at 2 000 000 characters) */
+    full(id: string, itemId: string): Promise<{ ok: true; text: string; truncated: boolean; md: boolean } | { ok: false; reason: 'gone' | 'unknown' | 'none' }>
     /** The changes panel: every file this conversation changed (the worker's index of the whole transcript) */
     changes(id: string): Promise<{ ok: true; summary: ChangeSummary; files: ChangeFile[]; agentsUnread: number } | { ok: false }>
     /** One file's edits, newest last (at most 20 with their diffs, read again from the transcript); `more` older ones */
@@ -102,7 +104,7 @@ interface spawnBridge {
     /** the mode menu: one Shift+Tab (main checks the session, no dialog, no send in flight) */
     cycleMode(id: string): Promise<{ ok: true } | { ok: false; reason: string }>
     /** the dialog card: one key, or one line of words (main checks the session, no hold, no send in flight) */
-    dialogKey(p: { id: string; key: 'up' | 'down' | 'enter' | 'esc' | 'text'; text?: string }): Promise<{ ok: true } | { ok: false; reason: string }>
+    dialogKey(p: { id: string; key: 'up' | 'down' | 'enter' | 'esc' | 'end' | 'backspace' | 'text'; text?: string; n?: number }): Promise<{ ok: true } | { ok: false; reason: string }>
     /** An image's bytes: main checks them by their first bytes and keeps the file; the page gets a token */
     image(p: { id: string; bytes: Uint8Array }): Promise<{ ok: true; token: string; type: 'png' | 'jpeg' | 'gif' | 'webp' } | { ok: false; reason: ImageRefusal }>
     /** A chip removed before sending: its file goes */

@@ -55,6 +55,7 @@ import { UserMessage } from './chat/UserMessage'
 import { Lightbox } from './chat/Lightbox'
 import { AnswerSurface, type AnswerFn } from './chat/AnswerSurface'
 import { DialogCard, useTermDialog } from './chat/DialogCard'
+import { FullButton, FullView, type FullState } from './chat/FullView'
 import { FindBar, useFind } from './chat/FindBar'
 import { cardNote, shownCard } from '../chat/answer'
 import { noticeText, overlayOpen } from '../chat/find'
@@ -152,7 +153,7 @@ const TextRow: React.FC<{ item: TextItem; copy?: boolean }> = ({ item, copy = tr
     <div className="chat-prose chat-text">
       <Markdown blocks={blocks} onLink={onLink} onPath={onPath} afterBlock={afterBlock} />
       {item.partial && <p className="chat-stopped">{t('(멈춤)')}</p>}
-      {item.truncated && <p className="chat-cut">{t('글이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요')}</p>}
+      {item.truncated && <p className="chat-cut">{t('글이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={t('답 전체')} /></p>}
       {/* the whole answer as its markdown (a selection across rows the list unmounted would lose its start);
           an answer cut at the lens's cap says, once copied, that its cut part was not */}
       {copy && <div className="chat-text-acts"><CopyButton text={item.text} label={t('답 복사')} cut={item.truncated === true} /></div>}
@@ -484,6 +485,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
       return null
     })
   }, [])
+  // "전체 보기": one item read again whole (bridge.chat.full), shown over the view until closed
+  const [full, setFull] = useState<FullState | null>(null)
+  const openFull = useCallback((itemId: string, title: string) => {
+    const read = fixed ? undefined : bridge?.chat.full
+    if (!read) return
+    setFull({ title, loading: true })
+    read(id, itemId).then(
+      r => setFull(cur => (cur && cur.title === title ? (r.ok ? { title, loading: false, text: r.text, md: r.md, truncated: r.truncated } : { title, loading: false, error: r.reason }) : cur)),
+      () => setFull(cur => (cur ? { title, loading: false, error: 'gone' } : cur)),
+    )
+  }, [id, fixed])
   const thumbs = useCallback((itemId: string) => {
     if (!box) return []
     if (itemId.startsWith('pending:')) return entries.find(e => `pending:${e.local}` === itemId)?.images.map(i => i.url) ?? []
@@ -509,6 +521,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     waitingAgents: agentsKey ? agentsKey.split(',') : [],
     openImage,
     lightbox: !!shown,
+    ...(fixed ? {} : { openFull }),
     thumbs,
     cardHere,
     ...(onChanges && !fixed ? { openChanges: onChanges } : {}),
@@ -517,7 +530,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     ...(ledger ? { stepsFor: ledger.stepsFor, stepsSubscribe: ledger.subscribe } : {}),
     ...(game ? { wildNew, wildPlayed } : {}),
     previews,
-  }), [id, onTerminal, fixed, agentsKey, openImage, shown, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews])
+  }), [id, onTerminal, fixed, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews])
   const banner = status?.banner ?? null
   const reload = () => { if (!fixed) chatStore.reload(id) }
   const older = () => (fixed ? undefined : bridge?.chat.older(id))
@@ -607,6 +620,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
         {(!asks.length || termOnly) && dialog && dialogKey && <DialogCard id={id} dialog={dialog} dialogKey={dialogKey} />}
         {footer}
         {shown && <Lightbox url={shown.url} caption={shown.caption} onClose={closeImage} />}
+        {full && <FullView state={full} onClose={() => setFull(null)} />}
       </div>
     </ChatContext.Provider>
   )

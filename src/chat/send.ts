@@ -116,7 +116,7 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
         const marks = typeof dim === 'string' ? screenShape(dim.replace(/d/g, '~')) : '(no dim marks)'
         try { d.bridge.diag?.({ id, why: sent.reason, shape: `${screenShape(rowScreen)}\n-- dim --\n${marks}` }) } catch { /* only a log line */ }
       }
-      if (sent.reason === 'prompt-busy' && row.kind === 'text') return { ok: false, reason: sent.reason, leftOnPrompt: false, row: row.text }
+      if ((sent.reason === 'prompt-busy' || sent.reason === 'prompt-unknown') && row.kind === 'text') return { ok: false, reason: sent.reason, leftOnPrompt: false, row: row.text }
       return { ok: false, reason: sent.reason, leftOnPrompt: false }
     }
     const answeredAt = d.now()

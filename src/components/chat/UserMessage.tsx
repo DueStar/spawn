@@ -16,6 +16,7 @@ import type { UserItem } from '../../chat/types'
 import { outboxFor } from '../../chat/outbox'
 import { useChatContext } from './context'
 import { FileRef } from './FileChips'
+import { FullButton } from './FullView'
 import { leadingRefs, splitMentions } from '../../chat/mentions'
 
 export const UserMessage: React.FC<{ item: UserItem; time: string | null }> = ({ item, time }) => {
@@ -38,7 +39,7 @@ export const UserMessage: React.FC<{ item: UserItem; time: string | null }> = ({
         : item.images > 0 && <span className="chat-img-chip">{t('이미지 {n}', { n: item.images })}</span>}
       {refs.length > 0 && <div className="chat-user-files">{refs.map(f => <FileRef key={f} path={f} />)}</div>}
       {body.trim() && <div className="chat-bubble">{splitMentions(body).map((g, i) => g.kind === 'file' ? <FileRef key={i} path={g.path} /> : g.text)}</div>}
-      {item.truncated && <span className="chat-time">{t('글이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요')}</span>}
+      {item.truncated && <span className="chat-time">{t('글이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={t('보낸 메시지 전체')} /></span>}
       {item.pending === 'sending' && <span className="chat-pending">{t('보내는 중…')}</span>}
       {item.pending === 'unconfirmed' && (
         // (it does not float here for good: the user looks in the terminal, or lets it go)

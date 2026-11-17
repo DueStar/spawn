@@ -48,6 +48,7 @@ contextBridge.exposeInMainWorld('spawn', {
     reload: (id) => ipcRenderer.invoke('chat:reload', String(id)),
     resync: (id) => ipcRenderer.invoke('chat:resync', String(id)),
     agent: (id, toolId) => ipcRenderer.invoke('chat:agent', { id: String(id), toolId: String(toolId) }),
+    full: (id, itemId) => ipcRenderer.invoke('chat:full', { id: String(id), itemId: String(itemId) }),
     // the changes panel (Phase 5): the conversation's changed files, and one file's edits (read from the transcript)
     changes: (id) => ipcRenderer.invoke('chat:changes', String(id)),
     changeFile: (p) => ipcRenderer.invoke('chat:change-file', {
@@ -66,7 +67,7 @@ contextBridge.exposeInMainWorld('spawn', {
     // the mode menu (2026-11-17): one Shift+Tab, checked in main
     cycleMode: (id) => ipcRenderer.invoke('chat:cycle-mode', String(id)),
     // the dialog card (2026-11-17): one key (up, down, enter, esc) or one line of words, checked in main
-    dialogKey: (p) => ipcRenderer.invoke('chat:dialog-key', { id: String(p?.id ?? ''), key: String(p?.key ?? ''), ...(typeof p?.text === 'string' ? { text: p.text.slice(0, 4000) } : {}) }),
+    dialogKey: (p) => ipcRenderer.invoke('chat:dialog-key', { id: String(p?.id ?? ''), key: String(p?.key ?? ''), ...(typeof p?.text === 'string' ? { text: p.text.slice(0, 4000) } : {}), ...(Number.isInteger(p?.n) ? { n: p.n } : {}) }),
     // an image's bytes (main checks them and names the file; the page never names a path) and its removal
     image: (p) => ipcRenderer.invoke('chat:image', { id: String(p?.id ?? ''), bytes: p?.bytes instanceof Uint8Array ? p.bytes : null }),
     dropImage: (p) => ipcRenderer.send('chat:image-drop', { id: String(p?.id ?? ''), token: String(p?.token ?? '') }),

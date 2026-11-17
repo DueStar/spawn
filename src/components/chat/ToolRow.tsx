@@ -19,6 +19,7 @@ import { useChatContext, useRowOpen } from './context'
 import { Markdown } from './Markdown'
 import { DiffBlock } from './DiffBlock'
 import { AgentGroup } from './AgentGroup'
+import { FullButton } from './FullView'
 
 /** The first line of a failed call's output, without Claude Code's error tags */
 export function errorLine(item: ToolItem): string {
@@ -95,7 +96,7 @@ export const ToolRow: React.FC<{ item: ToolItem }> = ({ item }) => {
       {foldable && open && out && (
         <div className="chat-tool-body">
           <pre className="chat-tool-out" tabIndex={0} aria-label={label}>{out.text}</pre>
-          {out.truncated && <p className="chat-tool-note">{t('출력이 길어서 앞부분만 보여요 ({lines}줄)', { lines: out.lines })}</p>}
+          {out.truncated && <p className="chat-tool-note">{t('출력이 길어서 앞부분만 보여요 ({lines}줄)', { lines: out.lines })} <FullButton itemId={item.id} title={label} /></p>}
         </div>
       )}
     </div>

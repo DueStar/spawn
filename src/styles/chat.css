@@ -549,3 +549,12 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-words { display: flex; gap: 6px; margin-top: 8px; }
 .chat-card-field { flex: 1; min-width: 0; height: 30px; padding: 0 10px; box-sizing: border-box; font: inherit; font-size: var(--t-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-s); outline: none; }
 .chat-card-field:focus { border-color: var(--line-hover); }
+/* "전체 보기": an item read again whole, over the conversation */
+.chat-full-btn { margin-left: 4px; }
+.chat-full { position: absolute; inset: 0; z-index: 40; display: flex; align-items: stretch; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
+.chat-full-panel { display: flex; flex-direction: column; width: 100%; max-width: var(--read-w); min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l); overflow: hidden; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5); }
+.chat-full-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--line); }
+.chat-full-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink); }
+.chat-full-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; outline: none; }
+.chat-full-pre { margin: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-full-note { margin: 0 0 8px; font-size: var(--t-meta); color: var(--ink-3); }

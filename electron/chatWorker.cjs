@@ -155,6 +155,8 @@ parentPort.on('message', async (m) => {
     // Phase 5: the change index (counts and offsets; a file's edits read again from the transcript)
     case 'changes': reply(m, lens ? await lens.changes(m.id) : { ok: false }); return
     case 'change-file': reply(m, lens ? await lens.changeFile(m.id, m.file, m.before) : { ok: false, reason: 'gone' }); return
+    // "전체 보기" (2026-11-17): one item read again whole
+    case 'full': reply(m, lens ? await lens.full(m.id, m.itemId) : { ok: false, reason: 'gone' }); return
     // Phase 5: link previews (only while main says they are on)
     case 'preview': await preview(m); return
     case 'previews': setPreviews(m.on === true); return
