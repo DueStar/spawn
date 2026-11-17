@@ -34,6 +34,10 @@ The code inherited from Claude-Office and the code added in this repository.
   personal, non-commercial fan project, is not licensed by this repository, and will be
   taken down on request.
 
+## Icons
+
+The interface icons are [Phosphor Icons](https://phosphoricons.com) (`@phosphor-icons/react`, MIT licence, © Phosphor Icons), drawn in their bold weight. The window buttons (minimize, maximize, restore) are spawn's own drawings of Windows' shapes.
+
 ## Fonts
 
 The app ships three typefaces in `public/fonts/` (declared in `public/fonts/fonts.css`),

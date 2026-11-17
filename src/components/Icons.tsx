@@ -1,51 +1,79 @@
 /**
- * Icons — small line icons (16px grid, currentColor) and spawn's Poké Ball
- * (an original drawing, tools/build-icons.py: the same ball as the app icon).
+ * Icons — one icon system (2026-11-17, the owner's call: icons from Phosphor, one weight, a few sizes; before this
+ * the app's own 16-grid drawings at 1.5 and the chat's at 1.4, drawn at 11–16px, read thick here and thin there).
+ *
+ *   weight  bold everywhere (24/256 of the size: 1.5px at 16, 1.3px at 14, 1.1px at 12)
+ *   sizes   16 a button's icon · 14 an icon inside a line of text · 12 a small caret or ×
+ *
+ * Phosphor (MIT, phosphoricons.com) first; Hugeicons or Material only where Phosphor has nothing that fits. The
+ * window buttons stay Windows' own shapes (minimize, maximize, restore), drawn at the same 1.5px. And spawn's
+ * Poké Ball (an original drawing, tools/build-icons.py: the same ball as the app icon).
  */
 
 import React, { useState } from 'react'
+// (one module per icon: the whole set is 3000+ icons, which a test or a build should never load)
+import type { Icon as PhIcon } from '@phosphor-icons/react/dist/lib/types'
+import { AppWindowIcon as AppWindow } from '@phosphor-icons/react/dist/csr/AppWindow'
+import { ArrowLineDownIcon as ArrowLineDown } from '@phosphor-icons/react/dist/csr/ArrowLineDown'
+import { ArrowsLeftRightIcon as ArrowsLeftRight } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
+import { BookOpenIcon as BookOpen } from '@phosphor-icons/react/dist/csr/BookOpen'
+import { CalendarBlankIcon as CalendarBlank } from '@phosphor-icons/react/dist/csr/CalendarBlank'
+import { CheckIcon as Check } from '@phosphor-icons/react/dist/csr/Check'
+import { CornersOutIcon as CornersOut } from '@phosphor-icons/react/dist/csr/CornersOut'
+import { FolderIcon as Folder } from '@phosphor-icons/react/dist/csr/Folder'
+import { GearIcon as Gear } from '@phosphor-icons/react/dist/csr/Gear'
+import { MagnifyingGlassIcon as MagnifyingGlass } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
+import { PackageIcon as Package } from '@phosphor-icons/react/dist/csr/Package'
+import { PaperPlaneRightIcon as PaperPlaneRight } from '@phosphor-icons/react/dist/csr/PaperPlaneRight'
+import { PictureInPictureIcon as PictureInPicture } from '@phosphor-icons/react/dist/csr/PictureInPicture'
+import { PlusIcon as Plus } from '@phosphor-icons/react/dist/csr/Plus'
+import { SidebarSimpleIcon as SidebarSimple } from '@phosphor-icons/react/dist/csr/SidebarSimple'
+import { StackIcon as Stack } from '@phosphor-icons/react/dist/csr/Stack'
+import { TerminalIcon as Terminal } from '@phosphor-icons/react/dist/csr/Terminal'
+import { TrophyIcon as Trophy } from '@phosphor-icons/react/dist/csr/Trophy'
+import { XIcon as X } from '@phosphor-icons/react/dist/csr/X'
 import { ballUrl } from '../pokedexStore'
 
 type P = { size?: number; className?: string }
+
+/** One weight for every icon of the app (the system above) */
+export const ICON_WEIGHT = 'bold' as const
+/** The sizes an icon may be drawn at */
+export const ICON_SIZES = Object.freeze({ button: 16, inline: 14, small: 12 })
+
+/** The step a size is drawn at: 12, 14 or 16 (a size over 17 is a picture-sized icon, drawn as asked) */
+export const iconStep = (size: number): number => (size > 17 ? size : size <= 12.5 ? ICON_SIZES.small : size < 15 ? ICON_SIZES.inline : ICON_SIZES.button)
+
+/** A Phosphor icon as the app draws one: its size (on a step; 16 by default), the one weight, currentColor, decorative */
+export const ph = (Comp: PhIcon, fallback: number = ICON_SIZES.button): React.FC<P> => {
+  const C: React.FC<P> = ({ size = fallback, className }) => (
+    <Comp className={`ico${className ? ` ${className}` : ''}`} size={iconStep(size)} weight={ICON_WEIGHT} aria-hidden="true" focusable="false" />
+  )
+  return C
+}
+
+/** The window buttons' own shapes (Windows draws them so), at the same stroke as the system: 1.5 on a 16 grid */
 const Svg: React.FC<P & { children: React.ReactNode }> = ({ size = 16, className, children }) => (
-  <svg className={`ico${className ? ` ${className}` : ''}`} width={size} height={size} viewBox="0 0 16 16" fill="none"
+  <svg className={`ico${className ? ` ${className}` : ''}`} width={iconStep(size)} height={iconStep(size)} viewBox="0 0 16 16" fill="none"
     stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     {children}
   </svg>
 )
 
 /** A folder: open a session somewhere else */
-export const FolderIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M2 4.5c0-.6.4-1 1-1h3l1.5 1.5H13c.6 0 1 .4 1 1V12c0 .6-.4 1-1 1H3c-.6 0-1-.4-1-1z" /></Svg>
-)
-/** Stacked cards: pick one of the earlier sessions */
-export const SessionsIcon: React.FC<P> = (p) => (
-  <Svg {...p}>
-    <rect x="2" y="5.5" width="12" height="8" rx="1.5" />
-    <path d="M3.5 3.5h9M5 1.8h6" />
-    <path d="M5 9.5h4" />
-  </Svg>
-)
+export const FolderIcon = ph(Folder)
+/** Stacked sessions: pick one of the earlier sessions */
+export const SessionsIcon = ph(Stack)
 /** >_ */
-export const TerminalIcon: React.FC<P> = (p) => (
-  <Svg {...p}><rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1.8" /><path d="M4.5 6.5 6.5 8l-2 1.5M8 10h3" /></Svg>
-)
+export const TerminalIcon = ph(Terminal)
 /** The Pokédex: an open book */
-export const DexIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M8 4.2C6.6 3.2 4.6 3 2.5 3.3v9.2c2.1-.3 4.1-.1 5.5.9 1.4-1 3.4-1.2 5.5-.9V3.3C11.4 3 9.4 3.2 8 4.2zM8 4.2v9.2" /></Svg>
-)
-/** The PC box: a grid of slots */
-export const BoxIcon: React.FC<P> = (p) => (
-  <Svg {...p}><rect x="2" y="2" width="5" height="5" rx="1.2" /><rect x="9" y="2" width="5" height="5" rx="1.2" /><rect x="2" y="9" width="5" height="5" rx="1.2" /><rect x="9" y="9" width="5" height="5" rx="1.2" /></Svg>
-)
-/** Widget: a narrow floating panel */
-export const WidgetModeIcon: React.FC<P> = (p) => (
-  <Svg {...p}><rect x="2" y="2.5" width="12" height="11" rx="1.8" strokeDasharray="2 1.6" /><rect x="8.5" y="4.5" width="4" height="7" rx="1" fill="currentColor" stroke="none" /></Svg>
-)
+export const DexIcon = ph(BookOpen)
+/** The PC box */
+export const BoxIcon = ph(Package)
+/** Widget: a small window over the others */
+export const WidgetModeIcon = ph(PictureInPicture)
 /** Window: an app window */
-export const WindowModeIcon: React.FC<P> = (p) => (
-  <Svg {...p}><rect x="2" y="3" width="12" height="10" rx="1.8" /><path d="M2 6h12M6 6v7" /></Svg>
-)
+export const WindowModeIcon = ph(AppWindow)
 /** Maximize (as Windows draws it): one square — the window fills the screen */
 export const MaximizeIcon: React.FC<P> = (p) => (
   <Svg {...p}><rect x="3.5" y="3.5" width="9" height="9" rx="1.2" /></Svg>
@@ -55,59 +83,31 @@ export const RestoreIcon: React.FC<P> = (p) => (
   <Svg {...p}><rect x="2.8" y="5.2" width="8" height="8" rx="1.2" /><path d="M5.2 5.2V4a1.2 1.2 0 0 1 1.2-1.2H12a1.2 1.2 0 0 1 1.2 1.2v5.6a1.2 1.2 0 0 1-1.2 1.2h-1.2" /></Svg>
 )
 /** Fullscreen: four corners */
-export const FullscreenIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M2.5 6V2.5H6M10 2.5h3.5V6M13.5 10v3.5H10M6 13.5H2.5V10" /></Svg>
-)
-/** A clock: today's log */
-export const TodayIcon: React.FC<P> = (p) => (
-  <Svg {...p}><circle cx="8" cy="8" r="6" /><path d="M8 4.8V8l2.2 1.6" /></Svg>
-)
+export const FullscreenIcon = ph(CornersOut)
+/** Today's log */
+export const TodayIcon = ph(CalendarBlank)
 /** A trophy: 랭킹 */
-export const RankIcon: React.FC<P> = (p) => (
-  <Svg {...p}>
-    <path d="M4.5 2.5h7v3.2a3.5 3.5 0 0 1-7 0z" />
-    <path d="M4.5 3.8H3.2a1.4 1.4 0 0 0 0 2.8h1.5M11.5 3.8h1.3a1.4 1.4 0 0 1 0 2.8h-1.5" />
-    <path d="M8 9.2v2.3M5.5 13.5h5M6.3 11.5h3.4" />
-  </Svg>
-)
-/** A line: minimize the window */
+export const RankIcon = ph(Trophy)
+/** A line: minimize the window (as Windows draws it) */
 export const MinimizeIcon: React.FC<P> = (p) => (
   <Svg {...p}><path d="M3.5 8h9" /></Svg>
 )
 /** A window with its left column: show or hide the side panel */
-export const SidePanelIcon: React.FC<P> = (p) => (
-  <Svg {...p}><rect x="2.5" y="3" width="11" height="10" rx="2" /><path d="M6.5 3v10" /></Svg>
-)
+export const SidePanelIcon = ph(SidebarSimple)
 /** Two opposed arrows: swap the Pokémon working a session */
-export const SwapIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M3 5.5h9.5M10 3l2.5 2.5L10 8M13 10.5H3.5M6 8l-2.5 2.5L6 13" /></Svg>
-)
+export const SwapIcon = ph(ArrowsLeftRight)
 /** × : close */
-export const CloseIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M4 4l8 8M12 4l-8 8" /></Svg>
-)
+export const CloseIcon = ph(X)
 /** ✓ : the chosen one in a menu */
-export const CheckIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M3 8.5l3.2 3L13 4.5" /></Svg>
-)
+export const CheckIcon = ph(Check)
 /** A paper plane: send the instruction */
-export const SendIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M14 2L7 9M14 2l-4.5 12-2.5-5-5-2.5z" /></Svg>
-)
-export const SearchIcon: React.FC<P> = (p) => (
-  <Svg {...p}><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5L14 14" /></Svg>
-)
-export const PlusIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M8 3v10M3 8h10" /></Svg>
-)
-/** An arrow down onto a line: an update to take (the header's update button) */
-export const UpdateIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M8 2.5v8M4.5 7L8 10.5L11.5 7M3 13.5h10" /></Svg>
-)
-/** A gear with six teeth: 설정 (the old circle-and-rays read as a sun) */
-export const GearIcon: React.FC<P> = (p) => (
-  <Svg {...p}><path d="M6.32 3.40L6.63 1.54L9.37 1.54L9.68 3.40L11.15 4.25L12.90 3.58L14.28 5.96L12.83 7.15L12.83 8.85L14.28 10.04L12.90 12.42L11.15 11.75L9.68 12.60L9.37 14.46L6.63 14.46L6.32 12.60L4.85 11.75L3.10 12.42L1.72 10.04L3.17 8.85L3.17 7.15L1.72 5.96L3.10 3.58L4.85 4.25Z" /><circle cx="8" cy="8" r="2.1" /></Svg>
-)
+export const SendIcon = ph(PaperPlaneRight)
+export const SearchIcon = ph(MagnifyingGlass)
+export const PlusIcon = ph(Plus)
+/** An arrow down onto a line: an update to take (the update button) */
+export const UpdateIcon = ph(ArrowLineDown)
+/** 설정 */
+export const GearIcon = ph(Gear)
 
 /**
  * A Poké Ball picture: the games' ball artwork shipped with the app (without `ball`, the

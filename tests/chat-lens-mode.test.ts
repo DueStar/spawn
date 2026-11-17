@@ -19,6 +19,9 @@ vi.mock('../src/i18n', async (orig) => ({ ...(await orig<typeof import('../src/i
 const ROOT = join(__dirname, '..')
 const term = (over: Partial<TerminalInfo> = {}): TerminalInfo => ({ id: 't1', sessionId: 's1', cwd: '', project: 'p', status: 'running', createdAt: 0, exitCode: null, title: null, tool: 'claude', ...over })
 
+/** (2026-11-17: icons belong to the icon system, tests/icons.test.ts; the captures check the markup around them) */
+const noSvg = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '<svg/>')
+
 describe('lensAvailability', () => {
   it('no chat key (off, or not Claude Code): no flip', () => {
     expect(lensAvailability(term(), 'window')).toEqual({ show: false, enabled: false, reason: null })
@@ -110,8 +113,8 @@ describe('SessionHeader', () => {
   const BEFORE_2 = '<div class="w-sess-head" title="C:/code/shop-web"><span class="w-sess-head-pic w-sess-head-glyph" aria-hidden="true"><svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1.8"></rect><path d="M4.5 6.5 6.5 8l-2 1.5M8 10h3"></path></svg></span><span class="w-sess-head-name" title="더블클릭해서 세션 이름 바꾸기">새 세션</span><span class="w-sess-head-proj">docs</span><span class="w-sess-head-spacer"></span><button class="w-sess-head-close confirm" title="한 번 더 누르면 세션을 닫아요" aria-label="세션 닫기">닫기</button></div>'
 
   it('without `lens` the markup is exactly as before the flip', () => {
-    expect(renderToStaticMarkup(React.createElement(SessionHeader, props))).toBe(BEFORE_1)
-    expect(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, parts: { picture: 'glyph', name: null, branch: null, project: 'docs' }, closing: true }))).toBe(BEFORE_2)
+    expect(noSvg(renderToStaticMarkup(React.createElement(SessionHeader, props)))).toBe(noSvg(BEFORE_1))
+    expect(noSvg(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, parts: { picture: 'glyph', name: null, branch: null, project: 'docs' }, closing: true })))).toBe(noSvg(BEFORE_2))
   })
 
   it('with `lens`: a group of two pressed-state buttons before the ×, 채팅 pressed when chat is shown', () => {

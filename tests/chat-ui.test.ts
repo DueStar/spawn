@@ -360,7 +360,9 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
       if (j.packages?.['']) delete j.packages[''].version
       return createHash('sha256').update(JSON.stringify(j)).digest('hex')
     }
-    expect(sha('package.json')).toBe('ebe875e30cf0a08930f2fbddad0473f289739c43d11baecc2ff9bcdfd074bcd2')
-    expect(sha('package-lock.json')).toBe('8242b4e969055cc68b29cd6ddc265a637a86eb409ecfcccfbaf1c5d8ed6899e4')
+    // (2026-11-17: one dependency added on purpose, @phosphor-icons/react 2.1.10 (MIT) — the owner's icon system;
+    // anything else new still fails here)
+    expect(sha('package.json')).toBe('50beae6c3c1e6035016e22678a19fc40e37a55744283537b624c3b0e0b46466b')
+    expect(sha('package-lock.json')).toBe('bbc6b9de9af963d8b8cbdbc659d634095d1b89e030f9bbbd86f6b33c7c2a4976')
   })
 })

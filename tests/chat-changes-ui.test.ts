@@ -50,6 +50,9 @@ async function editsOf(index: any, file: string) {
 let index: any
 beforeAll(async () => { index = await indexed() })
 
+/** (2026-11-17: icons belong to the icon system, tests/icons.test.ts; the captures check the markup around them) */
+const noSvg = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '<svg/>')
+
 describe('fileTree', () => {
   it('over changes.jsonl: folders first, then files, alphabetical; the files outside the folder in their own group, last', async () => {
     const { fileTree } = await import('../src/chat/changes')
@@ -169,15 +172,15 @@ describe('SessionHeader', () => {
 
   it('without `chatTools` the markup is exactly as captured before', async () => {
     const { SessionHeader } = await import('../src/components/SessionHeader')
-    expect(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, lens: { mode: 'chat', enabled: true, reason: null, onMode() {} } }))).toBe(CAP_CHAT)
-    expect(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, lens: { mode: 'terminal', enabled: true, reason: null, onMode() {} } }))).toBe(CAP_TERM)
+    expect(noSvg(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, lens: { mode: 'chat', enabled: true, reason: null, onMode() {} } })))).toBe(noSvg(CAP_CHAT))
+    expect(noSvg(renderToStaticMarkup(React.createElement(SessionHeader, { ...props, lens: { mode: 'terminal', enabled: true, reason: null, onMode() {} } })))).toBe(noSvg(CAP_TERM))
   })
 
   it('with `chatTools`: a group before the flip, nothing else changed', async () => {
     const { SessionHeader } = await import('../src/components/SessionHeader')
     const html = renderToStaticMarkup(React.createElement(SessionHeader, { ...props, lens: { mode: 'chat', enabled: true, reason: null, onMode() {} }, chatTools: React.createElement('button', { className: 'probe' }, 'x') }))
     expect(html).toContain('<div class="w-chat-tools"><button class="probe">x</button></div><div class="w-lens"')
-    expect(html.replace('<div class="w-chat-tools"><button class="probe">x</button></div>', '')).toBe(CAP_CHAT)
+    expect(noSvg(html.replace('<div class="w-chat-tools"><button class="probe">x</button></div>', ''))).toBe(noSvg(CAP_CHAT))
   })
 
   it('(5.11 sweep) the narrowest header (260px: 560 wide, a Mac\'s panel open) keeps its controls whole: only inside the chat tools\' container, the counts and the project give way', () => {
