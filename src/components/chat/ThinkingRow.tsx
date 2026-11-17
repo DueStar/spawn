@@ -23,6 +23,8 @@ export const ThinkingRow: React.FC<{ item: ThinkingItem }> = ({ item }) => {
   const { onLink, onPath } = useChatContext()
   const text = item.redacted ? '' : item.text
   const blocks = useMemo(() => (text.trim() ? parseMarkdown(text) : null), [text])
+  // a progress note (thinkingDisplay "updates"): what the terminal shows as Claude's words, so the chat's prose
+  if (item.update && blocks) return <div className="chat-prose chat-update"><Markdown blocks={blocks} onLink={onLink} onPath={onPath} /></div>
   return (
     <div className="chat-think">
       <b className="chat-think-head">{item.durationMs !== undefined ? t('생각 · {time}', { time: thoughtFor(item.durationMs) }) : t('생각')}</b>

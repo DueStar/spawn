@@ -34,7 +34,9 @@ export const SendUpIcon = ({ size = 15 }: P) => (
   <svg width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false"><path d="M8 13V3.5M3.8 7.5 8 3.3l4.2 4.2" /></svg>
 )
 export const PlusIcon = ({ size = 15 }: P) => svg(size, <path d="M8 3v10M3 8h10" />)
-export const XIcon = ({ size = 11 }: P) => svg(size, <path d="M4 4l8 8M12 4l-8 8" />)
+// the file mention: drawn on the same 16 grid as the plus, so the two sit at one height (a mono "@" glyph sat low)
+export const AtIcon = ({ size = 15 }: P) => svg(size, <><circle cx="8" cy="8" r="2.6" /><path d="M10.6 5.6v3.3c0 1.2.8 1.9 1.7 1.9s1.7-.9 1.7-2.8a6 6 0 1 0-2.4 4.8" /></>)
+export const XIcon =({ size = 11 }: P) => svg(size, <path d="M4 4l8 8M12 4l-8 8" />)
 export const CpuIcon = ({ size = 13 }: P) => svg(size, <><rect x="4" y="4" width="8" height="8" rx="1.5" /><path d="M6.5 1.8v2M9.5 1.8v2M6.5 12.2v2M9.5 12.2v2M1.8 6.5h2M1.8 9.5h2M12.2 6.5h2M12.2 9.5h2" /></>)
 export const ShieldIcon = ({ size = 13 }: P) => svg(size, <path d="M8 1.8 13 3.5v4c0 3.2-2.2 5.3-5 6.7-2.8-1.4-5-3.5-5-6.7v-4z" />)
 

@@ -21,6 +21,9 @@ import { bridge } from '../../desktop'
 import { josa, t } from '../../i18n'
 import { useWorkMode } from '../../settingsStore'
 import { termDim, termText } from '../../termMetrics'
+import { footerMode, promptRow, suggestionOf, type FooterMode } from '../../chat/promptRow'
+import { parseDialog } from '../../chat/dialog'
+import { switchMode } from '../../chat/modeSwitch'
 import { createImeTracker, keyAction, mentionAt } from '../../chat/composerKeys'
 import { onChatForget, takeChatFocus, type ChatWho } from '../../chat/lensMode'
 import { baselineOf, outboxFor } from '../../chat/outbox'
@@ -30,8 +33,11 @@ import { cardNote, shownCard } from '../../chat/answer'
 import type { ImageRefusal, InterruptRefusal, SendRefusal, SubmitRefusal } from '../../chat/types'
 import { ControlRow, type ComposerControl } from './ControlRow'
 import { ImageChips, type Chip } from './ImageChips'
+import { FileChips } from './FileChips'
+import { withRefs } from '../../chat/mentions'
+import { continueList } from '../../chat/lists'
 import { QueueStrip } from './QueueStrip'
-import { PlusIcon, SendUpIcon } from './ChatIcons'
+import { AtIcon, PlusIcon, SendUpIcon } from './ChatIcons'
 import { MENU_ROWS, MentionMenu } from './MentionMenu'
 import { useChatContext } from './context'
 import { isTypingTarget } from './ChatList'
@@ -53,7 +59,7 @@ export interface ComposerHandle {
 
 type ChatBridge = NonNullable<typeof bridge>['chat']
 export interface ComposerDeps {
-  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded'>>) | null
+  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded' | 'cycleMode'>>) | null
   termText(id: string): string | null
   /** (1.6.2) the same lines' dim marks; absent: none (the ledger decides in main) */
   termDim?(id: string): string | null
@@ -77,6 +83,8 @@ export interface ComposerProps {
 }
 
 const ESC_AFTER_MENU_MS = 600
+/** how often the empty composer looks for Claude Code's next-prompt suggestion on the terminal's row */
+const SUGGEST_POLL_MS = 700
 const MAX_CHARS = 20_000
 const MAX_IMAGES = 8
 const MAX_MB = 10
@@ -84,12 +92,17 @@ const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp
 
 const drafts = new Map<string, string>()
 const chipsOf = new Map<string, Chip[]>()
+/** the permission modes each session's Shift+Tab cycle was seen to lack (the mode menu greys them) */
+const lacksOf = new Map<string, Set<FooterMode>>()
+/** the files picked from the @ menu, per session: badges, not text; sent as `@path` before the message */
+const refsOf = new Map<string, string[]>()
 const chipSeq = new Map<string, number>()
 const revoke = (url: string) => { try { URL.revokeObjectURL(url) } catch { /* not a page */ } }
 onChatForget(id => {
   drafts.delete(id)
   for (const c of chipsOf.get(id) ?? []) revoke(c.url)
   chipsOf.delete(id)
+  refsOf.delete(id)
   chipSeq.delete(id)
 })
 
@@ -160,8 +173,12 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   const chat = deps?.chat !== undefined ? deps.chat : bridge?.chat ?? null
   const [text, setText] = useState(() => preview?.text ?? drafts.get(id) ?? '')
   const [chips, setChips] = useState<Chip[]>(() => preview?.chips ?? chipsOf.get(id) ?? [])
+  const [refs, setRefs] = useState<string[]>(() => refsOf.get(id) ?? [])
   const [note, setNote] = useState<Note | null>(preview?.note ?? null)
   const [busy, setBusy] = useState(false)
+  // shell mode: a `!` typed into the empty draft, as in Claude Code; the command is sent as `!command` (bash mode)
+  const [shell, setShell] = useState(false)
+  useEffect(() => { setShell(false) }, [id])
   const sending = useRef(false)
   const ta = useRef<HTMLTextAreaElement>(null)
   const picker = useRef<HTMLInputElement>(null)
@@ -200,12 +217,15 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     const f = menuFiles?.[i]
     if (!el || !mention || !f) return
     const caret = el.selectionStart ?? el.value.length
-    replaceRange(el, mention.start, caret, `@${f} `)
+    // the typed `@query` leaves the text; the file becomes a badge (the owner's call, 2026-11-17)
+    replaceRange(el, mention.start, caret, '')
+    if (!refs.includes(f)) setRefList([...refs, f])
     setMention(null)
   }
   const menuClosedAt = useRef(-Infinity)
   const closeMenu = () => { if (mention) dismissed.current = mention.start; setMention(null); menuClosedAt.current = Date.now() }
   const setChipList = (l: Chip[]) => { chipsOf.set(id, l); setChips(l) }
+  const setRefList = (l: string[]) => { refsOf.set(id, l); setRefs(l) }
   const say = (n: Note | null, ms?: number) => {
     clearTimeout(noteTimer.current)
     setNote(n)
@@ -250,18 +270,26 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   async function send() {
     if (sending.current || !chat) return
     const value = ta.current?.value ?? text
-    if (!value.trim() && !chips.length) return
+    if (!value.trim() && (shell || (!chips.length && !refs.length))) return
     if (ended) { say({ key: '세션이 끝나서 보낼 수 없어요', terminal: true }); return }
     if (value.length > MAX_CHARS) { say(refusalNote('too-long', who)); return }
     sending.current = true
     setBusy(true)
     say(null)
     const sentChips = chips
+    const sentRefs = refs
     try {
-      const r = await sendDraft({ id, text: value, images: sentChips.map(c => ({ token: c.token, url: c.url })) }, depsFor())
-      if (r.ok) {
+      // (a `!` command goes alone: the pictures stay in the composer for the next message)
+      const r = shell
+        ? await sendDraft({ id, text: value, images: [], shell: true }, depsFor())
+        : await sendDraft({ id, text: withRefs(sentRefs, value), images: sentChips.map(c => ({ token: c.token, url: c.url })) }, depsFor())
+      if (r.ok && shell) {
+        setDraft(rest(value))
+        setShell(false)
+      } else if (r.ok) {
         setDraft(rest(value))
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
+        setRefList((refsOf.get(id) ?? []).filter(f => !sentRefs.includes(f)))
         if (r.command) say({ key: '{command} 보냈어요. 터미널에 화면이 열렸다면 거기서 이어서 해 주세요', vars: { command: value.trim().split(/\s/)[0] }, terminal: true }, 6000)
       } else if (r.leftOnPrompt) {
         // the text is on the terminal's prompt row: sending it again would double it
@@ -269,11 +297,76 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
         say({ key: '보낸 글은 터미널 입력란에 남아 있어요. 터미널에서 Enter를 누르거나 지워 주세요', terminal: true })
       } else {
-        say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.row))
+        // (a dialog on the terminal's screen: its card is right above, never the terminal)
+        if (r.reason === 'screen' && parseDialog((deps?.termText ?? termText)(id))) say({ key: '{name}{iga} 고르기를 기다려요. 위 카드에서 먼저 골라 주세요', vars: nameVars(who.name) })
+        else say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.row))
       }
     } finally {
       sending.current = false
       setBusy(false)
+    }
+  }
+
+  // ---- the control row's menus (2026-11-17): the model by `/model <alias>`, the mode by Shift+Tab until the footer shows it
+  const [ctrlBusy, setCtrlBusy] = useState(false)
+  const [modeShown, setModeShown] = useState<FooterMode | null>(null)
+  const [lacks, setLacks] = useState<ReadonlySet<FooterMode>>(() => lacksOf.get(id) ?? new Set())
+  // (the hooks' next word on the mode wins over what the footer showed)
+  // the footer shows the mode the session is in now: read it once a second (the hooks only say it when they fire)
+  useEffect(() => {
+    if (fixed) return
+    const readScreen = deps?.termText ?? termText
+    const look = () => { const m = footerMode(readScreen(id)); if (m) setModeShown(cur => (cur === m ? cur : m)) }
+    look()
+    const timer = setInterval(look, 1000)
+    return () => clearInterval(timer)
+  }, [fixed, id, deps])
+  useEffect(() => { setLacks(lacksOf.get(id) ?? new Set()) }, [id])
+
+  async function changeModel(alias: string) {
+    if (sending.current || !chat || ended) return
+    sending.current = true
+    setCtrlBusy(true)
+    say(null)
+    try {
+      const r = await sendDraft({ id, text: `/model ${alias}`, images: [] }, depsFor())
+      if (r.ok) {
+        // Claude Code may ask first (switching mid-conversation clears the prompt cache): the dialog card asks then
+        await new Promise(resolve => setTimeout(resolve, 600))
+        if (!parseDialog((deps?.termText ?? termText)(id))) say({ key: alias === 'default' ? '모델을 기본값으로 바꿨어요' : '모델을 바꿨어요 · {model}', vars: { model: alias[0].toUpperCase() + alias.slice(1) } }, 4000)
+      }
+      else say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.ok === false && 'row' in r ? r.row : undefined))
+    } finally {
+      sending.current = false
+      setCtrlBusy(false)
+    }
+  }
+
+  async function changeMode(target: FooterMode) {
+    if (sending.current || !chat?.cycleMode || ended) return
+    const press = chat.cycleMode
+    sending.current = true
+    setCtrlBusy(true)
+    say(null)
+    try {
+      const readScreen = deps?.termText ?? termText
+      const r = await switchMode(target, {
+        read: () => readScreen(id),
+        press: async () => { try { return (await press(id)).ok } catch { return false } },
+        sleep: deps?.sleep ?? (ms => new Promise(resolve => setTimeout(resolve, ms))),
+      })
+      if (r.mode) setModeShown(r.mode)
+      if (r.ok) return
+      if (r.reason === 'unreachable') {
+        const next = new Set(lacksOf.get(id) ?? [])
+        next.add(target)
+        lacksOf.set(id, next)
+        setLacks(next)
+        say({ key: '이 세션에서는 이 모드를 고를 수 없어요. Claude Code를 이 모드로 시작해야 해요' }, 6000)
+      } else say({ key: '지금은 모드를 바꾸지 못했어요. 잠시 뒤 다시 해 주세요' }, 5000)
+    } finally {
+      sending.current = false
+      setCtrlBusy(false)
     }
   }
 
@@ -362,8 +455,21 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     ta.current?.focus({ preventScroll: true })
   })
 
-  const canSend = !ended && (text.trim().length > 0 || chips.length > 0)
-  const placeholder = workMode ? t('에이전트에게 지시하기…') : t('{name}에게 지시하기…', { name: who.name })
+  // Claude Code's next-prompt suggestion (the dim text on the terminal's prompt row), shown as the placeholder
+  // while the draft is empty; Tab or → takes it into the draft, never sends it (the owner's call, 2026-11-17)
+  const [suggestion, setSuggestion] = useState<string | null>(null)
+  const idleNow = status?.state === 'idle'
+  useEffect(() => {
+    if (fixed || ended || text || shell || !idleNow) { setSuggestion(null); return }
+    const readScreen = deps?.termText ?? termText
+    const readDim = deps ? deps.termDim : termDim
+    const look = () => setSuggestion(suggestionOf(promptRow(readScreen(id), readDim?.(id) ?? null)))
+    look()
+    const timer = setInterval(look, SUGGEST_POLL_MS)
+    return () => clearInterval(timer)
+  }, [fixed, ended, text, shell, idleNow, id, deps])
+  const canSend = !ended && (text.trim().length > 0 || (!shell && (chips.length > 0 || refs.length > 0)))
+  const placeholder = shell ? t('실행할 명령…') : suggestion ?? (workMode ? t('에이전트에게 지시하기…') : t('{name}에게 지시하기…', { name: who.name }))
 
   return (
     <div className="chat-composer">
@@ -377,11 +483,12 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         {menuOpen && <MentionMenu listId={listId} files={menuFiles!} sel={sel} onPick={pick} onHover={setSel} />}
         <QueueStrip status={status} />
         <div
-          className="chat-cbox"
+          className={`chat-cbox${shell ? ' shell' : ''}`}
           onDragOver={e => { if (Array.from(e.dataTransfer?.types ?? []).includes('Files')) { e.preventDefault(); e.dataTransfer.dropEffect = 'copy' } }}
           onDrop={e => { const files = filesOf(e.dataTransfer); if (files.length) { e.preventDefault(); void attach(files) } }}
         >
-          <ImageChips chips={chips} onRemove={removeChip} onOpen={(c, from) => ctx.openImage?.(c.url, t('붙여넣은 이미지 {n}', { n: c.n }), from)} />
+          {!shell && <FileChips files={refs} onRemove={f => setRefList(refs.filter(x => x !== f))} />}
+          {!shell && <ImageChips chips={chips} onRemove={removeChip} onOpen={(c, from) => ctx.openImage?.(c.url, t('붙여넣은 이미지 {n}', { n: c.n }), from)} />}
           <textarea ref={twin} className="chat-input chat-input-twin" rows={1} readOnly tabIndex={-1} aria-hidden="true" defaultValue="" />
           <textarea
             ref={ta}
@@ -394,7 +501,11 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
             aria-busy={busy || undefined}
             readOnly={ended}
             aria-disabled={ended || undefined}
-            onChange={e => { setDraft(e.target.value); look() }}
+            onChange={e => {
+              // a `!` into the empty draft: shell mode (the mark is the badge, not part of the command)
+              if (!shell && !text && e.target.value === '!' && chat) { setShell(true); setDraft(''); return }
+              setDraft(e.target.value); look()
+            }}
             onSelect={look}
             onCompositionStart={() => ime.start()}
             onCompositionEnd={() => { ime.end(); look() }}
@@ -411,6 +522,21 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
                 { composing: ime.composing(), working, menuOpen, mentionOpen: !!mention, lightbox: !!ctx.lightbox },
               )
               const n = Math.min(menuFiles?.length ?? 0, MENU_ROWS)
+              // Backspace on the empty draft leaves shell mode
+              if (shell && e.key === 'Backspace' && !text && !ime.composing()) { e.preventDefault(); setShell(false); return }
+              // Shift+Enter on a list line: the next item's mark comes with the new line (src/chat/lists.ts)
+              if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey && !shell && !menuOpen
+                && !ime.composing() && !e.nativeEvent.isComposing && e.keyCode !== 229) {
+                const el = e.currentTarget
+                const edit = el.selectionStart === el.selectionEnd ? continueList(el.value, el.selectionStart ?? el.value.length) : null
+                if (edit) { e.preventDefault(); replaceRange(el, edit.start, edit.end, edit.insert); return }
+              }
+              // the suggestion taken into the draft: Tab or →, plain, on an empty draft
+              if (suggestion && !text && !menuOpen && !ime.composing() && !e.nativeEvent.isComposing && (e.key === 'Tab' || e.key === 'ArrowRight') && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                e.preventDefault()
+                insertText(suggestion)
+                return
+              }
               if (a === 'send') { e.preventDefault(); if (!busy) void send() }
               // (an Esc right after one that closed the @ menu is the same gesture: it never stops the work)
               else if (a === 'stop') { e.preventDefault(); if (Date.now() - menuClosedAt.current > ESC_AFTER_MENU_MS) void stop() }
@@ -421,9 +547,16 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
             }}
           />
           <div className="chat-cbar">
+            {/* shell mode: its badge in place of + and @ (a command takes neither); a click leaves it */}
+            {shell ? (
+              <button type="button" className="chat-shell-badge" onClick={() => { setShell(false); ta.current?.focus({ preventScroll: true }) }}
+                title={t('셸 모드 · 눌러서 나가기 (빈 칸에서 Backspace)')} aria-label={t('셸 모드 나가기')}>
+                <b>!</b>{t('셸 모드')}
+              </button>
+            ) : <>
             <button type="button" className="chat-ib" onClick={() => picker.current?.click()} aria-label={t('이미지 붙이기')} title={t('이미지 붙이기')} disabled={ended}><PlusIcon /></button>
             {chat && (
-              <button type="button" className="chat-ib mono" aria-label={t('파일 멘션')} title={t('파일 멘션')} disabled={ended}
+              <button type="button" className="chat-ib" aria-label={t('파일 멘션')} title={t('파일 멘션')} disabled={ended}
                 onClick={() => {
                   const el = ta.current
                   if (!el) return
@@ -431,10 +564,12 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
                   dismissed.current = null
                   insertText(at > 0 && !/\s/.test(el.value[at - 1]) ? ' @' : '@')
                   requestAnimationFrame(look)
-                }}>@</button>
+                }}><AtIcon /></button>
             )}
+            </>}
             <input ref={picker} className="chat-file" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple tabIndex={-1} aria-hidden="true"
               onChange={e => { const files = Array.from(e.target.files ?? []); e.target.value = ''; void attach(files) }} />
+            {suggestion && !text && <kbd className="chat-sugg-key" title={t('Tab으로 추천 문장 채우기')}>Tab</kbd>}
             <button
               type="button"
               className={`chat-send${canSend ? '' : ' empty'}`}
@@ -445,8 +580,17 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
             ><SendUpIcon /></button>
           </div>
         </div>
-        {isCommandText(text) && !chips.length ? <div className="chat-chint">{t('/로 시작하면 Claude Code 명령으로 보내요. 글자 그대로 보내려면 앞에 띄어쓰기를 넣어요')}</div> : null}
-        <ControlRow control={control} mode={status?.mode} />
+        {shell ? <div className="chat-chint">{t('터미널에서 !로 실행하는 것과 같아요. 명령과 결과가 Claude의 대화에도 들어가요')}</div> : null}
+        {!shell && isCommandText(text) && !chips.length ? <div className="chat-chint">{t('/로 시작하면 Claude Code 명령으로 보내요. 글자 그대로 보내려면 앞에 띄어쓰기를 넣어요')}</div> : null}
+        <ControlRow control={control} mode={modeShown ?? status?.mode} actions={chat && !fixed ? {
+          onModel: m => { void changeModel(m) },
+          onMode: m => { void changeMode(m) },
+          // (a model is a command: typed only on an idle prompt; a mode is a key: not while a card waits on it)
+          modelWhy: ended ? '세션이 끝났어요' : status?.state === 'working' ? '일이 끝나면 바꿀 수 있어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : null,
+          modeWhy: ended ? '세션이 끝났어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : !chat.cycleMode ? '이 버전에서는 바꿀 수 없어요' : null,
+          unreachable: lacks,
+          busy: ctrlBusy || busy,
+        } : undefined} />
       </div>
     </div>
   )

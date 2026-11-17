@@ -43,8 +43,11 @@ export interface TurnEndItem extends ItemBase { kind: 'turn-end'; durationMs: nu
 export interface LiveItem extends ItemBase { kind: 'live'; text: string }
 /** A thinking block (shown from 생각 포함). Claude Code 2.1.32x writes its text empty (FINDINGS §1): `text` is ''
  *  then, and the row says the content is not in the record; `durationMs` from the line's thinkingDurationMs. */
-export interface ThinkingItem extends ItemBase { kind: 'thinking'; text: string; durationMs?: number; redacted?: boolean; truncated?: boolean }
-export type ChatItem = UserItem | TextItem | ToolItem | NoticeItem | TurnEndItem | LiveItem | ThinkingItem
+/** update: a progress note (thinkingDisplay "updates"), shown in 기본 as prose; else hidden thinking, shown from 생각 포함 */
+export interface ThinkingItem extends ItemBase { kind: 'thinking'; text: string; durationMs?: number; redacted?: boolean; truncated?: boolean; update?: true }
+/** A `!` command (Claude Code's bash mode): running until its output line comes */
+export interface ShellItem extends ItemBase { kind: 'shell'; command: string; state: 'running' | 'done'; stdout?: string; stderr?: string; truncated?: boolean }
+export type ChatItem = UserItem | TextItem | ToolItem | NoticeItem | TurnEndItem | LiveItem | ThinkingItem | ShellItem
 
 export type BannerReason = 'schema' | 'canary' | 'missing' | 'stalled' | 'rewrite' | 'version' | 'mapping' | 'worker'
   | 'unarmed'                          // (the page's own, when chat.open says the session is not armed: main never sends it)
@@ -129,14 +132,16 @@ export interface AskCard {
   fetchPrompt?: string                          // WebFetch: what is asked of the page
   always: { rule: string } | null               // 항상 허용 offered: the rule it adds for this session
   question?: { text: string; header?: string; options: { label: string; description?: string }[] }
+  /** several questions, or a multi-select one (2026-11-17): every question, the first as `question` too */
+  questions?: { text: string; header?: string; multiSelect?: true; options: { label: string; description?: string }[] }[]
   state: 'open' | 'sent' | 'timeout' | 'terminal'
-  sent?: 'allow' | 'always' | 'deny' | 'option'
+  sent?: 'allow' | 'always' | 'deny' | 'option' | 'options'
   cut?: boolean
   /** why it is answered in the terminal: too long to show whole, a field the card does not show, not sure the file is new */
   cutWhy?: 'long' | 'fields' | 'unsure'
   since: number
 }
-export type AnswerChoice = 'allow' | 'always' | 'deny' | 'option'
+export type AnswerChoice = 'allow' | 'always' | 'deny' | 'option' | 'options'
 export type AnswerRefusal = 'gone' | 'not-bound' | 'other-session' | 'hidden' | 'invalid' | 'not-answerable' | 'off'
 export type PermissionMode = 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | 'dontAsk'
 export interface QueuedPrompt { text: string; truncated: boolean }

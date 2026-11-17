@@ -26,7 +26,7 @@
  * question and a plan. Each of them also breaks a run of reads.
  */
 
-import type { ChatItem, LiveItem, NoticeItem, TextItem, ThinkingItem, ToolItem, TurnEndItem, UserItem } from './types'
+import type { ChatItem, LiveItem, NoticeItem, ShellItem, TextItem, ThinkingItem, ToolItem, TurnEndItem, UserItem } from './types'
 import type { Density } from './density'
 import type { WildEntry } from './wild'
 
@@ -37,6 +37,7 @@ export type Row =
   | { row: 'foot'; key: string; item: TurnEndItem; tools: number | null; files: number | null; texts: TextItem[]; whole: boolean }
   | { row: 'day'; key: string; label: string }
   | { row: 'user'; key: string; item: UserItem }
+  | { row: 'shell'; key: string; item: ShellItem }                        // a `!` command and its output
   | { row: 'turn-head'; key: string; at: number | null }
   | { row: 'text'; key: string; item: TextItem }
   | { row: 'tool'; key: string; item: ToolItem; children: (ToolItem | TextItem)[] }
@@ -181,9 +182,15 @@ export function buildRows(items: ChatItem[], opts: RowOptions): Row[] {
         seg = []
         segFrom = 'end'
         break
+      case 'shell':
+        // the user's own, as a message is: Claude's next words start a turn of their own
+        flush(); dayFor(it)
+        rows.push({ row: 'shell', key: it.id, item: it })
+        needHead = true
+        break
       case 'thinking':
-        // 기본: as if it were not there (no break in a group, no head, no day line)
-        if (!thinking) break
+        // 기본: as if it were not there (no break in a group, no head, no day line); a progress note shows always
+        if (!thinking && !it.update) break
         flush(); dayFor(it); head(it)
         rows.push({ row: 'thinking', key: it.id, item: it })
         break

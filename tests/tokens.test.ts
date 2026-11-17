@@ -73,12 +73,14 @@ describe('tokens.css', () => {
     expect(root['--bar-h']).toBe('2px')
   })
 
-  it('holds the four text steps exactly (보통 on :root)', () => {
+  // (2026-11-17: percents of 100%, each size the 100% one scaled and rounded, never under 9px)
+  it('holds the text steps exactly (100% on :root, 80–130% by 10)', () => {
     const pick = (o: Record<string, string>) => Object.fromEntries(TYPE.map(k => [k, o[k]]))
-    expect(pick(root)).toEqual(px(10, 11, 12, 12, 13, 12, 14, 15, 12))
-    expect(block(':root.ts-small')).toEqual(px(9, 10, 11, 11, 12, 11, 13, 14, 11))
-    expect(block(':root.ts-large')).toEqual(px(10, 11, 12, 13, 14, 13, 15, 16, 13))
-    expect(block(':root.ts-xlarge')).toEqual(px(11, 12, 13, 14, 15, 14, 16, 17, 14))
+    const base = [10, 11, 12, 12, 13, 12, 14, 15, 12]
+    expect(pick(root)).toEqual(px(...base))
+    for (const pct of [80, 90, 110, 120, 130]) {
+      expect(block(`:root.ts-${pct}`), `${pct}%`).toEqual(px(...base.map(v => Math.max(9, Math.floor(v * pct / 100 + 0.5)))))
+    }
   })
 
   const SURFACES = ['--bg', '--side-bg', '--card', '--card-2', '--mon-bg', '--term-bg']
@@ -360,8 +362,9 @@ describe('the guards: what the calm look allows', () => {
   })
 
   // (each matched exactly: .picked, not .picked-x)
-  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-send', '.chat-send', ':focus-visible']
-  it('(d) yellow only on the chosen session, the picked cell (and its drop / insert marks), send and focus rings', () => {
+  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-send', '.chat-send', '.w-update', '.set-switch.on', ':focus-visible']
+  // (.w-update: the update button wears the primary colour, the owner's call of 2026-11-17)
+  it('(d) yellow only on the chosen session, the picked cell (and its drop / insert marks), send, the update button and focus rings', () => {
     let uses = 0
     for (const r of RULES) {
       if (!/var\(--accent\)/.test(r.body)) continue
@@ -396,10 +399,11 @@ describe('the guards: what the calm look allows', () => {
     expect(game, 'chat-game.css').toBeTruthy()
     const rules = rulesOf(game.file, game.text)
     const moving = rules.filter(r => !r.at?.startsWith('@keyframes') && !r.at?.includes('prefers-reduced-motion') && values(r, 'animation(?:-name)?').some(v => v !== 'none'))
-    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon'])
+    // (2026-11-17: the working Pokémon's halo and hop, the owner's micro-interaction)
+    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head::before', '.chat-status.working .chat-pic.head > *'])
     // the lab's wildIn (app.css 273–274): 0.5 s, once
     expect(values(moving[0], 'animation')[0]).toMatch(/^chat-wild-in \.5s cubic-bezier\(\.2, \.8, \.2, 1\) both$/)
-    expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in'])
+    expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in', 'chat-hop', 'chat-halo'])
     const stop = rules.filter(r => r.at?.includes('prefers-reduced-motion') && /animation\s*:\s*none/.test(r.body))
     expect(stop.flatMap(r => parts(r.sel))).toContain('.chat-wild.appear .chat-wild-mon')
     // nothing else of the chat moves

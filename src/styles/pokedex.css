@@ -548,7 +548,8 @@ html.qa-mode #root { min-height: 100vh; }
 .rank-row.me, .rank-row.me:hover { background: var(--sel-bg); }
 /* A session's helpers: box Pokémon working its subagents */
 .w-row-helpers { flex: none; display: inline-flex; align-items: center; gap: 0; }
-.w-row-helpers img { width: auto; height: auto; max-width: 22px; max-height: 22px; margin-left: -4px; }
+.w-row-helpers img { width: auto; height: auto; max-width: 20px; max-height: 20px; margin-left: -4px; }
+.w-row-line1 > .w-row-helpers { margin-left: 2px; }
 .w-row-helpers img:first-child { margin-left: 0; }
 .w-row-helpers small { font-size: var(--t-micro); color: var(--ink-3); margin-left: 2px; font-variant-numeric: tabular-nums; }
 /* The pickers (교체, 던지기): the search, then one grid of the resting Pokémon */

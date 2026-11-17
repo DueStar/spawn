@@ -27,7 +27,7 @@ import { PermissionCard, permissionTitle } from './PermissionCard'
 import { QuestionCard } from './QuestionCard'
 import { PlanCard } from './PlanCard'
 
-export type AnswerFn = (p: { id: string; holdId: string; choice: AnswerChoice; option?: number }) => Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
+export type AnswerFn = (p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][] }) => Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
 
 export const nameVars = (name: string) => ({ name, iga: josa(name, '이가') })
 
@@ -44,7 +44,8 @@ export interface CardProps {
   local: CardLocal
   /** when this card was painted (Infinity until it is: a press before that is no answer) */
   shownAt(): number
-  onAnswer(choice: AnswerChoice, option?: number): void
+  /** option: one question's choice; picks: each question's chosen options (several questions, a multi-select) */
+  onAnswer(choice: AnswerChoice, option?: number, picks?: number[][]): void
   onTerminal(): void
 }
 
@@ -142,6 +143,7 @@ const SENT: Record<AnswerChoice, string> = {
   always: '항상 허용을 보냈어요 · 확인 중',
   deny: '거부를 보냈어요 · 확인 중',
   option: '답을 보냈어요 · 확인 중',
+  options: '답을 보냈어요 · 확인 중',
 }
 
 const CUT: Record<NonNullable<AskCard['cutWhy']>, string> = {
@@ -229,11 +231,11 @@ export const AnswerSurface: React.FC<{ id: string; asks: AskCard[]; who: ChatWho
   }, [keys]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const mine = card ? local[card.key] ?? NO_LOCAL : NO_LOCAL
-  const onAnswer = useMemo(() => (choice: AnswerChoice, option?: number) => {
+  const onAnswer = useMemo(() => (choice: AnswerChoice, option?: number, picks?: number[][]) => {
     if (!card || !card.holdId || card.state !== 'open' || mine.busy || mine.refused) return
     const key = card.key
     setLocal(cur => ({ ...cur, [key]: { busy: choice, refused: false } }))
-    answer({ id, holdId: card.holdId, choice, ...(option !== undefined ? { option } : {}) }).then(
+    answer({ id, holdId: card.holdId, choice, ...(option !== undefined ? { option } : {}), ...(picks ? { picks } : {}) }).then(
       // (refused only because this chat was not seen as shown that moment: the buttons stay, it may be pressed again)
       (r) => { if (!r.ok) setLocal(cur => ({ ...cur, [key]: r.reason === 'hidden' ? { busy: null, refused: false, retry: true } : { busy: null, refused: true } })) },
       () => setLocal(cur => ({ ...cur, [key]: { busy: null, refused: true } })),

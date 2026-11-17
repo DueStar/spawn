@@ -1,12 +1,13 @@
 /**
- * The composer's quiet control row (the lab's `.ctrl`), display only (the plan's Decision 12):
- * the model, the permission mode the hooks report (hidden while not known), the context left
- * as the side panel shows it (HP, or 컨텍스트 in 업무 모드, with its green / amber / red), and
- * the 5-hour and weekly usage. No menus: each says it is changed in the terminal (the chat
- * never sends a configuration command).
+ * The composer's quiet control row (the lab's `.ctrl`): the model, the permission mode (hidden while not known),
+ * the context left as the side panel shows it (HP, or 컨텍스트 in 업무 모드, with its green / amber / red), and
+ * the 5-hour and weekly usage. Since 2026-11-17 the model and the mode are menus (the owner's call: nothing of a
+ * chat session should need the terminal): a model sends `/model <alias>`, a mode steps Shift+Tab until the footer
+ * shows it (src/chat/modeSwitch.ts). The composer does both; this row only asks.
  */
 
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import type { FooterMode } from '../../chat/promptRow'
 import { lang, t } from '../../i18n'
 import { useTextStep } from '../../textSize'
 import { hpTone } from '../../sessionList'
@@ -18,6 +19,26 @@ export interface ComposerControl {
   /** left: the context left in %, tip: the side panel's tooltip; label: the side panel's barLabel */
   context: { left: number | null; tip: string; label: 'HP' | '컨텍스트' }
   usage: { fiveHour?: number; weekly?: number }
+}
+
+/** The models offered (Claude Code's own aliases, read from its binary 2.1.326: default, fable, opus, sonnet, haiku) */
+export const MODELS: readonly { alias: string; label: string }[] = [
+  { alias: 'default', label: '기본값' }, { alias: 'fable', label: 'Fable' }, { alias: 'opus', label: 'Opus' },
+  { alias: 'sonnet', label: 'Sonnet' }, { alias: 'haiku', label: 'Haiku' },
+]
+/** The modes offered, in Claude Code's own Shift+Tab order (auto and bypass only where the session was started so) */
+export const MODES_OFFERED: readonly FooterMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions']
+
+/** What the row may change now (absent: display only, as before) */
+export interface ControlActions {
+  onModel(alias: string): void
+  onMode(mode: FooterMode): void
+  /** why the model cannot change now (Claude works, a card waits); null: it can */
+  modelWhy: string | null
+  modeWhy: string | null
+  /** modes this session's cycle was seen to lack */
+  unreachable: ReadonlySet<FooterMode>
+  busy: boolean
 }
 
 const MODE: Record<PermissionMode, string> = {
@@ -40,11 +61,13 @@ export const CTRL_LEVELS = 4
 /** (measured in the page only: a server render, as the tests make, has nothing to measure) */
 const useLayoutEffectInPage = typeof window === 'undefined' ? useEffect : useLayoutEffect
 
-export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMode | null | undefined }> = ({ control, mode }) => {
-  const change = t('바꾸려면 터미널에서 해요')
+export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMode | null | undefined; actions?: ControlActions }> = ({ control, mode, actions }) => {
+  const change = t('눌러서 바꾸기')
+  const [menu, setMenu] = useState<'model' | 'mode' | null>(null)
   const { left, tip, label } = control.context
   const pct = (v: number) => `${Math.round(v)}%`
-  const modeKey = mode ? MODE[mode] : undefined
+  // (the menu is there even before the mode is known: it reads 권한 모드 until then)
+  const modeKey = mode ? MODE[mode] : actions ? '권한 모드' : undefined
   const rowRef = useRef<HTMLDivElement>(null)
   const [level, setLevel] = useState(0)
   const needed = useRef<number[]>([])
@@ -81,14 +104,65 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
     ro.observe(row)
     return () => ro.disconnect()
   }, [level, content])
+  // a click outside the menu, or Esc, closes it
+  useEffect(() => {
+    if (!menu) return
+    const down = (e: PointerEvent) => { if (!rowRef.current?.contains(e.target as Node)) setMenu(null) }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); setMenu(null) } }
+    window.addEventListener('pointerdown', down, true)
+    window.addEventListener('keydown', key, true)
+    return () => { window.removeEventListener('pointerdown', down, true); window.removeEventListener('keydown', key, true) }
+  }, [menu])
   const showWeekly = control.usage.weekly !== undefined && level < 1
   const showFive = control.usage.fiveHour !== undefined && level < 2
   const modelName = `${t('모델')} ${control.model ?? ''}`
   const modeName = modeKey ? `${t('권한 모드')} ${t(modeKey)}` : ''
   return (
     <div className="chat-ctrl" ref={rowRef} data-level={level}>
-      {control.model && <span className="chat-ctrl-item" title={`${t('모델')} ${control.model} · ${change}`} aria-label={level >= 4 ? modelName : undefined}><CpuIcon />{level < 4 && <b>{control.model}</b>}</span>}
-      {modeKey && <span className="chat-ctrl-item" title={`${t('권한 모드')} ${t(modeKey)} · ${change}`} aria-label={level >= 3 ? modeName : undefined}><ShieldIcon />{level < 3 && <b>{t(modeKey)}</b>}</span>}
+      {control.model && (actions ? (
+        <span className="chat-ctrl-anchor">
+          <button type="button" className={`chat-ctrl-item btn${menu === 'model' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu === 'model'}
+            title={`${t('모델')} ${control.model} · ${actions.modelWhy ? t(actions.modelWhy) : change}`} aria-label={level >= 4 ? modelName : undefined}
+            disabled={actions.busy} onClick={() => setMenu(menu === 'model' ? null : 'model')}><CpuIcon />{level < 4 && <b>{control.model}</b>}</button>
+          {menu === 'model' && (
+            <span className="chat-ctrl-menu" role="menu" aria-label={t('모델')}>
+              {actions.modelWhy && <span className="chat-ctrl-menu-note">{t(actions.modelWhy)}</span>}
+              {MODELS.map(m => {
+                const on = m.alias !== 'default' && control.model!.toLowerCase().startsWith(m.alias)
+                return (
+                  <button key={m.alias} type="button" role="menuitemradio" aria-checked={on} className={`chat-ctrl-opt${on ? ' on' : ''}`}
+                    disabled={!!actions.modelWhy} onClick={() => { setMenu(null); if (!on) actions.onModel(m.alias) }}>
+                    <span className="chat-ctrl-check" aria-hidden="true">{on ? '✓' : ''}</span>{m.alias === 'default' ? t(m.label) : m.label}
+                  </button>
+                )
+              })}
+            </span>
+          )}
+        </span>
+      ) : <span className="chat-ctrl-item" title={`${t('모델')} ${control.model}`} aria-label={level >= 4 ? modelName : undefined}><CpuIcon />{level < 4 && <b>{control.model}</b>}</span>)}
+      {modeKey && (actions ? (
+        <span className="chat-ctrl-anchor">
+          <button type="button" className={`chat-ctrl-item btn${menu === 'mode' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu === 'mode'}
+            title={`${t('권한 모드')} ${t(modeKey)} · ${actions.modeWhy ? t(actions.modeWhy) : change}`} aria-label={level >= 3 ? modeName : undefined}
+            disabled={actions.busy} onClick={() => setMenu(menu === 'mode' ? null : 'mode')}><ShieldIcon />{level < 3 && <b>{t(modeKey)}</b>}</button>
+          {menu === 'mode' && (
+            <span className="chat-ctrl-menu" role="menu" aria-label={t('권한 모드')}>
+              {actions.modeWhy && <span className="chat-ctrl-menu-note">{t(actions.modeWhy)}</span>}
+              {MODES_OFFERED.map(m => {
+                const on = m === mode
+                const lacks = actions.unreachable.has(m)
+                return (
+                  <button key={m} type="button" role="menuitemradio" aria-checked={on} className={`chat-ctrl-opt${on ? ' on' : ''}`}
+                    disabled={!!actions.modeWhy || lacks} title={lacks ? t('이 세션에서는 고를 수 없어요 (Claude Code를 이 모드로 시작해야 해요)') : undefined}
+                    onClick={() => { setMenu(null); if (!on) actions.onMode(m) }}>
+                    <span className="chat-ctrl-check" aria-hidden="true">{on ? '✓' : ''}</span>{t(MODE[m])}
+                  </button>
+                )
+              })}
+            </span>
+          )}
+        </span>
+      ) : <span className="chat-ctrl-item" title={`${t('권한 모드')} ${t(modeKey)}`} aria-label={level >= 3 ? modeName : undefined}><ShieldIcon />{level < 3 && <b>{t(modeKey)}</b>}</span>)}
       <span className="chat-ctrl-grow" />
       {/* (context not known yet: no value, and a text that says so, never a full 100) */}
       <span className="chat-ctrl-meter" title={tip} role="meter" aria-label={tip} aria-valuenow={left ?? undefined} aria-valuetext={left === null ? t('알 수 없음') : undefined} aria-valuemin={0} aria-valuemax={100}>
@@ -98,7 +172,7 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
       </span>
       {(showFive || showWeekly) && <>
         <span className="chat-ctrl-sep" aria-hidden="true" />
-        <span className="chat-ctrl-item" title={`${t('사용량')} · ${change}`}>
+        <span className="chat-ctrl-item" title={t('사용량')}>
           {showFive && <span>{t('5시간')} {pct(control.usage.fiveHour!)}</span>}
           {showWeekly && <span>{t('주간')} {pct(control.usage.weekly!)}</span>}
         </span>

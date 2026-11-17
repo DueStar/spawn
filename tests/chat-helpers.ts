@@ -117,9 +117,19 @@ export function itemProblems(item: any): Problem[] {
         only(item, [...base, 'durationMs'], p, 'turn-end')
         check(isNum(item.durationMs), p, 'turn-end.durationMs')
         break
+      case 'shell':
+        // (a ! command, Claude Code's bash mode: its input line, completed by its output line)
+        only(item, [...base, 'command', 'state', 'stdout', 'stderr', 'truncated'], p, 'shell')
+        check(typeof item.command === 'string', p, 'shell.command')
+        check(item.state === 'running' || item.state === 'done', p, 'shell.state')
+        check(item.stdout === undefined || typeof item.stdout === 'string', p, 'shell.stdout')
+        check(item.stderr === undefined || typeof item.stderr === 'string', p, 'shell.stderr')
+        check(item.truncated === undefined || item.truncated === true, p, 'shell.truncated')
+        break
       case 'thinking':
         // (Phase 5: a thinking block, shown from 생각 포함; Claude Code 2.1.32x writes its text empty)
-        only(item, [...base, 'text', 'durationMs', 'redacted', 'truncated'], p, 'thinking')
+        only(item, [...base, 'text', 'durationMs', 'redacted', 'truncated', 'update'], p, 'thinking')
+        check(item.update === undefined || item.update === true, p, 'thinking.update')
         check(typeof item.text === 'string', p, 'thinking.text')
         check(item.durationMs === undefined || (isNum(item.durationMs) && item.durationMs >= 0), p, 'thinking.durationMs')
         check(item.redacted === undefined || item.redacted === true, p, 'thinking.redacted')

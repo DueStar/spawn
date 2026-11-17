@@ -12,7 +12,7 @@ import { CloseIcon } from './Icons'
 import { t, tSense, locale } from '../i18n'
 import { isMac, modLabel, platformWord } from '../platform'
 import { termFontLabel } from '../termFont'
-import { setTextStep, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, useTextStep, type TextStep } from '../textSize'
+import { setTextStep, textStepLabel, TEXT_STEPS, useTextStep, type TextStep } from '../textSize'
 import { CHAT_VIEW, settingsSections } from '../features'
 import { workModeKeyLabel } from '../workMode'
 
@@ -211,6 +211,7 @@ const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback
             <Choice label={t('모델')} hint={t('기본값은 Claude Code 설정을 따라요')} value={s.session.model} options={[['', t('기본값')], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']]} onChange={v => set('session', { model: v })} />
             <Choice label="Permission mode" hint={t(PERMISSION_HINT[s.session.permissionMode])} value={s.session.permissionMode} options={[['', t('기본값')], ['default', 'Manual'], ['acceptEdits', 'Accept edits'], ['plan', 'Plan'], ['auto', 'Auto']]} onChange={v => set('session', { permissionMode: v })} />
             <Toggle label={t('세션 닫기 전 확인')} hint={t('끄면 × 한 번으로 바로 닫혀요')} on={s.session.confirmClose} onChange={v => set('session', { confirmClose: v })} />
+            <Toggle label={t('왼쪽 목록 자동 정렬')} hint={t('확인 필요가 맨 위, 일하는 세션은 시작한 순서로, 쉬는 세션은 최근에 쉰 순서로 놓여요. 끄면 끌어서 순서를 정해요')} on={s.session.autoSort !== false} onChange={v => set('session', { autoSort: v })} />
             <Toggle label={t('시작할 때 세션 다시 열기')} hint={t('앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요')} on={s.session.restoreOnStart} onChange={v => set('session', { restoreOnStart: v })} />
             {/* The chat view (a preview): only behind the features.json switch (src/features.ts) */}
             {CHAT_VIEW && <Toggle label={t('채팅으로 보기 (미리보기)')} hint={t('Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요')} on={s.session.chatView} onChange={v => set('session', { chatView: v })} />}
@@ -227,7 +228,7 @@ const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback
               title={t('업무 모드 켜고 끄기 ({key})', { key: workModeKeyLabel() })} on={s.app.workMode} onChange={v => set('app', { workMode: v })} />
             {/* The one text size (src/textSize.ts): kept per PC in the page, as the header's − 가 + */}
             <Choice<TextStep> label={t('글자 크기')} hint={t('목록·패널·터미널이 함께 바뀌어요 · {mod}+= / {mod}+-', { mod: modLabel() })} value={textStep}
-              options={TEXT_STEPS.map(v => [v, tSense(TEXT_STEP_LABEL[v], TEXT_STEP_SENSE)])} onChange={setTextStep} />
+              options={TEXT_STEPS.map(v => [v, textStepLabel(v)])} onChange={setTextStep} />
             <Choice label={t('언어')} hint={s.app.language === 'auto' ? t('시스템 언어를 따라요') : undefined} value={s.app.language} options={[['auto', t('자동')], ['ko', '한국어'], ['en', 'English'], ['ja', '日本語']]} onChange={v => set('app', { language: v })} />
             <Toggle label={t(platformWord('startup', isMac()))} on={s.app.openAtLogin} onChange={v => set('app', { openAtLogin: v })} />
             <Toggle label={isMac() ? t('시작 시 {tray}로 최소화', { tray: t(platformWord('tray', true)) }) : t('시작 시 트레이로 최소화')} hint={isMac() ? t('창을 띄우지 않고 시작해요. {tray}의 몬스터볼로 열 수 있어요', { tray: t(platformWord('tray', true)) }) : t('창을 띄우지 않고 시작해요. 작업 표시줄 트레이의 몬스터볼로 열 수 있어요')} on={s.app.startHidden} onChange={v => set('app', { startHidden: v })} />

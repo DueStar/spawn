@@ -198,7 +198,7 @@ const cache = new WeakMap<object, FindField[]>()
  * A thinking item gives nothing in 기본; a notice is said in the language of the moment (not cached).
  */
 export function plainOf(item: ChatItem, density: Density): FindField[] {
-  if (item.kind === 'thinking' && density !== 'thinking' && density !== 'all') return NONE
+  if (item.kind === 'thinking' && !item.update && density !== 'thinking' && density !== 'all') return NONE
   if (item.kind === 'notice') {
     const { text } = noticeText(item)
     return text ? [{ field: 'notice', text }] : NONE

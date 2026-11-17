@@ -71,6 +71,7 @@ function preloadViews() {
   else setTimeout(go, 500)
 }
 import { resetTextSize, stepTextSize, useTextStep } from './textSize'
+import { bucketOf, nextSince, statusOrder, type Bucket } from './sessionOrder'
 import { TextSizeControl } from './components/TextSizeControl'
 import type { SessionInfo } from './types'
 import { t, josa, nameOf, locale, lang } from './i18n'
@@ -457,9 +458,30 @@ const Widget: React.FC = () => {
     }
   }, [rows, settings.notify.sessions, workMode])
 
-  // The left panel's rows reorder by dragging, like the tabs (the same order: terminals.move)
+  // The left panel's order (2026-11-17): with 자동 정렬 (설정 › 세션, on by default) by what each session does —
+  // 확인 필요 on top, then working in the order they started, then resting (the latest to rest first), then ended
+  // (src/sessionOrder.ts). While the pointer is over the list the order holds still, so a row never moves under
+  // a click; only a session that comes to need the user goes to the top at once. Off: the dragged order, as before.
+  const autoSort = settings.session.autoSort !== false
+  const orderInputs = rows.map(r => ({ id: r.sessionId, mood: r.mood, asking: r.terminal?.status === 'running' && !!r.terminal.asking }))
+  const sinceRef = useRef(new Map<string, { b: Bucket; at: number }>())
+  sinceRef.current = nextSince(sinceRef.current, orderInputs, Date.now())
+  const [overList, setOverList] = useState(false)
+  const heldOrder = useRef<string[] | null>(null)
+  let listIds = rows.map(r => r.sessionId)
+  if (autoSort) {
+    const fresh = statusOrder(orderInputs, new Map([...sinceRef.current].map(([k, v]) => [k, v.at])))
+    const held = heldOrder.current
+    if (overList && held) {
+      const kept = [...held.filter(id => fresh.includes(id)), ...fresh.filter(id => !held.includes(id))]
+      const urgent = fresh.filter(id => bucketOf(orderInputs.find(o => o.id === id)!) === 0)
+      listIds = [...urgent, ...kept.filter(id => !urgent.includes(id))]
+    } else listIds = fresh
+    heldOrder.current = listIds
+  }
+  // The rows reorder by dragging, like the tabs (the same order: terminals.move), while 자동 정렬 is off
   const rowById = new Map(rows.map(r => [r.sessionId, r]))
-  const rowOrder = useDragOrder(rows.map(r => r.sessionId), 'y', (id, to) => {
+  const rowOrder = useDragOrder(listIds, 'y', (id, to) => {
     const term = rowById.get(id)?.terminal
     if (term) void bridge?.terminals.move(term.id, to)
   })
@@ -922,6 +944,28 @@ const Widget: React.FC = () => {
     <button className="w-signin" onClick={signIn} title={workMode ? t('Google로 로그인') : t('Google 계정으로 로그인하면 여러 PC에서 도감이 동기화돼요')}>{t('로그인')}</button>
   ))
 
+  // The update button, in the primary colour: in the right bar as a window, in the header as the widget
+  const updateButton = update && (update.status === 'available' || update.status === 'downloading' || update.status === 'ready') ? (
+    <button
+      className={`w-update ${update.status}${update.status === 'available' && update.error ? ' failed' : ''}`}
+      disabled={update.status === 'downloading'}
+      aria-label={updateWord(update)}
+      title={`${updateWord(update)} · ${update.current} → ${update.latest}${updateNotes(update) ? `
+
+${updateNotes(update)}` : ''}${update.error ? `
+
+${t('오류: {error}', { error: update.error })}` : ''}`}
+      onClick={() => {
+        if (update.needsFull) bridge?.env.openLink('release')
+        else if (update.status === 'available') bridge?.update.install()
+        else if (update.status === 'ready') bridge?.update.restart()
+      }}
+    >
+      {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's */}
+      <UpdateIcon size={14} />
+    </button>
+  ) : null
+
   return (
     <div ref={widgetRef} className={`widget${expanded ? ' expanded' : ''} mode-${mode}${expanded && folded ? ' side-hidden' : ''}${sideDragging ? ' resizing' : ''}`}
       style={expanded ? { '--side-w': `${sideWidth}px` } as React.CSSProperties : undefined}>
@@ -938,10 +982,6 @@ const Widget: React.FC = () => {
           )}
           {/* The panel's own fold button: here to unfold it, in the panel's header to fold it */}
           <button className="w-rail-btn w-side-toggle" onClick={unfoldSide} title={t('왼쪽 패널 펼치기')} aria-label={t('왼쪽 패널 펼치기')} aria-pressed={false}><SidePanelIcon size={15} /></button>
-          {update && (update.status === 'available' || update.status === 'ready') && (
-            <button className="w-rail-btn w-rail-update" title={update.status === 'ready' ? t('재시작해서 적용') : t('업데이트')}
-              onClick={() => { if (update.needsFull) bridge?.env.openLink('release'); else if (update.status === 'available') bridge?.update.install(); else bridge?.update.restart() }}>↑</button>
-          )}
           <span className="w-rail-sep" />
           <button className="w-rail-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={16} /></button>
           <button className="w-rail-btn" onClick={() => launch(true)} title={t('다른 폴더에서 새 세션')} aria-label={t('다른 폴더에서 새 세션')}><FolderIcon /></button>
@@ -1003,26 +1043,8 @@ const Widget: React.FC = () => {
             {workMode && accountButton}
             <span className={`w-conn${connected ? '' : ' off'}`} title={connected ? t('연결됨') : t('서버 연결 끊김')} />
             {!workMode && accountButton}
-            {update && (update.status === 'available' || update.status === 'downloading' || update.status === 'ready') && (
-              <button
-                className={`w-update ${update.status}${update.status === 'available' && update.error ? ' failed' : ''}`}
-                disabled={update.status === 'downloading'}
-                aria-label={updateWord(update)}
-                title={`${updateWord(update)} · ${update.current} → ${update.latest}${updateNotes(update) ? `
-
-${updateNotes(update)}` : ''}${update.error ? `
-
-${t('오류: {error}', { error: update.error })}` : ''}`}
-                onClick={() => {
-                  if (update.needsFull) bridge?.env.openLink('release')
-                  else if (update.status === 'available') bridge?.update.install()
-                  else if (update.status === 'ready') bridge?.update.restart()
-                }}
-              >
-                {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's */}
-                <UpdateIcon size={14} />
-              </button>
-            )}
+            {/* As a window the update button sits in the right bar; the widget has no right side */}
+            {!expanded && updateButton}
             <button className="w-icon" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={14} /></button>
             {expanded && (
               <button className="w-icon w-side-toggle on" onClick={toggleSide} title={t('왼쪽 패널 접기')} aria-label={t('왼쪽 패널 접기')} aria-pressed={true}><SidePanelIcon size={14} /></button>
@@ -1120,10 +1142,10 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
-            <div className={`w-rows${compact ? ' compact' : ''}`}>
+            <div className={`w-rows${compact ? ' compact' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}>
             {rowOrder.shown.map((sid, i) => {
               const r = rowById.get(sid)!
-              const drag = rowOrder.bind(sid, i, !!r.terminal)
+              const drag = rowOrder.bind(sid, i, !!r.terminal && !autoSort)
               const mon = monOf(r.sessionId)
               const parts = sessionRowParts({ title: r.title, name: r.name, project: r.project, level: mon ? levelOf(mon) : null, helpers: (dex?.helpers?.[r.sessionId] ?? []).length, noPokemon: noPokemon(r), shell: r.shell }, workMode)
               // What is left of the context window (the tick and the tooltip in 간략)
@@ -1218,13 +1240,21 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                     </div>
                   </div>
                 ) : <>
-                {/* Line 1: the session's name and its status; line 2: Lv first, then folder, AI tool and
-                    branch (the branch gives way first), helpers at the end. The buttons float over
+                {/* Line 1: the session's name, the sub-agents' helpers and its status; line 2: Lv first, then folder,
+                    AI tool and branch (the branch gives way first). The buttons float over
                     line 2's end on hover instead of holding space the name needs */}
                 <div className="w-row-head">
                   {picture}
                   <div className="w-row-line1">
                     {nameEl}
+                    {/* the sub-agents' helpers: on line 1, before the status, where the hover buttons (line 2's end)
+                        never cover them (2026-11-17; they sat at line 2's end until then) */}
+                    {parts.helpers && (
+                      <span className="w-row-helpers" title={t('서브에이전트를 돕는 조력자 (박스에서 나와요)')}>
+                        {dex!.helpers![r.sessionId].slice(0, 3).map(uid => { const h = dex!.mons[uid]; return h ? <img key={uid} src={iconUrl(h.dex)} alt={nameOf(pokemonById(h.dex))} title={`${t('조력자')} · ${nameOf(pokemonById(h.dex))} Lv.${levelOf(h)}`} /> : null })}
+                        {dex!.helpers![r.sessionId].length > 3 && <small>+{dex!.helpers![r.sessionId].length - 3}</small>}
+                      </span>
+                    )}
                     {r.shell ? null : pill}
                   </div>
                   <div className="w-row-line2">
@@ -1234,12 +1264,6 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                       {r.terminal?.tool && r.terminal.tool !== 'claude' && <span className="w-row-tool" title={t('이 세션에서 도는 AI 도구')}>{r.terminal.toolName}</span>}
                       {r.branch && <span className="w-row-branch" title={t('git 브랜치')}>{r.branch}</span>}
                     </span>
-                    {parts.helpers && (
-                      <span className="w-row-helpers" title={t('서브에이전트를 돕는 조력자 (박스에서 나와요)')}>
-                        {dex!.helpers![r.sessionId].slice(0, 3).map(uid => { const h = dex!.mons[uid]; return h ? <img key={uid} src={iconUrl(h.dex)} alt={nameOf(pokemonById(h.dex))} title={`${t('조력자')} · ${nameOf(pokemonById(h.dex))} Lv.${levelOf(h)}`} /> : null })}
-                        {dex!.helpers![r.sessionId].length > 3 && <small>+{dex!.helpers![r.sessionId].length - 3}</small>}
-                      </span>
-                    )}
                     {(r.terminal || monOf(r.sessionId)) && (
                       <span className="w-row-tools">
                         {r.terminal && renaming?.id !== r.sessionId && (
@@ -1271,7 +1295,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                       <div className={`w-ctx w-hp ${hpTone(left)}`} title={tip} role="meter" aria-valuenow={left ?? 100} aria-valuemin={0} aria-valuemax={100} aria-label={tip}>
                         <span style={{ width: `${left ?? 100}%` }} />
                       </div>
-                      {m && <span className="w-row-model" title={r.meter?.modelId ?? r.session?.model}>{m}</span>}
+                      {/* (fixed columns, always there: every row's HP bar the same length whatever its model or number, 2026-11-17) */}
+                      <span className="w-row-model" title={m ? r.meter?.modelId ?? r.session?.model : undefined}>{m ?? ''}</span>
                       <span className="w-row-num" title={tip}>{leftTokens !== null ? tokens(leftTokens) : left !== null ? `${Math.round(left)}%` : '—'}</span>
                     </>
                   })()}
@@ -1349,6 +1374,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </>}
             </div>
             <span className="w-term-spacer" />
+            {updateButton}
             {/* The widget on and off: here it turns the widget on (the widget's ⇤ turns it off again); left of the text size.
                 The last thing to give way in a narrow window (the tray reaches the widget too) */}
             {barLevel < 3 && <button className="w-icon w-widget-toggle" onClick={() => setMode('widget')} title={t('위젯으로 작게 (항상 위)')} aria-label={t('위젯 모드 켜기')}><WidgetModeIcon size={15} /></button>}

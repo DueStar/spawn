@@ -2,6 +2,26 @@
 
 ## spawn
 
+### 1.7.0
+- 채팅에서 터미널로 돌아가지 않아도 되게 했어요. 터미널에 뜨는 선택 창(모델 바꾸기 확인, 폴더 신뢰, 계획 선택지 등)이 채팅에 카드로 떠서 눌러서 고르고, 글이 필요한 보기는 그 자리에서 적어요.
+- 질문을 여러 개 한 번에 묻거나 여러 개를 고르는 질문, 계획 승인(승인 · 계속 계획하기)도 채팅에서 답해요.
+- 채팅 아래 모델과 권한 모드를 눌러서 바꿀 수 있어요.
+- 채팅 입력란에서 !로 시작하면 셸 모드가 돼요. 명령 결과는 대화에 작은 터미널 블록으로 보여요.
+- 입력란이 비어 있으면 Claude Code가 추천하는 다음 말이 흐리게 보이고, Tab이나 →로 채워요.
+- @로 고른 파일은 입력란 위 뱃지로 모이고, 보낸 메시지 위에도 파일 뱃지로 보여요. 첨부 버튼과 @ 버튼의 높이도 맞췄어요.
+- 대기 중인 메시지 줄을 누르면 전체 목록이 펼쳐져요.
+- - 나 1. 로 시작한 줄에서 Shift+Enter를 누르면 다음 줄에 같은 기호가 붙어요.
+- 일하는 포켓몬이 채팅에서 살짝 통통 튀고 옅게 빛나요.
+- Claude가 일하면서 쓰는 진행 설명이 채팅에도 보여요(터미널에만 보이고 채팅에서 빠지던 문제).
+- 마크다운 블록과 새로 만든 .md 파일은 서식을 입힌 문서로 보여요. 문서 · 원문으로 바꿔 볼 수 있어요.
+- 메시지를 보낸 뒤 "세션 기록 파일을 찾지 못했어요"가 뜨던 문제를 고쳤어요. 다른 플러그인의 훅이 오래 걸리면 기록이 늦게 쓰였어요.
+- "방금 끝난 답이 세션 기록에서 보이지 않아요"가 다시 읽기 전까지 남던 문제를 고쳤어요. 답이 늦게 들어오면 저절로 사라져요.
+- 오래 이어 쓴 세션에 "확인하지 않은 Claude Code 버전" 배너가 잘못 뜨던 문제를 고쳤어요.
+- 업데이트 버튼이 창 오른쪽 위에 노란색으로 떠요.
+- 글자 크기를 80~130% 비율로 골라요. −/+와 휠로 10%씩 바뀌어요.
+- 왼쪽 목록이 확인 필요 → 일하는 세션(시작한 순서) → 쉬는 세션(최근에 쉰 순서)으로 자동으로 정렬돼요. 설정 › 세션에서 끌 수 있어요.
+- 설정의 켜짐 스위치가 노란색이에요. HP 바 길이가 모든 세션에서 같아요. 서브에이전트 조력자가 버튼에 가려지지 않아요.
+
 ### 1.6.2
 - 채팅에서 무엇을 써도 "터미널 입력란에 쓰던 글이 있어요"라며 보내지지 않던 문제를 고쳤어요. Claude Code가 입력칸에 흐리게 띄우는 추천 문장을 쓰던 글로 잘못 알아봤어요. 이제 추천 문장만 있으면 그대로 보내고, 터미널에 정말 쓰던 글이 남아 있을 때만 그 글을 보여 주며 알려 줘요.
 - 세션 이름을 바꾼 뒤, 터미널에 쓰고 있던 문장 한가운데 이름 바꾸기 명령이 끼어들던 문제를 고쳤어요. 이제 입력칸이 비어 있을 때만 보내요. 셸 탭의 이름을 바꿀 때는 아예 보내지 않아요.
@@ -431,6 +451,26 @@
 
 ## spawn (English)
 
+### 1.7.0
+- The chat no longer sends you back to the terminal. Dialogs Claude Code draws there (switching the model, trusting a folder, a plan's choices, …) show in the chat as cards: click to choose, and type right there when an option needs words.
+- Several questions at once, multi-select questions and plan approval (Approve · Keep planning) are answered in the chat too.
+- Click the model or the permission mode under the chat to change them.
+- Start the chat input with ! for shell mode; the command's output shows in the conversation as a small terminal block.
+- With an empty input, Claude Code's suggested next prompt shows greyed out; Tab or → fills it in.
+- Files picked with @ gather as badges above the input, and show as file badges above the sent message. The attach and @ buttons now line up.
+- Click the queued-messages strip to see the whole queue.
+- Shift+Enter on a line starting with - or 1. starts the next line with the same mark.
+- The working Pokémon hops a little and glows softly in the chat.
+- Claude's progress notes while it works now show in the chat (they only showed in the terminal).
+- Markdown blocks and new .md files read as formatted documents; switch between Document and Source.
+- Fixed "Couldn't find the session record" after sending: a slow hook of another plugin delayed the record.
+- Fixed "The answer that just finished isn't in the session record" staying until Read again: it now goes once the answer arrives.
+- Fixed a wrong "unchecked Claude Code version" banner on long sessions resumed across updates.
+- The update button sits at the window's top right, in yellow.
+- Text size is a percent, 80–130%; − / + and the wheel step it by 10%.
+- The left list sorts itself: needs-you first, then working sessions (in the order they started), then resting ones (most recently finished first). Turn it off in Settings › Sessions.
+- Switches in Settings are yellow when on. HP bars are the same length for every session. Sub-agent helpers are no longer covered by the row's buttons.
+
 ### 1.6.2
 - Fixed the chat refusing every message with "There's text in the terminal's input". It mistook the greyed suggestion Claude Code shows in its input for something you had typed. A suggestion alone no longer blocks a message, and when something you really typed is left in the terminal, the note shows it.
 - Fixed a session rename being typed into the middle of what you were writing in the terminal. It now goes only when the input is empty, and never into a shell tab.
@@ -719,6 +759,26 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.7.0
+- チャットからターミナルに戻らなくてよくなりました。ターミナルに出る選択画面（モデル切り替えの確認、フォルダの信頼、プランの選択肢など）がチャットにカードで表示され、押して選べます。文字が必要な項目はその場で入力します。
+- 複数の質問を一度に聞く質問、複数選択の質問、プランの承認（承認 · 計画を続ける）もチャットで答えられます。
+- チャットの下のモデルと権限モードを押して変更できます。
+- チャット入力を ! で始めるとシェルモードになります。コマンドの結果は会話に小さなターミナルブロックで表示されます。
+- 入力欄が空のとき、Claude Code がすすめる次の言葉が薄く表示され、Tab か → で入力されます。
+- @ で選んだファイルは入力欄の上にバッジでまとまり、送ったメッセージの上にもファイルバッジで表示されます。添付ボタンと @ ボタンの高さもそろえました。
+- 待機中のメッセージの行を押すと一覧が開きます。
+- - や 1. で始まる行で Shift+Enter を押すと、次の行に同じ記号が付きます。
+- 作業中のポケモンがチャットで少し跳ねて、うっすら光ります。
+- Claude が作業しながら書く進捗の説明がチャットにも表示されます（ターミナルにだけ出ていました）。
+- Markdown ブロックと新しく作った .md ファイルは書式付きの文書で表示されます。文書 · 原文で切り替えられます。
+- 送信後に「セッション記録ファイルが見つかりません」と出る問題を直しました。ほかのプラグインのフックが遅いと記録が遅れていました。
+- 「終わったばかりの答えが記録に見当たりません」が再読み込みまで残る問題を直しました。答えが届くと自動で消えます。
+- 長く続けたセッションで「確認していない Claude Code のバージョン」バナーが誤って出る問題を直しました。
+- アップデートボタンがウィンドウの右上に黄色で表示されます。
+- 文字サイズを 80〜130% の割合で選べます。− / + とホイールで 10% ずつ変わります。
+- 左のリストが、確認が必要 → 作業中（始めた順） → 休憩中（最近休んだ順）に自動で並びます。設定 › セッションでオフにできます。
+- 設定のスイッチはオンのとき黄色です。HP バーの長さがすべてのセッションで同じになりました。サブエージェントの助っ人がボタンに隠れなくなりました。
 
 ### 1.6.2
 - チャットで何を書いても「ターミナルの入力欄に書きかけの文があります」と送れなかった問題を直しました。Claude Code が入力欄に薄く表示する提案文を、書きかけの文と取り違えていました。提案文だけなら送れるようになり、ターミナルに本当に書きかけの文が残っているときはその文を見せてお知らせします。

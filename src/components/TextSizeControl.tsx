@@ -1,20 +1,20 @@
 /**
- * TextSizeControl — `− 가 보통 +` in the top bar: the app's one text size (src/textSize.ts),
- * which the lists, the panels and the terminal follow together. − and + step it (dimmed at
- * the ends); the middle opens the four steps, each with its UI and terminal size. The same
+ * TextSizeControl — `− 100% +` in the top bar: the app's one text size (src/textSize.ts), as a percent,
+ * which the lists, the panels and the terminal follow together. − and + step it by 10% (dimmed at
+ * the ends); the middle opens the steps (80–130%); a wheel over it steps too. The same
  * step moves with Ctrl+= / Ctrl+- / Ctrl+0 and Ctrl+wheel (⌘ on a Mac), anywhere in the window.
  * The menu works from the keyboard as a menu does: it opens on the checked step, ↓ / ↑ / Home /
  * End move, Enter or Space picks, Esc and Tab close it, and the focus comes back to the button.
  */
 
 import React, { useEffect, useRef, useState } from 'react'
-import { setTextStep, stepTextSize, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, useTextStep } from '../textSize'
-import { t, tSense } from '../i18n'
+import { setTextStep, stepTextSize, textStepLabel, TEXT_STEPS, useTextStep } from '../textSize'
+import { t } from '../i18n'
 import { modCombo, modLabel } from '../platform'
 import { CheckIcon } from './Icons'
 import { menuKeyIndex } from '../menuKeys'
 
-/** compact: a narrow top bar — one 가 button that opens the same menu (no − / + and no step name) */
+/** compact: a narrow top bar — one button with the percent that opens the same menu (no − / +) */
 export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const step = useTextStep()
   const [open, setOpen] = useState(false)
@@ -50,7 +50,7 @@ export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = fal
     }
   }, [open])
   const at = TEXT_STEPS.indexOf(step)
-  const name = tSense(TEXT_STEP_LABEL[step], TEXT_STEP_SENSE)
+  const name = textStepLabel(step)
   const tip = t('글자 크기 ({mod}+= / {mod}+-)', { mod: modLabel() })
   return (
     <div className={`w-textsize${compact ? ' compact' : ''}`} ref={box}>
@@ -58,8 +58,9 @@ export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = fal
         title={`${t('글자 작게')} (${modCombo('-')})`} aria-label={t('글자 작게')}>−</button>}
       <button ref={cur} className={`w-textsize-cur${open ? ' open' : ''}`} onClick={() => setOpen(o => !o)}
         onKeyDown={e => { if (!open && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) { e.preventDefault(); setOpen(true) } }}
+        onWheel={e => { if (e.deltaY) stepTextSize(e.deltaY < 0 ? 1 : -1) }}
         title={compact ? `${name} · ${tip}` : tip} aria-label={`${t('글자 크기')}: ${name}`} aria-haspopup="menu" aria-expanded={open}>
-        <span className="w-textsize-g" aria-hidden="true">가</span>{!compact && <span className="w-textsize-name">{name}</span>}
+        <span className="w-textsize-name">{name}</span>
       </button>
       {!compact && <button className="w-textsize-step" onClick={() => stepTextSize(1)} disabled={at >= TEXT_STEPS.length - 1}
         title={`${t('글자 크게')} (${modCombo('=')})`} aria-label={t('글자 크게')}>+</button>}
@@ -70,7 +71,7 @@ export const TextSizeControl: React.FC<{ compact?: boolean }> = ({ compact = fal
             <button key={s} role="menuitemradio" aria-checked={s === step} tabIndex={-1} className={`w-textsize-item${s === step ? ' on' : ''}`}
               onClick={() => { setTextStep(s); setOpen(false); cur.current?.focus() }}>
               <span className="w-textsize-ck"><CheckIcon size={12} /></span>
-              <span className="w-textsize-item-name">{tSense(TEXT_STEP_LABEL[s], TEXT_STEP_SENSE)}</span>
+              <span className="w-textsize-item-name">{textStepLabel(s)}</span>
             </button>
           ))}
         </div>

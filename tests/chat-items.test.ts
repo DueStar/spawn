@@ -266,7 +266,7 @@ describe('the event model', () => {
     // every kind the model names is one the checker knows (the field lists come from types.ts)
     const types = readFileSync(join(__dirname, '..', 'src', 'chat', 'types.ts'), 'utf8')
     const modelKinds = [...types.matchAll(/extends ItemBase \{\s*kind: '([a-z-]+)'/g)].map(m => m[1]).sort()
-    expect(modelKinds).toEqual(['live', 'notice', 'text', 'thinking', 'tool', 'turn-end', 'user'])
+    expect(modelKinds).toEqual(['live', 'notice', 'shell', 'text', 'thinking', 'tool', 'turn-end', 'user'])
     for (const k of modelKinds) expect(itemProblems({ id: 'x', order: 0, at: null, kind: k }).some(p => p.startsWith('unknown kind'))).toBe(false)
   })
 

@@ -98,6 +98,31 @@ function questionBody(input, label) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...whole, answers: { [q.question]: label } } } })
 }
 
+/** How the picked labels of a multi-select question are written in its answer (as Claude Code's own dialog joins them) */
+const MULTI_JOIN = ', '
+
+/**
+ * Several questions at once, or a multi-select one (2026-11-17): `picked` holds each question's chosen labels, in
+ * the questions' order; the answer maps each question's text to its label, a multi-select's labels joined. The whole
+ * input is kept (review M10). Verified shape: several questions (the record's `answers`, one entry per question);
+ * the join of a multi-select is Claude Code's own dialog's, not yet seen in a record here.
+ */
+function questionsBody(input, picked) {
+  if (!isObj(input) || !Array.isArray(input.questions) || !Array.isArray(picked)) return null
+  const qs = input.questions
+  if (!qs.length || qs.length !== picked.length) return null
+  const answers = {}
+  for (let i = 0; i < qs.length; i++) {
+    const q = qs[i]
+    const labels = picked[i]
+    if (!isObj(q) || typeof q.question !== 'string' || !q.question || q.question in answers) return null
+    if (!Array.isArray(labels) || !labels.length || !labels.every(l => typeof l === 'string' && l)) return null
+    if (labels.length > 1 && q.multiSelect !== true) return null
+    answers[q.question] = labels.join(MULTI_JOIN)
+  }
+  return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...input, answers } } })
+}
+
 const FINAL = new Set(['answered', 'released', 'gone'])
 
 /**
@@ -166,11 +191,14 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
     let d = null
     if (h.kind === 'permission') d = { rules: cleanRules(data?.rules) ?? [] }
     else {
-      const labels = Array.isArray(data?.labels) && data.labels.every(l => typeof l === 'string') ? data.labels : null
+      const okSet = (l) => Array.isArray(l) && l.length >= 2 && l.length <= 6 && l.every(x => typeof x === 'string')
       // (the call's whole input, when the reader sent it: the answer keeps every field of it; review M10)
       const input = isObj(data?.input) ? data.input : { questions: data?.questions }
-      if (!labels || labels.length < 2 || labels.length > 6 || !Array.isArray(input.questions) || input.questions.length !== 1) { finish(h, 'released', null, 'shape'); return false }
-      d = { questions: input.questions, labels: [...labels], input }
+      const qs = Array.isArray(input.questions) ? input.questions : null
+      // each question's labels (several questions or a multi-select, 2026-11-17), else the one question's
+      const sets = Array.isArray(data?.sets) ? data.sets : okSet(data?.labels) ? [data.labels] : null
+      if (!qs || !sets || sets.length !== qs.length || sets.length < 1 || sets.length > 4 || !sets.every(okSet)) { finish(h, 'released', null, 'shape'); return false }
+      d = { questions: qs, labels: [...sets[0]], sets: sets.map(l => [...l]), multi: qs.map(q => isObj(q) && q.multiSelect === true), input }
     }
     h.id = id
     h.key = typeof key === 'string' ? key : null
@@ -210,7 +238,7 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
    * An answer from the chat. Accepted only for an open hold of this terminal while its chat is the
    * visible view (and the window is), a choice that fits, and — for "always" — rules to add.
    */
-  function answer(holdId, { id, choice, option, visibleId, windowVisible } = {}) {
+  function answer(holdId, { id, choice, option, picks, visibleId, windowVisible } = {}) {
     const h = typeof holdId === 'string' ? holds.get(holdId) : undefined
     if (!h || h.done) return { ok: false, reason: 'gone' }
     if (h.state !== 'open') return { ok: false, reason: 'not-bound' }
@@ -221,8 +249,21 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
       if (choice !== 'allow' && choice !== 'always' && choice !== 'deny') return { ok: false, reason: 'invalid' }
       if (choice === 'always' && !h.data.rules.length) return { ok: false, reason: 'not-answerable' }
       body = permissionBody(choice, h.data.rules)
+    } else if (choice === 'options') {
+      // several questions or a multi-select: each question's picked options, by index
+      const { sets, multi } = h.data
+      if (!Array.isArray(picks) || picks.length !== sets.length) return { ok: false, reason: 'invalid' }
+      const picked = []
+      for (let i = 0; i < sets.length; i++) {
+        const p = picks[i]
+        if (!Array.isArray(p) || !p.length || (p.length > 1 && !multi[i]) || new Set(p).size !== p.length) return { ok: false, reason: 'invalid' }
+        if (!p.every(n => Number.isInteger(n) && n >= 0 && n < sets[i].length)) return { ok: false, reason: 'invalid' }
+        picked.push([...p].sort((a, b) => a - b).map(n => sets[i][n]))
+      }
+      body = questionsBody(h.data.input, picked)
     } else {
-      if (choice !== 'option' || !Number.isInteger(option) || option < 0 || option >= h.data.labels.length) return { ok: false, reason: 'invalid' }
+      // (one question, one choice: as before)
+      if (choice !== 'option' || h.data.sets.length !== 1 || h.data.multi[0] || !Number.isInteger(option) || option < 0 || option >= h.data.labels.length) return { ok: false, reason: 'invalid' }
       body = questionBody(h.data.input, h.data.labels[option])
     }
     if (body === null) return { ok: false, reason: 'not-answerable' }
@@ -245,4 +286,4 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
   return { open, bind, pass, release, releaseWhere, releaseAll, gone, answer, get, openFor, close, reopen, size: () => holds.size }
 }
 
-module.exports = { HOLD, DENY_MESSAGE, entryTimeoutS, shortHolds, permissionBody, questionBody, cleanRules, createHolds, FINAL }
+module.exports = { questionsBody, MULTI_JOIN, HOLD, DENY_MESSAGE, entryTimeoutS, shortHolds, permissionBody, questionBody, cleanRules, createHolds, FINAL }

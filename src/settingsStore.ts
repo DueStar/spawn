@@ -11,7 +11,7 @@ import { WORK_MODE_CLASS } from './workMode'
 export const DEFAULT_SETTINGS: AppSettings = {
   notify: { catch: true, flee: true, evolve: true, levelup: true, rareOnly: false, duration: 'normal', quiet: false, quietFrom: '23:00', quietTo: '08:00', sound: true, sessions: true },
   privacy: { hidePrompts: false },
-  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false },
+  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false, autoSort: true },
   app: { openAtLogin: false, startHidden: false, widgetOnTop: true, language: 'auto', workMode: false },
   terminal: { scrollback: 5000, font: 'default' },
 }

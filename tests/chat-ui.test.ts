@@ -37,12 +37,17 @@ describe('the chat view sends nothing and changes nothing', () => {
     for (const f of [...MAIN, ...PAGE]) {
       const src = code(read(f))
       for (const bad of [/terminals\.write/, /terminals\.send/, /sendInstruction/, /pty\.write|\.write\(/, /['"`]\/model/, /['"`]\/config/, /['"`]\/login/, /['"`]\/logout/, /['"`]\/permissions/, /settings\.json/]) {
+        // (2026-11-17, the owner's call: the control row's model menu sends `/model <alias>`, from the composer only)
+        if (f.endsWith('Composer.tsx') && String(bad) === String(/['"`]\/model/)) {
+          expect([...src.matchAll(/['"`]\/model/g)].map(m => src.slice(m.index!, m.index! + 17))).toEqual(['`/model ${alias}`'])
+          continue
+        }
         expect(src, `${f}: ${bad}`).not.toMatch(bad)
       }
     }
   })
 
-  it('(a) the chat writes to a terminal only through terminals.typeForChat, in chatHost.cjs send, submit and interrupt', () => {
+  it('(a) the chat writes to a terminal only through terminals.typeForChat, in chatHost.cjs send, submit, interrupt, cycleMode and dialogKey', () => {
     const host = code(read(join(ROOT, 'electron', 'chatHost.cjs')))
     const span = (name: string): [number, number] => {
       const start = host.search(new RegExp(String.raw`\n  (?:async )?function ${name}\(`))
@@ -50,9 +55,11 @@ describe('the chat view sends nothing and changes nothing', () => {
       const next = host.slice(start + 1).search(/\n  (?:async )?function /)
       return [start, next < 0 ? host.length : start + 1 + next]
     }
-    const spans = ['send', 'submit', 'interrupt'].map(span)
+    // (cycleMode: the mode menu's one Shift+Tab, 2026-11-17)
+    // (dialogKey: the dialog card's keys, 2026-11-17)
+    const spans = ['send', 'submit', 'interrupt', 'cycleMode', 'dialogKey'].map(span)
     const at = [...host.matchAll(/typeForChat\(/g)].map(m => m.index!)
-    expect(at).toHaveLength(3)
+    expect(at).toHaveLength(5)
     for (const i of at) expect(spans.some(([a, b]) => i > a && i < b), `typeForChat at ${i}`).toBe(true)
     for (const [a, b] of spans) expect(at.some(i => i > a && i < b)).toBe(true)
     for (const i of at) expect(host.slice(i - 10, i)).toBe('terminals.')
@@ -63,6 +70,9 @@ describe('the chat view sends nothing and changes nothing', () => {
     const input = read(join(ROOT, 'electron', 'chatInput.cjs'))
     expect(input).toMatch(/const ENTER = '\\r'/)
     expect(input).toMatch(/const ESC = '\\x1b'/)
+    expect(input).toMatch(/const SHIFT_TAB = '\\x1b\[Z'/)
+    expect(input).toMatch(/const ARROW_UP = '\\x1b\[A'/)
+    expect(input).toMatch(/const ARROW_DOWN = '\\x1b\[B'/)
     expect(input).toMatch(/const PASTE_START = '\\x1b\[200~'/)
     for (const f of [...MAIN, ...PAGE].filter(x => !x.endsWith('chatInput.cjs'))) {
       const src = code(read(f))
@@ -240,7 +250,8 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     expect(sheet('chat.css')).not.toMatch(/animation|@keyframes/)
     const frames = SHEETS.flatMap(f => [...sheet(f).matchAll(/@keyframes\s+([\w-]+)/g)].map(m => `${f}: ${m[1]}`)).sort()
     // release 1.4.0 (cff52ac) had exactly these six; Phase 5 adds chat-game.css's one
-    expect(frames).toEqual(['chat-game.css: chat-wild-in', 'pokedex.css: wMonHop', 'toast.css: toastIn', 'toast.css: toastOut', 'widget.css: wLimitPulse', 'widget.css: wLimitShimmer', 'widget.css: wNoteIn'])
+    // (2026-11-17: the working Pokémon's hop and halo, the owner's micro-interaction, in chat-game.css too)
+    expect(frames).toEqual(['chat-game.css: chat-halo', 'chat-game.css: chat-hop', 'chat-game.css: chat-wild-in', 'pokedex.css: wMonHop', 'toast.css: toastIn', 'toast.css: toastOut', 'widget.css: wLimitPulse', 'widget.css: wLimitShimmer', 'widget.css: wNoteIn'])
     // no rule of the chat view moves outside chat-game.css
     for (const f of SHEETS.filter(x => x !== 'chat-game.css')) {
       for (const r of rulesIn(sheet(f))) {

@@ -1,5 +1,5 @@
 /**
- * src/textSize.ts — one text-size step for the whole app (the UI's type scale and the
+ * src/textSize.ts — one text-size step (a percent, 80–130%) for the whole app (the UI's type scale and the
  * terminal's font size together): the step tables, stepping, and the migration from the
  * old terminal-only size (spawn-term-font, 10–24px) to the nearest step, ties going larger.
  * And src/termFont.ts keeps the names TerminalPanel.tsx imports (a source check).
@@ -8,73 +8,79 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { nextStep, OLD_TERM_KEY, readInitialStep, stepFromTermPx, TERM_PX, TEXT_KEY, TEXT_STEP_LABEL, TEXT_STEP_SENSE, TEXT_STEPS, UI_PX } from '../src/textSize'
+import { DEFAULT_STEP, nextStep, OLD_TERM_KEY, readInitialStep, stepFromTermPx, TERM_PX, TEXT_KEY, textStepLabel, TEXT_STEPS, UI_PX } from '../src/textSize'
 
 const ROOT = join(__dirname, '..')
 const src = (p: string) => readFileSync(join(ROOT, p), 'utf8')
 
+// (2026-11-17: the steps are percents of 100%, 80–130 by 10; 작게 / 보통 / 크게 / 아주 크게 until then)
 describe('the steps', () => {
-  it('four steps, their names and sizes', () => {
-    expect([...TEXT_STEPS]).toEqual(['small', 'normal', 'large', 'xlarge'])
-    expect(TEXT_STEP_LABEL).toEqual({ small: '작게', normal: '보통', large: '크게', xlarge: '아주 크게' })
-    expect(UI_PX).toEqual({ small: 11, normal: 12, large: 13, xlarge: 14 })
-    expect(TERM_PX).toEqual({ small: 12, normal: 13, large: 15, xlarge: 17 })
+  it('six percents, their labels and sizes', () => {
+    expect([...TEXT_STEPS]).toEqual(['80', '90', '100', '110', '120', '130'])
+    expect(DEFAULT_STEP).toBe('100')
+    expect(TEXT_STEPS.map(textStepLabel)).toEqual(['80%', '90%', '100%', '110%', '120%', '130%'])
+    expect(UI_PX).toEqual({ 80: 10, 90: 11, 100: 12, 110: 13, 120: 14, 130: 16 })
+    expect(TERM_PX).toEqual({ 80: 10, 90: 12, 100: 13, 110: 14, 120: 16, 130: 17 })
     expect([TEXT_KEY, OLD_TERM_KEY]).toEqual(['spawn-text-size', 'spawn-term-font'])
   })
 })
 
 describe('stepFromTermPx: an old terminal size to the nearest step, a tie to the larger', () => {
   it.each([
-    [10, 'small'], [12, 'small'], [13, 'normal'], [14, 'large'], [15, 'large'],
-    [16, 'xlarge'], [17, 'xlarge'], [20, 'xlarge'], [24, 'xlarge'],
-  ] as const)('%ipx → %s', (px, step) => {
+    [10, '80'], [11, '90'], [12, '90'], [13, '100'], [14, '110'], [15, '120'],
+    [16, '120'], [17, '130'], [20, '130'], [24, '130'],
+  ] as const)('%ipx → %s%%', (px, step) => {
     expect(stepFromTermPx(px)).toBe(step)
   })
 })
 
 describe('nextStep', () => {
-  it('one step up or down, held at both ends', () => {
-    expect(nextStep('small', -1)).toBe('small')
-    expect(nextStep('small', 1)).toBe('normal')
-    expect(nextStep('normal', 1)).toBe('large')
-    expect(nextStep('normal', -1)).toBe('small')
-    expect(nextStep('xlarge', 1)).toBe('xlarge')
-    expect(nextStep('xlarge', -1)).toBe('large')
+  it('10% up or down, held at both ends', () => {
+    expect(nextStep('80', -1)).toBe('80')
+    expect(nextStep('80', 1)).toBe('90')
+    expect(nextStep('100', 1)).toBe('110')
+    expect(nextStep('100', -1)).toBe('90')
+    expect(nextStep('130', 1)).toBe('130')
+    expect(nextStep('130', -1)).toBe('120')
   })
 })
 
 describe('readInitialStep', () => {
   const store = (o: Record<string, string>) => ({ getItem: (k: string) => (k in o ? o[k] : null) })
 
-  it('nothing stored: 보통', () => {
-    expect(readInitialStep(null)).toBe('normal')
-    expect(readInitialStep(undefined)).toBe('normal')
-    expect(readInitialStep(store({}))).toBe('normal')
+  it('nothing stored: 100%', () => {
+    expect(readInitialStep(null)).toBe('100')
+    expect(readInitialStep(undefined)).toBe('100')
+    expect(readInitialStep(store({}))).toBe('100')
+  })
+
+  it('a step stored by its old name moves to its percent', () => {
+    expect(['small', 'normal', 'large', 'xlarge'].map(v => readInitialStep(store({ 'spawn-text-size': v })))).toEqual(['90', '100', '110', '120'])
   })
 
   it('the old terminal size carries over to its nearest step', () => {
-    expect(readInitialStep(store({ 'spawn-term-font': '15' }))).toBe('large')
-    expect(readInitialStep(store({ 'spawn-term-font': '14' }))).toBe('large')
-    expect(readInitialStep(store({ 'spawn-term-font': '16' }))).toBe('xlarge')
-    expect(readInitialStep(store({ 'spawn-term-font': '20' }))).toBe('xlarge')
-    expect(readInitialStep(store({ 'spawn-term-font': '10' }))).toBe('small')
+    expect(readInitialStep(store({ 'spawn-term-font': '15' }))).toBe('120')
+    expect(readInitialStep(store({ 'spawn-term-font': '14' }))).toBe('110')
+    expect(readInitialStep(store({ 'spawn-term-font': '20' }))).toBe('130')
+    expect(readInitialStep(store({ 'spawn-term-font': '10' }))).toBe('80')
   })
 
   it('a step the user picked wins over the old size (never migrated again)', () => {
-    expect(readInitialStep(store({ 'spawn-term-font': '15', 'spawn-text-size': 'small' }))).toBe('small')
-    expect(readInitialStep(store({ 'spawn-term-font': '24', 'spawn-text-size': 'normal' }))).toBe('normal')
+    expect(readInitialStep(store({ 'spawn-term-font': '15', 'spawn-text-size': '90' }))).toBe('90')
+    expect(readInitialStep(store({ 'spawn-term-font': '24', 'spawn-text-size': '100' }))).toBe('100')
   })
 
-  it('garbage or out of range: 보통', () => {
-    expect(readInitialStep(store({ 'spawn-term-font': 'abc' }))).toBe('normal')
-    expect(readInitialStep(store({ 'spawn-term-font': '99' }))).toBe('normal')
-    expect(readInitialStep(store({ 'spawn-term-font': '9' }))).toBe('normal')
-    expect(readInitialStep(store({ 'spawn-term-font': '' }))).toBe('normal')
-    expect(readInitialStep(store({ 'spawn-text-size': 'huge' }))).toBe('normal')
+  it('garbage or out of range: 100%', () => {
+    expect(readInitialStep(store({ 'spawn-term-font': 'abc' }))).toBe('100')
+    expect(readInitialStep(store({ 'spawn-term-font': '99' }))).toBe('100')
+    expect(readInitialStep(store({ 'spawn-term-font': '9' }))).toBe('100')
+    expect(readInitialStep(store({ 'spawn-term-font': '' }))).toBe('100')
+    expect(readInitialStep(store({ 'spawn-text-size': 'huge' }))).toBe('100')
+    expect(readInitialStep(store({ 'spawn-text-size': '105' }))).toBe('100')
   })
 
   it('an unknown step falls back to the old size', () => {
-    expect(readInitialStep(store({ 'spawn-text-size': 'huge', 'spawn-term-font': '17' }))).toBe('xlarge')
+    expect(readInitialStep(store({ 'spawn-text-size': 'huge', 'spawn-term-font': '17' }))).toBe('130')
   })
 
   it('it only reads', () => {
@@ -84,8 +90,8 @@ describe('readInitialStep', () => {
     expect(writes).toEqual([])
   })
 
-  it('a storage that throws: 보통', () => {
-    expect(readInitialStep({ getItem: () => { throw new Error('denied') } })).toBe('normal')
+  it('a storage that throws: 100%', () => {
+    expect(readInitialStep({ getItem: () => { throw new Error('denied') } })).toBe('100')
   })
 })
 
@@ -123,31 +129,19 @@ describe('the text-size control (source checks)', () => {
 
   it('the words in English and Japanese; the trio\'s words are gone', async () => {
     const { default: WIDGET } = await import('../src/locales/widget')
-    const { default: DICTS } = await import('../src/locales')
     for (const lang of ['en', 'ja'] as const) {
-      for (const k of ['글자 크기', '작게', '보통#text-size', '크게', '아주 크게', '글자 작게', '글자 크게', '글자 크기 ({mod}+= / {mod}+-)']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeTruthy()
+      for (const k of ['글자 크기', '글자 작게', '글자 크게', '글자 크기 ({mod}+= / {mod}+-)']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeTruthy()
       for (const k of ['소', '중', '대', '글자 {size}', '글자 크기 {size}']) expect(WIDGET[lang][k], `${lang} ${k}`).toBeUndefined()
     }
-    // the merged dictionaries read the step names as the control does
-    expect([DICTS.en['보통#text-size'], DICTS.ja['보통#text-size'], DICTS.ja['아주 크게']]).toEqual(['Normal', '標準', '特大'])
   })
 
-  it("'보통' has two senses: the text size (ja 標準) and 설정's display time (ja 普通, as on main) — final review M5", async () => {
-    const { default: DICTS } = await import('../src/locales')
-    const { default: SETTINGS } = await import('../src/locales/settings')
-    const { default: WIDGET } = await import('../src/locales/widget')
-    expect([DICTS.en['보통'], DICTS.ja['보통']]).toEqual(['Normal', '普通'])
-    expect([SETTINGS.en['보통'], SETTINGS.ja['보통']]).toEqual(['Normal', '普通'])
-    // the plain word lives once, in settings.ts (as on main); the text size has its own sense key
-    expect([WIDGET.en['보통'], WIDGET.ja['보통']]).toEqual([undefined, undefined])
-    expect(TEXT_STEP_SENSE).toBe('text-size')
-    // the step names are read in their sense, the display time plainly (Korean shows 보통 in both)
+  // (2026-11-17: the steps are shown as percents, the same in every language; no step names to translate)
+  it('the control and 설정 show the step as its percent, never a name', () => {
     for (const f of ['src/components/TextSizeControl.tsx', 'src/components/SettingsView.tsx']) {
-      expect(src(f), f).not.toMatch(/t\(TEXT_STEP_LABEL/)
-      expect(src(f), f).toContain('tSense(TEXT_STEP_LABEL[')
+      expect(src(f), f).toContain('textStepLabel(')
+      expect(src(f), f).not.toMatch(/TEXT_STEP_LABEL|TEXT_STEP_SENSE/)
     }
-    expect(src('src/components/SettingsView.tsx')).toContain("['normal', t('보통')]")
-    expect(src('src/i18n.ts')).toContain('const k = `${ko}#${sense}`')
+    expect(src('src/components/TextSizeControl.tsx')).not.toMatch(/>가</)
   })
 
   it('the menu works from the keyboard: it opens on the checked step, arrows / Home / End move, Esc and Tab close it (final review M7)', async () => {

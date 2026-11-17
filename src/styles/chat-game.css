@@ -1,8 +1,9 @@
 /* src/styles/chat-game.css — the game's lively bits in the chat view (Phase 5), on the 차분하게 2 tokens: the turn
    summary's step count (the paw glyph, the lab's `.turn-foot .steps`, calm-lab app.css 661) and the wild Pokémon met
    in the flow (the lab's `.wild`, app.css 264–274). Imported by src/components/ChatView.tsx. None of it is drawn in
-   업무 모드 (the components leave it out), and chat.css keeps its "nothing animates" rule: the one allowed animation
-   (a wild Pokémon met while the view is open, Decision 12) lives here and stops under prefers-reduced-motion. */
+   업무 모드 (the components leave it out), and chat.css keeps its "nothing animates" rule: the allowed animations
+   (a wild Pokémon met while the view is open, Decision 12; the working Pokémon's hop and halo, the owner's call of
+   2026-11-17) live here and stop under prefers-reduced-motion. */
 
 /* the step count: the paw glyph and {n}걸음, in the foot's own quiet colour */
 .chat-steps { display: inline-flex; align-items: center; gap: 4px; }
@@ -25,4 +26,16 @@
 @keyframes chat-wild-in { from { transform: translateY(6px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
   .chat-wild.appear .chat-wild-mon { animation: none; }
+}
+
+/* the working Pokémon (the line under the conversation, its time ticking): a 2px hop and a faint halo breathing on
+   the same beat, the owner's micro-interaction of 2026-11-17; still for anyone who asks for less motion */
+.chat-status.working .chat-pic.head { position: relative; }
+.chat-status.working .chat-pic.head::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 70%); pointer-events: none; animation: chat-halo 1.6s ease-in-out infinite; }
+.chat-status.working .chat-pic.head > * { position: relative; animation: chat-hop 1.6s ease-in-out infinite; }
+@keyframes chat-hop { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-2px); } 40% { transform: translateY(0.5px); } }
+@keyframes chat-halo { 0%, 100% { opacity: 0.25; } 25% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-status.working .chat-pic.head::before { animation: none; }
+  .chat-status.working .chat-pic.head > * { animation: none; }
 }

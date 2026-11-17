@@ -48,11 +48,13 @@ import { LinkCard } from './chat/LinkCard'
 import { ToolEntry } from './chat/ToolRow'
 import { ToolGroup } from './chat/ToolGroup'
 import { ThinkingRow } from './chat/ThinkingRow'
+import { ShellRow } from './chat/ShellRow'
 import { TurnFoot } from './chat/TurnFoot'
 import { WildRow } from './chat/WildRow'
 import { UserMessage } from './chat/UserMessage'
 import { Lightbox } from './chat/Lightbox'
 import { AnswerSurface, type AnswerFn } from './chat/AnswerSurface'
+import { DialogCard, useTermDialog } from './chat/DialogCard'
 import { FindBar, useFind } from './chat/FindBar'
 import { cardNote, shownCard } from '../chat/answer'
 import { noticeText, overlayOpen } from '../chat/find'
@@ -203,6 +205,7 @@ function renderRow(row: Row, who: ChatWho, noCopy = false): React.ReactNode {
     case 'notice': return <NoticeRow item={row.item} />
     case 'live': return <LiveRow item={row.item} />
     case 'thinking': return <ThinkingRow item={row.item} />
+    case 'shell': return <ShellRow item={row.item} time={row.item.at !== null ? clock(row.item.at) : null} />
     case 'foot': return <TurnFoot row={row} name={who.name} />
     case 'wild': return <WildRow rowKey={row.key} entry={row.entry} />
     default: return null
@@ -264,7 +267,7 @@ function withTime(key: string, vars: Record<string, string>, since: number | nul
 }
 
 /** Working / waiting, at the end of the conversation; the same height when nothing is shown (no jump) */
-const WorkingLine: React.FC<{ status: LensStatus | null; who: ChatWho; onTerminal(): void; onStop?: () => void; card?: AskCard['kind'] | null }> = ({ status, who, onTerminal, onStop, card = null }) => {
+const WorkingLine: React.FC<{ status: LensStatus | null; who: ChatWho; onTerminal(): void; onStop?: () => void; card?: AskCard['kind'] | 'dialog' | null }> = ({ status, who, onTerminal, onStop, card = null }) => {
   // (a card below waits on the user: the line says who waits, even while the hooks say working — a question)
   const state = card && status?.state === 'working' ? 'waiting' : status?.state
   const shown = state === 'working' || state === 'waiting'
@@ -277,7 +280,7 @@ const WorkingLine: React.FC<{ status: LensStatus | null; who: ChatWho; onTermina
       {/* (a card below says where to answer: this line only says who waits) */}
       {state === 'waiting' && card && <>
         <i className="chat-dot amber" aria-hidden="true" />
-        <span className="chat-status-text">{t(card === 'permission' ? '{name}{iga} 허락을 기다려요' : '{name}{iga} 답을 기다려요', nameVars(who.name))}</span>
+        <span className="chat-status-text">{t(card === 'permission' ? '{name}{iga} 허락을 기다려요' : card === 'dialog' ? '{name}{iga} 고르기를 기다려요 · 아래 카드에서 골라 주세요' : '{name}{iga} 답을 기다려요', nameVars(who.name))}</span>
       </>}
       {state === 'waiting' && !card && <>
         <i className="chat-dot amber" aria-hidden="true" />
@@ -530,6 +533,12 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   })
   // what waits on the user (Phase 4): the answer surface, in the amber pill's place while it shows a card
   const asks = status?.asks ?? NO_ASKS
+  // a dialog on the terminal's screen that no card holds (2026-11-17): its own card, answered from here
+  const dialogKey = fixed ? undefined : bridge?.chat.dialogKey
+  // (a card that can only be answered in the terminal — too long, a sub-agent's — gives way to the dialog its
+  // terminal shows, read from the screen; one answerable here, or an answer on its way, keeps the screen untouched)
+  const termOnly = asks.length > 0 && asks.every(a => a.state === 'terminal')
+  const dialog = useTermDialog(id, !!dialogKey && (!asks.length || termOnly))
   const waiting = wait && !asks.length ? { text: t(wait.kind === 'permission' ? '{name}{iga} 허락을 기다려요' : '{name}{iga} 답을 기다려요', nameVars(who.name)), key: wait.key } : null
   // the chat's one live region (review M9): there before any card, announcements one after another
   const [say, announce] = useAnnouncer()
@@ -585,7 +594,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
                 olderCut={!!status?.hasOlder && atCap}
                 onOlder={older}
                 renderRow={row => <RowView row={row} who={who} noCopy={footed.has(row.key)} />}
-                tail={<WorkingLine status={status} who={who} onTerminal={onTerminal} onStop={onStop} card={card?.kind ?? null} />}
+                tail={<WorkingLine status={status} who={who} onTerminal={onTerminal} onStop={onStop} card={card?.kind ?? (dialog ? 'dialog' : null)} />}
                 dim={!!banner}
                 waiting={waiting}
                 estimate={ESTIMATE[density]}
@@ -594,7 +603,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
               />
             )}
         <div className="chat-sr" aria-live="assertive">{say}</div>
-        {asks.length > 0 && <AnswerSurface id={id} asks={asks} who={who} answer={fixed ? qaAnswer : bridgeAnswer} onTerminal={onTerminal} announce={announce} />}
+        {asks.length > 0 && !(termOnly && dialog) && <AnswerSurface id={id} asks={asks} who={who} answer={fixed ? qaAnswer : bridgeAnswer} onTerminal={onTerminal} announce={announce} />}
+        {(!asks.length || termOnly) && dialog && dialogKey && <DialogCard id={id} dialog={dialog} dialogKey={dialogKey} />}
         {footer}
         {shown && <Lightbox url={shown.url} caption={shown.caption} onClose={closeImage} />}
       </div>

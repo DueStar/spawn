@@ -34,13 +34,16 @@
   --read-w: 840px;  --add-bg: rgba(116, 214, 139, 0.07);  --del-bg: rgba(255, 100, 100, 0.07);
   /* find in the conversation: every match a light grey, the current one a stronger grey (never yellow) */
   --find-bg: rgba(255, 255, 255, 0.12);  --find-now-bg: rgba(255, 255, 255, 0.28);
-  /* type, 보통 (the default step) */
+  /* type, 100% (the default size) */
   --t-micro: 10px;  --t-meta: 11px;  --t-ui: 12px;  --t-name: 12px;  --t-prose: 13px;
   --t-num: 12px;  --t-head: 14px;  --t-big: 15px;  --t-code: 12px;
 }
-:root.ts-small  { --t-micro: 9px;  --t-meta: 10px; --t-ui: 11px; --t-name: 11px; --t-prose: 12px; --t-num: 11px; --t-head: 13px; --t-big: 14px; --t-code: 11px; }
-:root.ts-large  { --t-micro: 10px; --t-meta: 11px; --t-ui: 12px; --t-name: 13px; --t-prose: 14px; --t-num: 13px; --t-head: 15px; --t-big: 16px; --t-code: 13px; }
-:root.ts-xlarge { --t-micro: 11px; --t-meta: 12px; --t-ui: 13px; --t-name: 14px; --t-prose: 15px; --t-num: 14px; --t-head: 16px; --t-big: 17px; --t-code: 14px; }
+/* the other text sizes, as a percent of 100% (src/textSize.ts; at least 9px) */
+:root.ts-80 { --t-micro: 9px; --t-meta: 9px; --t-ui: 10px; --t-name: 10px; --t-prose: 10px; --t-num: 10px; --t-head: 11px; --t-big: 12px; --t-code: 10px; }
+:root.ts-90 { --t-micro: 9px; --t-meta: 10px; --t-ui: 11px; --t-name: 11px; --t-prose: 12px; --t-num: 11px; --t-head: 13px; --t-big: 14px; --t-code: 11px; }
+:root.ts-110 { --t-micro: 11px; --t-meta: 12px; --t-ui: 13px; --t-name: 13px; --t-prose: 14px; --t-num: 13px; --t-head: 15px; --t-big: 17px; --t-code: 13px; }
+:root.ts-120 { --t-micro: 12px; --t-meta: 13px; --t-ui: 14px; --t-name: 14px; --t-prose: 16px; --t-num: 14px; --t-head: 17px; --t-big: 18px; --t-code: 14px; }
+:root.ts-130 { --t-micro: 13px; --t-meta: 14px; --t-ui: 16px; --t-name: 16px; --t-prose: 17px; --t-num: 16px; --t-head: 18px; --t-big: 20px; --t-code: 16px; }
 /* tier colours are information: text and dot colour, never a fill */
 .tier-common { --tier: #a4a9b6; }  .tier-rare { --tier: #6cb6ff; }  .tier-sub { --tier: #c08bff; }
 .tier-legendary { --tier: #ffc94a; }  .tier-mythical { --tier: #ff7ad9; }

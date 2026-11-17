@@ -59,9 +59,14 @@ contextBridge.exposeInMainWorld('spawn', {
     send: (p) => ipcRenderer.invoke('chat:send', {
       id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), text: typeof p?.text === 'string' ? p.text : '',
       images: Array.isArray(p?.images) ? p.images.filter(x => typeof x === 'string').slice(0, 64) : [], screen: String(p?.screen ?? ''),
+      shell: p?.shell === true,
     }),
     submit: (p) => ipcRenderer.invoke('chat:submit', { id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), echo: String(p?.echo ?? '') }),
     interrupt: (id) => ipcRenderer.invoke('chat:interrupt', String(id)),
+    // the mode menu (2026-11-17): one Shift+Tab, checked in main
+    cycleMode: (id) => ipcRenderer.invoke('chat:cycle-mode', String(id)),
+    // the dialog card (2026-11-17): one key (up, down, enter, esc) or one line of words, checked in main
+    dialogKey: (p) => ipcRenderer.invoke('chat:dialog-key', { id: String(p?.id ?? ''), key: String(p?.key ?? ''), ...(typeof p?.text === 'string' ? { text: p.text.slice(0, 4000) } : {}) }),
     // an image's bytes (main checks them and names the file; the page never names a path) and its removal
     image: (p) => ipcRenderer.invoke('chat:image', { id: String(p?.id ?? ''), bytes: p?.bytes instanceof Uint8Array ? p.bytes : null }),
     dropImage: (p) => ipcRenderer.send('chat:image-drop', { id: String(p?.id ?? ''), token: String(p?.token ?? '') }),
@@ -75,6 +80,8 @@ contextBridge.exposeInMainWorld('spawn', {
     answer: (p) => ipcRenderer.invoke('chat:answer', {
       id: String(p?.id ?? ''), holdId: String(p?.holdId ?? ''), choice: String(p?.choice ?? ''),
       ...(Number.isInteger(p?.option) ? { option: p.option } : {}),
+      // (several questions / a multi-select: each question's option indices, plain integers only)
+      ...(Array.isArray(p?.picks) ? { picks: p.picks.slice(0, 4).map(x => (Array.isArray(x) ? x.filter(Number.isInteger).slice(0, 6) : [])) } : {}),
     }),
     // 7-48: one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
     redraw: (id) => ipcRenderer.invoke('chat:redraw', String(id)),

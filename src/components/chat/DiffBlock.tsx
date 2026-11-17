@@ -7,8 +7,9 @@
  * Built from the transcript's structuredPatch only (electron/chatItems.cjs buildDiff).
  */
 
-import React from 'react'
+import React, { useState } from 'react'
 import { t } from '../../i18n'
+import { DocToggle, MdDocBody, isMarkdownFile } from './Markdown'
 import { isRemotePath } from '../../chat/markdown'
 import { initialOpen } from '../../chat/density'
 import type { DiffBlock as Diff, DiffLine, ToolItem } from '../../chat/types'
@@ -26,7 +27,7 @@ const PanelGlyph = () => (
 )
 
 export const DiffBlock: React.FC<{ item: ToolItem; diff: Diff }> = ({ item, diff }) => {
-  const { onPath, openChanges, density } = useChatContext()
+  const { onPath, onLink, openChanges, density } = useChatContext()
   // (전부 shows every line until the user folds it)
   const [all, setAll] = useRowOpen(`${item.id}:diff`, initialOpen(density ?? 'default', 'diff'))
   const lines: Line[] = []
@@ -35,11 +36,16 @@ export const DiffBlock: React.FC<{ item: ToolItem; diff: Diff }> = ({ item, diff
   const shown = all ? lines : lines.slice(0, DIFF_PREVIEW)
   const more = real - shown.filter(l => l.t !== 'gap').length
   const firstLine = diff.hunks[0]?.newStart || undefined
+  // a new markdown file, whole: shown as the document it is (변경 shows the added lines); 2026-11-17
+  const docText = diff.kind === 'create' && isMarkdownFile(diff.file) && !diff.truncated && !diff.hidden && real > 0
+    ? lines.filter((l): l is DiffLine => l.t === '+').map(l => l.text).join('\n') : null
+  const [asDiff, setAsDiff] = useState(false)
   return (
     <div className="chat-diff">
       <div className="chat-diff-head">
         <span className="chat-tool-ico"><EditIcon size={13} /></span>
         {diff.kind === 'create' && <span className="chat-diff-kind">{t('새 파일')}</span>}
+        {docText !== null && <DocToggle raw={asDiff} onRaw={setAsDiff} other={t('변경')} />}
         {/* a UNC or device path stays text: a click would make Windows connect to that host */}
         {isRemotePath(diff.file)
           ? <span className="chat-diff-file">{diff.file}</span>
@@ -61,7 +67,8 @@ export const DiffBlock: React.FC<{ item: ToolItem; diff: Diff }> = ({ item, diff
           </span>
         )}
       </div>
-      {lines.length > 0 && (
+      {docText !== null && !asDiff && <div className="chat-diff-doc"><MdDocBody text={docText} raw={false} onLink={onLink} onPath={onPath} /></div>}
+      {lines.length > 0 && (docText === null || asDiff) && (
         <div className="chat-diff-body">
           <div className="chat-diff-lines">
             {shown.map((l, i) => l.t === 'gap'

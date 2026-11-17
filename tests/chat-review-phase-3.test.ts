@@ -71,12 +71,13 @@ describe('I-5: the side panel while a chat send is in flight', () => {
 describe('m2 and m11: the composer', () => {
   const composer = src('components/chat/Composer.tsx')
   it('m2: the "/ goes as a command" hint only for text that goes as a command', () => {
-    expect(composer).toContain("{isCommandText(text) && !chips.length ? <div className=\"chat-chint\">")
+    expect(composer).toContain("{!shell && isCommandText(text) && !chips.length ? <div className=\"chat-chint\">")
     expect(composer).not.toContain("text.startsWith('/') ? <div className=\"chat-chint\">")
   })
   it('m11: a mention picked or text inserted is the browser\'s own edit (undo keeps working), the value set only as a fallback', () => {
     expect(composer).toContain("document.execCommand('insertText', false, s)")
-    expect(composer).toMatch(/replaceRange\(el, mention\.start, caret, `@\$\{f\} `\)/)
+    // (since 2026-11-17 a picked file leaves the text for a badge: the typed `@query` is taken out the same way)
+    expect(composer).toMatch(/replaceRange\(el, mention\.start, caret, ''\)/)
   })
   it('m7: a send whose page went away is said once as the composer opens', () => {
     expect(composer).toMatch(/chat\.stranded\(id\)\.then\(r => \{ if \(live && r\?\.stranded\) say\(/)

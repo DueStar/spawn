@@ -21,7 +21,7 @@ import type { EchoVerdict, Expect, LensStatus, ScreenVerdict, SendRefusal, Submi
 
 export interface SendDeps {
   bridge: {
-    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs?: number } | { ok: false; reason: SendRefusal }>
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs?: number } | { ok: false; reason: SendRefusal }>
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
     /** spawn.log only (1.5.3): why the page found no prompt box, and the masked shape it read */
     diag?(p: { id: string; why: string; shape: string }): void
@@ -76,7 +76,7 @@ export function newSendId(): string {
   return Array.from(b, x => x.toString(16).padStart(2, '0')).join('')
 }
 
-export async function sendDraft(draft: { id: string; text: string; images: OutboxImage[] }, d: SendDeps): Promise<SendResult> {
+export async function sendDraft(draft: { id: string; text: string; images: OutboxImage[]; shell?: boolean }, d: SendDeps): Promise<SendResult> {
   const { id } = draft
   const text = draft.text.replace(/\s+$/, '')
   if (busy.has(id)) return { ok: false, reason: 'sending', leftOnPrompt: false }
@@ -94,7 +94,8 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
   try {
     const sendId = d.newId()
     // the bubble shows at once, from the page's own guess; main's answer decides (a command has none)
-    let bubble = !(isCommandText(text) && !draft.images.length)
+    // (a `!` command shows as its shell row once the record has it: no bubble)
+    let bubble = !draft.shell && !(isCommandText(text) && !draft.images.length)
     const local = `${sendId}`
     const shown = wellFormed(dropLeadingBlank(text))
     const addBubble = () => d.outbox.add({ local, text: shown, images: draft.images, state: 'sending', at: d.now(), baseline: d.baseline })
@@ -103,7 +104,7 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
     // (1.6.2) text whose dim marks were read says whether anyone typed it; without marks main's ledger decides
     const screen: ScreenVerdict = row.kind !== 'text' ? row.kind : row.typed === undefined ? 'text' : row.typed ? 'typed' : 'suggestion'
     try {
-      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen })
+      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen, shell: draft.shell || undefined })
     } catch {
       sent = { ok: false, reason: 'no-session' }
     }

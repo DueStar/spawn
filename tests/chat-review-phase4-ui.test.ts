@@ -78,8 +78,13 @@ describe('review M3, C1, C2: logical order; the whole path and every diff line w
     expect(perm).toMatch(/<WithExact k="\{name\}의 설명: \{text\}" name="text" value=\{input\.description\}/)
     expect(perm).not.toMatch(/input\.description \?\? ''/)
     const q = code(read('src', 'components', 'chat', 'QuestionCard.tsx'))
-    expect(q).toMatch(/title=\{q\?\.text \? <Exact text=\{q\.text\} \/>/)
-    expect(q).toMatch(/<Exact text=\{q\.header\} \/>/)
+    // (2026-11-17: several questions too — each one's text and header, and every option, through Exact)
+    expect(q).toMatch(/q\?\.text \? <Exact text=\{q\.text\} \/>/)
+    expect(q).toMatch(/<Exact text=\{head\.header\} \/>/)
+    expect(q).toMatch(/<Exact text=\{x\.header\} \/>/)
+    expect(q).toMatch(/<Exact text=\{x\.text\} \/>/)
+    expect(q).toMatch(/<Exact text=\{o\.label\} \/>/)
+    expect(q).toMatch(/<Exact text=\{o\.description\} \/>/)
   })
 })
 
@@ -151,7 +156,8 @@ describe('review M7, M8: the card shown, and what the composer says about it', (
 describe('review M9: one live region, there before any card', () => {
   it('ChatView owns it outside the surface; the surface announces through it; 허용 is described by what it approves', () => {
     const view = code(read('src', 'components', 'ChatView.tsx'))
-    expect(view).toMatch(/<div className="chat-sr" aria-live="assertive">\{say\}<\/div>\s*\{asks\.length > 0 && <AnswerSurface[^\n]*announce=\{announce\}/)
+    // (2026-11-17: a card answerable only in the terminal gives way to the dialog card: `!(termOnly && dialog)`)
+    expect(view).toMatch(/<div className="chat-sr" aria-live="assertive">\{say\}<\/div>\s*\{asks\.length > 0 && !\(termOnly && dialog\) && <AnswerSurface[^\n]*announce=\{announce\}/)
     const surface = code(read('src', 'components', 'chat', 'AnswerSurface.tsx'))
     expect(surface).not.toMatch(/aria-live/)
     const perm = code(read('src', 'components', 'chat', 'PermissionCard.tsx'))

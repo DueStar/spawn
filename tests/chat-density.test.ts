@@ -57,11 +57,19 @@ describe('buildRows by density', () => {
 
   it('기본 gives exactly the Phase 2 rows (deep-equal to the snapshot taken before the change), with or without the option', () => {
     expect(Object.keys(SNAP)).toEqual(['tools.jsonl', 'thinking.jsonl', 'basic.jsonl', 'agent.jsonl', 'turns.jsonl', 'image.jsonl'])
+    // (since 2026-11-17 a progress note — thinkingDisplay "updates", a thinking block with text — shows in 기본 too:
+    // thinking.jsonl has one; the rest of 기본 is the snapshot's, row for row)
+    const notes = (rows: Row[]) => rows.filter(r => r.row === 'thinking' && r.item.update)
+    // (a turn's head is keyed by the turn's first shown item: the note now, where it was the answer)
+    const heads = (rows: unknown) => (JSON.parse(JSON.stringify(rows)) as { row: string; key: string; at?: unknown }[])
+      .map(r => (r.row === 'turn-head' ? { ...r, key: 'head', at: 'the turn\'s first shown item' } : r))
     for (const [name, rows] of Object.entries(SNAP)) {
-      expect(json(noFeet(buildRows(items(name), { dayLabel, density: 'default' }))), name).toEqual(rows)
-      expect(json(noFeet(buildRows(items(name), { dayLabel }))), name).toEqual(rows)
+      for (const built of [buildRows(items(name), { dayLabel, density: 'default' }), buildRows(items(name), { dayLabel })]) {
+        expect(heads(json(noFeet(built.filter(r => !notes([r]).length)))), name).toEqual(heads(rows))
+        expect(notes(built), name).toHaveLength(name === 'thinking.jsonl' ? 1 : 0)
+      }
     }
-    // the thinking items are there, and drawn by none of them
+    // the thinking items are there; the hidden ones drawn by none of them
     expect(items('thinking.jsonl').filter(i => i.kind === 'thinking')).toHaveLength(4)
     expect(SNAP['thinking.jsonl'].some(r => (r as { row: string }).row === 'thinking')).toBe(false)
   })

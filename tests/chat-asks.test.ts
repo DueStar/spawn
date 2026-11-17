@@ -107,7 +107,8 @@ describe('binding and passing', () => {
     expect(agent).toMatchObject({ agent: true, tool: 'PowerShell', toolId: null })
   })
 
-  it('a plan passes, with a read-only plan card; a question as a PermissionRequest passes, with no card; an unmapped session passes', async () => {
+  // (2026-11-17: a whole plan of the main thread binds, answered from the chat with 승인 / 계속 계획하기; it passed until then)
+  it('a plan binds as a permission with no rules; a question as a PermissionRequest passes, with no card; an unmapped session passes', async () => {
     const { lens, holds, status, run } = setup()
     lens.hook('PermissionRequest', perm('ExitPlanMode').body, 0, 'h4', T1)
     lens.hook('PermissionRequest', perm('AskUserQuestion').body, 10, 'h5', T1)
@@ -115,10 +116,21 @@ describe('binding and passing', () => {
     lens.hook('PermissionRequest', { ...perm('Bash').body, session_id: 'not-a-session' }, 30, 'h7', T1)
     lens.hook('PermissionRequest', 'not an object' as any, 40, 'h8', T1)
     await run(10)
-    expect(holds.map(h => [h.t, h.holdId ?? h.holdIds, h.why])).toEqual([['hold-pass', 'h4', 'plan'], ['hold-pass', 'h5', 'question'], ['hold-pass', 'h6', 'unmapped'], ['hold-pass', 'h7', 'unmapped'], ['hold-pass', 'h8', 'shape']])
+    expect(holds.map(h => [h.t, h.holdId ?? h.holdIds, h.why])).toEqual([['hold-bind', 'h4', undefined], ['hold-pass', 'h5', 'question'], ['hold-pass', 'h6', 'unmapped'], ['hold-pass', 'h7', 'unmapped'], ['hold-pass', 'h8', 'shape']])
+    expect(holds[0]).toMatchObject({ kind: 'permission', data: { rules: [] } })
     expect(status().asks).toHaveLength(1)
-    expect(status().asks[0]).toMatchObject({ kind: 'plan', holdId: null, state: 'terminal', tool: 'ExitPlanMode' })
+    expect(status().asks[0]).toMatchObject({ kind: 'plan', holdId: 'h4', state: 'open', tool: 'ExitPlanMode' })
     expect(status().asks[0].input.plan).toMatch(/^# Plan: rename/)
+  })
+
+  it("a plan longer than the card shows, or a sub-agent's: passed, answered in the terminal", async () => {
+    const { lens, holds, status, run } = setup()
+    const body = perm('ExitPlanMode').body
+    lens.hook('PermissionRequest', { ...body, tool_input: { ...body.tool_input, plan: 'x'.repeat(20_001) } }, 0, 'p1', T1)
+    lens.hook('PermissionRequest', { ...body, agent_id: 'a1' }, 10, 'p2', T1)
+    await run(10)
+    expect(holds.map(h => [h.t, h.why])).toEqual([['hold-pass', 'plan'], ['hold-pass', 'plan']])
+    expect(status().asks.map((a: any) => [a.holdId, a.state, a.cut ?? false])).toEqual([[null, 'terminal', true], [null, 'terminal', false]])
   })
 
   it('a request whose URL names another terminal than its session maps to: passed', async () => {
@@ -137,18 +149,24 @@ describe('binding and passing', () => {
     expect(status().asks[0]).toMatchObject({ holdId: null, state: 'terminal', cut: true })
   })
 
-  it('the single-select question binds with its labels; multi-select and two questions pass, with read-only cards', async () => {
+  // (2026-11-17: a multi-select and two questions are answered from the chat too; they passed to the terminal until then)
+  it('a single-select, a multi-select and two questions all bind, each with its labels per question', async () => {
     const { lens, holds, status, run } = setup()
     lens.hook('PreToolUse', Q[0].body, 0, 'q1', T1)
     lens.hook('PreToolUse', Q[1].body, 10, 'q2', T1)
     lens.hook('PreToolUse', Q[2].body, 20, 'q3', T1)
     await run(10)
-    expect(holds[0]).toEqual({ t: 'hold-bind', holdId: 'q1', id: T1, kind: 'question', key: callKey('AskUserQuestion', Q[0].body.tool_input), data: { questions: Q[0].body.tool_input.questions, labels: ['Yes', 'No'], input: Q[0].body.tool_input } })
-    expect(holds.slice(1)).toEqual([{ t: 'hold-pass', holdId: 'q2', why: 'shape' }, { t: 'hold-pass', holdId: 'q3', why: 'shape' }])
+    expect(holds[0]).toEqual({ t: 'hold-bind', holdId: 'q1', id: T1, kind: 'question', key: callKey('AskUserQuestion', Q[0].body.tool_input), data: { questions: Q[0].body.tool_input.questions, labels: ['Yes', 'No'], sets: [['Yes', 'No']], input: Q[0].body.tool_input } })
+    for (const [k, h] of holds.slice(1).entries()) {
+      const input = Q[k + 1].body.tool_input
+      expect(h).toMatchObject({ t: 'hold-bind', holdId: `q${k + 2}`, kind: 'question', data: { sets: input.questions.map((q: any) => q.options.map((o: any) => o.label)) } })
+    }
     const [one, multi, two] = status().asks
     expect(one).toMatchObject({ kind: 'question', holdId: 'q1', state: 'open', toolId: 'toolu_fixture0951', question: { text: 'Should README.md be updated too?', header: 'README', options: [{ label: 'Yes', description: 'Update the references to notes.txt.' }, { label: 'No', description: 'Only rename the file.' }] } })
-    expect(multi).toMatchObject({ kind: 'question', holdId: null, state: 'terminal' })
-    expect(two).toMatchObject({ kind: 'question', holdId: null, state: 'terminal' })
+    expect(one.questions).toBeUndefined()
+    expect(multi).toMatchObject({ kind: 'question', holdId: 'q2', state: 'open', questions: [{ multiSelect: true }] })
+    expect(two).toMatchObject({ kind: 'question', holdId: 'q3', state: 'open' })
+    expect(two.questions).toHaveLength(2)
   })
 
   it('without a hold (a version out of the verified range), a request makes no card: Phase 2 as it was', async () => {

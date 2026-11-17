@@ -48,6 +48,8 @@ const MENU_INDENTED = /^\s+[❯>]\s*\d+\.\s/
 // (Claude Code 2.1.325 draws the mark with a no-break space after it: seen in the Phase 3 trial)
 const PROMPT = /^(?:❯(?:[  ]|$)|>(?: |$))/
 const INDENT = /^[  ]{2}/
+/** bash mode's mark (a `!` command typed or pasted): the row reads as `!` + its text, as the composer sent it */
+const SHELL_PROMPT = /^!(?:[  ]|$)/
 /** a shell's prompt (Claude Code gone): PowerShell, cmd, or a POSIX prompt ending in $ # % */
 const SHELL = /^(?:PS\s.*>|[A-Za-z]:\\.*>|\S+[$#%])\s*$/
 /** lines under the box: the footer (the mode line, the status line) */
@@ -157,9 +159,11 @@ export function promptRow(screen: string | null, dim?: string | null): RowVerdic
   let first = -1
   for (let i = last - 1; i >= Math.max(0, last - 13); i--) if (SOLID.test(lines[i]) || topLabelled(lines[i])) { first = i; break }
   const inside = first >= 0 ? lines.slice(first + 1, last) : []
-  if (!inside.length || !PROMPT.test(inside[0])) return { kind: 'unknown', why: 'no-box' }
+  const shell = !!inside.length && !PROMPT.test(inside[0]) && SHELL_PROMPT.test(inside[0])
+  if (!inside.length || !(PROMPT.test(inside[0]) || shell)) return { kind: 'unknown', why: 'no-box' }
   if (inside.slice(1).some(l => l.trim() !== '' && !INDENT.test(l))) return { kind: 'unknown', why: 'no-box' }
-  const text = [inside[0].slice(2), ...inside.slice(1).map(l => l.slice(2))].join('\n').trim()
+  const body = [inside[0].slice(2), ...inside.slice(1).map(l => l.slice(2))].join('\n').trim()
+  const text = shell ? `!${body}` : body
 
   // the footer: short, no shell prompt (a command's list of matches may be longer, all indented; the agents panel
   // may follow it)
@@ -215,4 +219,43 @@ export function echoState(screen: string | null, expect: EchoExpect, before?: st
   // no head and no image: nothing to recognise, never ok (main always gives a head for text)
   if (!head && expect.images === 0) return 'mismatch'
   return 'ok'
+}
+
+/**
+ * Claude Code's next-prompt suggestion, for the composer's placeholder: the row holds only dim text (nobody typed
+ * it) that is not the stock `Try "…"` hint. Unknown marks, typed text, an empty row, a dialog: none.
+ */
+export function suggestionOf(row: RowVerdict): string | null {
+  if (row.kind !== 'text' || row.typed !== false) return null
+  const text = row.text.trim()
+  if (!text || /^Try "/.test(text)) return null
+  return text
+}
+
+/**
+ * The permission mode Claude Code's footer shows under the prompt box (2026-11-17, for the chat's mode menu):
+ * `⏸ manual mode on` (default), `⏵⏵ accept edits on`, `⏸ plan mode on`, `⏵⏵ auto mode on`, `⏵⏵ bypass permissions
+ * on` (seen on 2.1.32x). A footer naming none of them is the default mode (older versions drew nothing for it).
+ * No box, a dialog, too little: null (the mode cannot be read, so nothing is pressed).
+ */
+export type FooterMode = 'default' | 'acceptEdits' | 'plan' | 'auto' | 'bypassPermissions' | 'dontAsk'
+const FOOTER_MODES: [RegExp, FooterMode][] = [
+  [/\baccept edits on\b/i, 'acceptEdits'],
+  [/\bplan mode on\b/i, 'plan'],
+  [/\bauto mode on\b/i, 'auto'],
+  [/\bbypass permissions on\b/i, 'bypassPermissions'],
+  [/\bdon'?t ask (?:mode )?on\b/i, 'dontAsk'],
+  [/\bmanual mode on\b/i, 'default'],
+]
+export function footerMode(screen: string | null): FooterMode | null {
+  if (typeof screen !== 'string') return null
+  const row = promptRow(screen)
+  if (row.kind === 'unknown') return null
+  const lines = lastLines(screen, LOOK)
+  let last = -1
+  for (let i = lines.length - 1; i >= 0; i--) if (SOLID.test(lines[i])) { last = i; break }
+  if (last < 0) return null
+  // (the footer's first lines: the status line and the mode line; the agents panel under them is not read)
+  for (const l of lines.slice(last + 1, last + 1 + FOOTER_MAX)) for (const [re, mode] of FOOTER_MODES) if (re.test(l)) return mode
+  return 'default'
 }

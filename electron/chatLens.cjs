@@ -129,7 +129,9 @@ const READ_AFTER_HOOK_MS = 50
 const CLOSE_AFTER_MS = 60_000
 const TAIL_WANT = 150
 const CANARY_MS = 3000
-const MISSING_MS = 5000
+// Claude Code writes a prompt only once every UserPromptSubmit hook is done, and another plugin's hook can take
+// many seconds (claude-mem: 12 s, 2026-11-17) while spawn's own arrives at once: the wait allows for them
+const MISSING_MS = 15_000
 const STALL_MS = 30_000
 const AGENT_ITEMS = 200
 /** the items a view keeps (the page's own cap, src/chat/store.ts ITEM_CAP): the oldest go, hasOlder says so */
@@ -249,29 +251,41 @@ function fileThere(file, cwd, fsx) {
   }
 }
 
-/** A question card's question, and whether it can be answered from the chat (the verified shape only) */
+/**
+ * A question card's questions (the first also as `question`, as before), and whether it can be answered from the
+ * chat: 1–4 questions (2026-11-17; one until then), each with 2–6 options of unique labels, single or multi-select,
+ * every word fitting the card, the question texts unique (the answer is keyed by them).
+ */
 function questionCard(input) {
   const qs = isObj(input) && Array.isArray(input.questions) ? input.questions : []
-  const q = isObj(qs[0]) ? qs[0] : null
-  const opts = q && Array.isArray(q.options) ? q.options.filter(isObj) : []
   const cutTo = (v, n) => (typeof v === 'string' && v ? v.slice(0, n) : undefined)
-  const question = q ? {
-    text: cutTo(q.question, CARD.question) ?? '',
-    ...(cutTo(q.header, CARD.header) ? { header: cutTo(q.header, CARD.header) } : {}),
-    options: opts.slice(0, 6).map(o => ({ label: cutTo(o.label, CARD.label) ?? '', ...(cutTo(o.description, CARD.description) ? { description: cutTo(o.description, CARD.description) } : {}) })),
-  } : null
+  const shown = qs.filter(isObj).slice(0, 4).map(q => {
+    const opts = Array.isArray(q.options) ? q.options.filter(isObj) : []
+    return {
+      text: cutTo(q.question, CARD.question) ?? '',
+      ...(cutTo(q.header, CARD.header) ? { header: cutTo(q.header, CARD.header) } : {}),
+      ...(q.multiSelect === true ? { multiSelect: true } : {}),
+      options: opts.slice(0, 6).map(o => ({ label: cutTo(o.label, CARD.label) ?? '', ...(cutTo(o.description, CARD.description) ? { description: cutTo(o.description, CARD.description) } : {}) })),
+    }
+  })
   let size = Infinity
   // (the whole input: the answer carries all of it back)
   try { size = JSON.stringify(input).length } catch { size = Infinity }
-  const labels = opts.map(o => o.label)
-  const answerable = !!q && qs.length === 1 && q.multiSelect !== true && q.options.length === opts.length
-    && typeof q.question === 'string' && !!q.question && q.question.length <= CARD.question
-    && opts.length >= 2 && opts.length <= 6
-    && labels.every(l => typeof l === 'string' && !!l && l.length <= CARD.label) && new Set(labels).size === labels.length
-    && opts.every(o => o.description === undefined || (typeof o.description === 'string' && o.description.length <= CARD.description))
-    && (q.header === undefined || (typeof q.header === 'string' && q.header.length <= CARD.header))
-    && size <= CARD.json
-  return { question, answerable, labels: answerable ? labels : [] }
+  const fits = (q) => {
+    if (!isObj(q) || !Array.isArray(q.options)) return false
+    const opts = q.options.filter(isObj)
+    const labels = opts.map(o => o.label)
+    return q.options.length === opts.length && typeof q.question === 'string' && !!q.question && q.question.length <= CARD.question
+      && opts.length >= 2 && opts.length <= 6
+      && labels.every(l => typeof l === 'string' && !!l && l.length <= CARD.label) && new Set(labels).size === labels.length
+      && opts.every(o => o.description === undefined || (typeof o.description === 'string' && o.description.length <= CARD.description))
+      && (q.header === undefined || (typeof q.header === 'string' && q.header.length <= CARD.header))
+      && (q.multiSelect === undefined || typeof q.multiSelect === 'boolean')
+  }
+  const answerable = qs.length >= 1 && qs.length <= 4 && qs.every(fits)
+    && new Set(qs.map(q => q.question)).size === qs.length && size <= CARD.json
+  const sets = answerable ? qs.map(q => q.options.map(o => o.label)) : []
+  return { question: shown[0] ?? null, questions: shown, answerable, labels: sets[0] ?? [], sets }
 }
 /** The tools whose call opens a dialog in the terminal without a PermissionRequest */
 const ASKING_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode'])
@@ -576,6 +590,9 @@ function createLens({
     }
     t.status.version = v
     if (verdict === 'old') setBanner(t, 'version')
+    // a later line by a checked version: the session is written by it now (a long session resumed across updates);
+    // the old version's banner said a version the view no longer reads from
+    if (verdict === 'ok' && t.status.banner?.reason === 'version') t.status.banner = null
     if (verdict === 'new') t.status.note = 'new-version'
   }
 
@@ -762,8 +779,11 @@ function createLens({
     if (t.disposed) return
     t.readFails = 0
     if (r.rewritten) { onRewritten(t); return }
-    // the file grew (bookkeeping counts too): a stall is over
-    if (t.tail.state().endOffset > before) t.stall = null
+    // the file grew (bookkeeping counts too): a stall is over, and a prompt that landed late was not missing
+    if (t.tail.state().endOffset > before) {
+      t.stall = null
+      if (t.status.banner?.reason === 'missing' && grewSincePrompt(t)) t.status.banner = null
+    }
     if (!r.lines.length) { flush(t); return }
     const { upserts, removes } = ingest(t, r.lines)
     const ops = []
@@ -956,9 +976,15 @@ function createLens({
     const key = keyOf(tool, body.tool_input)
     if (event === 'PermissionRequest') {
       if (tool === 'ExitPlanMode') {
-        // plan approval stays the terminal's: a read-only card
-        addCard(t, { key: `ask:${holdId}`, holdId: null, kind: 'plan', toolId: (key && t.calls.get(key)) ?? null, agent: typeof body.agent_id === 'string', tool, input: toolInput(tool, body.tool_input, t.cwd), always: null, state: 'terminal', since: at }, key)
-        return sendHold({ t: 'hold-pass', holdId, why: 'plan' })
+        // plan approval from the chat (2026-11-17): 승인 (allow) or 계속 계획하기 (deny, Claude plans on), only when the
+        // plan is shown whole and it is the main thread's; a sub-agent's, a plan too long, or no key: the terminal's
+        const input = toolInput(tool, body.tool_input, t.cwd)
+        const raw = isObj(body.tool_input) && typeof body.tool_input.plan === 'string' ? body.tool_input.plan : ''
+        const whole = !!raw.trim() && (input.plan ?? '').length === raw.length
+        const agent = typeof body.agent_id === 'string'
+        const answerable = whole && !agent && !!key
+        addCard(t, { key: answerable ? holdId : `ask:${holdId}`, holdId: answerable ? holdId : null, kind: 'plan', toolId: (key && t.calls.get(key)) ?? null, agent, tool, input, always: null, state: answerable ? 'open' : 'terminal', since: at, ...(raw && !whole ? { cut: true, cutWhy: 'long' } : {}) }, key)
+        return sendHold(answerable ? { t: 'hold-bind', holdId, id: t.id, kind: 'permission', key, data: { rules: [] } } : { t: 'hold-pass', holdId, why: 'plan' })
       }
       // a question is answered through its PreToolUse route, never as a permission
       if (tool === 'AskUserQuestion') return sendHold({ t: 'hold-pass', holdId, why: 'question' })
@@ -998,11 +1024,11 @@ function createLens({
     // (a sub-agent's question: shown, answered in the terminal)
     const answerable = q.answerable && typeof body.agent_id !== 'string'
     if (q.question) {
-      addCard(t, { key: answerable ? holdId : `ask:${holdId}`, holdId: answerable ? holdId : null, kind: 'question', toolId, agent: typeof body.agent_id === 'string', tool, input: {}, always: null, question: q.question, state: answerable ? 'open' : 'terminal', since: at }, key)
+      addCard(t, { key: answerable ? holdId : `ask:${holdId}`, holdId: answerable ? holdId : null, kind: 'question', toolId, agent: typeof body.agent_id === 'string', tool, input: {}, always: null, question: q.question, ...(q.questions.length > 1 || q.questions[0]?.multiSelect ? { questions: q.questions } : {}), state: answerable ? 'open' : 'terminal', since: at }, key)
     }
     if (!answerable) return sendHold({ t: 'hold-pass', holdId, why: 'shape' })
     // (the whole input: the answer keeps every field of it, review M10)
-    return sendHold({ t: 'hold-bind', holdId, id: t.id, kind: 'question', key, data: { questions: body.tool_input.questions, labels: q.labels, input: body.tool_input } })
+    return sendHold({ t: 'hold-bind', holdId, id: t.id, kind: 'question', key, data: { questions: body.tool_input.questions, labels: q.labels, sets: q.sets, input: body.tool_input } })
   }
 
   /** Main's word on a hold (Phase 4): the card's state, nothing else */
@@ -1192,6 +1218,8 @@ function createLens({
   /** A prompt: where the transcript stands now (to tell it grew); missing after 5 s without growth */
   function onPrompt(t) {
     t.prompt = { path: t.path, end: t.tail ? t.tail.state().endOffset : 0 }
+    // a late check of the last turn ends here: this turn's own check decides
+    if (t.canary?.late) clearCanary(t)
     t.stall = null
     stopTimer(t, 'missing')
     if (!watching(t)) return
@@ -1234,7 +1262,9 @@ function createLens({
       const upserts = new Map()
       const removes = new Set()
       if (passed) canaryPassed(t, upserts, removes)
-      else { t.canary = null; setBanner(t, 'canary'); clearLive(t, removes) }
+      // (failed: the check stays, late, until the next prompt; the answer landing after all clears the banner,
+      // as a 다시 읽기 would have shown it: the owner's session, 2026-11-17)
+      else { t.canary.late = true; setBanner(t, 'canary'); clearLive(t, removes) }
       const out = []
       if (removes.size) out.push({ op: 'remove', ids: [...removes] })
       if (upserts.size) out.push(upsertOp(upserts.values()))
@@ -1244,9 +1274,9 @@ function createLens({
     t.timers.canary = timers.setTimeout(() => {
       t.timers.canary = null
       enqueue(t, async () => {
-        if (!t.canary) return
+        if (!t.canary || t.canary.late) return
         if (t.path) await readNew(t)
-        if (!t.canary) return
+        if (!t.canary || t.canary.late) return
         flush(t, settle(canaryHolds(t)))
       })
     }, CANARY_MS)

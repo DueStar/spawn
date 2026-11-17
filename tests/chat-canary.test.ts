@@ -104,6 +104,30 @@ describe('the canary', () => {
     expect(s.status().banner).toBeNull()
   })
 
+  // (the owner's session, 2026-11-17: the banner came, and 다시 읽기 showed the answer; it had landed late)
+  it('the answer lands after the 3 s: the canary banner goes by itself', async () => {
+    const s = await promptSubmitted()
+    const answer = 'An answer written down a little late, long enough to be matched.'
+    s.lens.hook('Stop', { ...stream[4].body, last_assistant_message: answer }, Date.now())
+    await s.run(3100)
+    expect(s.status().banner).toEqual({ reason: 'canary' })
+    appendFileSync(s.transcript(SID(901)), textLine(SID(193), answer))
+    await s.run(1100)
+    expect(s.status().banner).toBeNull()
+  })
+
+  it('a late check is dropped at the next prompt: that turn\'s own check decides', async () => {
+    const s = await promptSubmitted()
+    s.lens.hook('Stop', { ...stream[4].body, last_assistant_message: 'Never written at all, and long enough to be matched.' }, Date.now())
+    await s.run(3100)
+    expect(s.status().banner).toEqual({ reason: 'canary' })
+    s.lens.hook('UserPromptSubmit', { ...stream[0].body, prompt: 'next' }, Date.now())
+    await s.run(10)
+    appendFileSync(s.transcript(SID(901)), userLine(SID(194), 'next') + textLine(SID(195), 'Something else'))
+    await s.run(1100)
+    expect(s.status().banner).toEqual({ reason: 'canary' })
+  })
+
   it('Stop says "A" but the transcript has "B": the canary banner', async () => {
     const s = await promptSubmitted()
     s.lens.hook('Stop', { ...stream[4].body, last_assistant_message: 'A completely different answer that was never written down.' }, Date.now())
@@ -149,22 +173,42 @@ describe('the canary', () => {
 })
 
 describe('missing and stalled', () => {
-  it('a prompt, and no transcript for 5 s: missing', async () => {
+  it('a prompt, and no transcript for 15 s: missing', async () => {
     const s = setup()
     s.lens.setTerminals([term(SID(901))])
     s.lens.open(SID(901))
     await s.run(20)
     s.lens.hook('UserPromptSubmit', stream[0].body, Date.now())
-    await s.run(4900)
+    await s.run(14_900)
     expect(s.status().banner).toBeNull()
     await s.run(200)
     expect(s.status().banner).toEqual({ reason: 'missing' })
   })
 
-  it('a prompt, and the transcript does not grow for 5 s: missing', async () => {
+  it('a prompt, and the transcript does not grow for 15 s: missing', async () => {
     const s = await promptSubmitted()
-    await s.run(5100)
+    await s.run(15_100)
     expect(s.status().banner).toEqual({ reason: 'missing' })
+  })
+
+  // Claude Code writes the prompt only after every UserPromptSubmit hook is done; another plugin's
+  // hook took 12 s (claude-mem, 2026-11-17) while spawn's own arrived at once
+  it('the prompt lands 12 s after its hook (a slow hook of another plugin): no banner', async () => {
+    const s = await promptSubmitted()
+    await s.run(12_000)
+    appendFileSync(s.transcript(SID(901)), '{"type":"queue-operation","operation":"enqueue"}\n')
+    await s.run(1100)
+    await s.run(5000)
+    expect(s.status().banner).toBeNull()
+  })
+
+  it('the prompt lands after the missing banner: the banner goes by itself', async () => {
+    const s = await promptSubmitted()
+    await s.run(15_100)
+    expect(s.status().banner).toEqual({ reason: 'missing' })
+    appendFileSync(s.transcript(SID(901)), '{"type":"queue-operation","operation":"enqueue"}\n')
+    await s.run(1100)
+    expect(s.status().banner).toBeNull()
   })
 
   it('tool hooks keep coming while the file stays still for 30 s: stalled', async () => {
@@ -266,6 +310,19 @@ describe('versions', () => {
     await s.run(20)
     expect(s.status().banner).toEqual({ reason: 'version' })
     expect(s.status().version).toBe('2.1.200')
+  })
+
+  // a long session resumed across updates (the owner's Translation tab, 2026-11-17): its early lines by 2.1.319, the
+  // rest by 2.1.325; the banner said "2.1.325 hasn't been checked" for good
+  it('older lines first, then lines by a checked version: no banner, the checked version shown', async () => {
+    const s = setup()
+    writeFileSync(s.transcript(SID(901)), userLine(SID(181), 'hello', { version: '2.1.200' }) + textLine(SID(182), 'hi', { version: '2.1.200' })
+      + userLine(SID(183), 'again', { version: '2.1.325' }) + textLine(SID(184), 'yes', { version: '2.1.325' }))
+    s.lens.setTerminals([term(SID(901))])
+    s.lens.open(SID(901))
+    await s.run(20)
+    expect(s.status().banner).toBeNull()
+    expect(s.status().version).toBe('2.1.325')
   })
 
   it('newer than the range: a quiet note, no banner (from the transcript or from the host)', async () => {

@@ -260,3 +260,39 @@ describe('chatHolds.cjs source', () => {
     expect(src.match(/updatedPermissions/g)?.length).toBe(1)
   })
 })
+
+// 2026-11-17: several questions at once, and a multi-select one, answered from the chat
+describe('several questions and a multi-select', () => {
+  const { questionsBody, MULTI_JOIN } = holdsMod
+  const Q2 = { question: 'Which areas?', header: 'Areas', options: [{ label: 'UI' }, { label: 'Server' }, { label: 'Docs' }], multiSelect: true }
+  const input = { questions: [Q1, Q2] }
+  const sets = [['Yes', 'No'], ['UI', 'Server', 'Docs']]
+
+  it('the body maps each question to its label, a multi-select\'s joined', () => {
+    const body = JSON.parse(questionsBody(input, [['No'], ['UI', 'Docs']]))
+    expect(body.hookSpecificOutput.updatedInput).toEqual({ ...input, answers: { [Q1.question]: 'No', [Q2.question]: `UI${MULTI_JOIN}Docs` } })
+    expect(body.hookSpecificOutput.permissionDecision).toBe('allow')
+  })
+  it('a body that does not fit: none', () => {
+    expect(questionsBody(input, [['No']])).toBeNull()
+    expect(questionsBody(input, [['No', 'Yes'], ['UI']])).toBeNull()
+    expect(questionsBody(input, [[], ['UI']])).toBeNull()
+    expect(questionsBody({ questions: [Q1, Q1] }, [['No'], ['Yes']])).toBeNull()
+  })
+  it('through a hold: picks by index, checked against each question', () => {
+    const sent: (string | null)[] = []
+    const { holds } = setup()
+    const id = holds.open('question', (b: string | null) => { sent.push(b) })
+    expect(holds.bind(id, { id: A, key: 'k', data: { sets, input } })).toBe(true)
+    expect(holds.answer(id, { id: A, choice: 'option', option: 0, ...shown(A) })).toEqual({ ok: false, reason: 'invalid' })
+    expect(holds.answer(id, { id: A, choice: 'options', picks: [[0, 1], [0]], ...shown(A) })).toEqual({ ok: false, reason: 'invalid' })
+    expect(holds.answer(id, { id: A, choice: 'options', picks: [[0], [3]], ...shown(A) })).toEqual({ ok: false, reason: 'invalid' })
+    expect(holds.answer(id, { id: A, choice: 'options', picks: [[1], [2, 0]], ...shown(A) })).toEqual({ ok: true })
+    expect(JSON.parse(sent[0]!).hookSpecificOutput.updatedInput.answers).toEqual({ [Q1.question]: 'No', [Q2.question]: 'UI, Docs' })
+  })
+  it('a bind whose sets do not fit the questions is released', () => {
+    const { holds } = setup()
+    const id = holds.open('question', () => {})
+    expect(holds.bind(id, { id: A, key: 'k', data: { sets: [['Yes', 'No']], input } })).toBe(false)
+  })
+})

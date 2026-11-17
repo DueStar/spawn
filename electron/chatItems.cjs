@@ -35,7 +35,8 @@
  * @typedef {ItemBase & { kind: 'notice', notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model', text?: string }} NoticeItem
  * @typedef {ItemBase & { kind: 'turn-end', durationMs: number }} TurnEndItem
  * @typedef {ItemBase & { kind: 'live', text: string }} LiveItem
- * @typedef {ItemBase & { kind: 'thinking', text: string, durationMs?: number, redacted?: boolean, truncated?: boolean }} ThinkingItem
+ * @typedef {ItemBase & { kind: 'shell', command: string, state: 'running' | 'done', stdout?: string, stderr?: string, truncated?: boolean }} ShellItem
+ * @typedef {ItemBase & { kind: 'thinking', text: string, durationMs?: number, redacted?: boolean, truncated?: boolean, update?: boolean }} ThinkingItem
  * @typedef {UserItem | TextItem | ToolItem | NoticeItem | TurnEndItem | LiveItem | ThinkingItem} ChatItem
  */
 
@@ -266,6 +267,18 @@ function unwrapPasted(text) {
 }
 
 /**
+ * A `!` command (Claude Code's bash mode) is recorded as two user lines: `<bash-input>ls</bash-input>`, then
+ * `<bash-stdout>…</bash-stdout><bash-stderr>…</bash-stderr>` (the output HTML-escaped). The view shows them as one
+ * shell row: the second line updates the first's item.
+ */
+const BASH_INPUT = /^<bash-input>([\s\S]*?)<\/bash-input>\s*$/
+const BASH_OUTPUT = /^<bash-stdout>([\s\S]*?)<\/bash-stdout>\s*(?:<bash-stderr>([\s\S]*?)<\/bash-stderr>)?\s*$/
+const NO_OUTPUT = '(Bash completed with no output)'
+function unescapeHtml(s) {
+  return String(s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
+}
+
+/**
  * The pairing builder. `parent` (a sub-agent's Agent row id): sidechain lines
  * are built, each item carrying it (tools and prose only); without it
  * sidechain lines are skipped.
@@ -274,6 +287,8 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
   /** @type {Map<string, ToolItem>} */
   const tools = new Map()
   const out = (item) => (parent ? { ...item, parent } : { ...item })
+  /** the last `!` command's row, which its output line completes */
+  let shell = null
 
   /** A user message or what its text stands for (a notice), or nothing */
   function userText(raw, images, id, order, at, summary = false) {
@@ -285,6 +300,21 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
     if (t.startsWith('[Request interrupted by user')) return { id, order, at, kind: 'notice', notice: 'interrupted' }
     const command = commandOf(t)
     if (command) return { id, order, at, kind: 'notice', notice: 'command', text: command }
+    const input = BASH_INPUT.exec(t)
+    if (input) {
+      shell = { id, order, at, kind: 'shell', command: cut(unescapeHtml(input[1]).trim(), caps.field), state: 'running' }
+      return shell
+    }
+    const output = BASH_OUTPUT.exec(t)
+    if (output) {
+      if (!shell) return null
+      const stdout = unescapeHtml(output[1]).replace(NO_OUTPUT, '').replace(/\s+$/, '')
+      const stderr = unescapeHtml(output[2] ?? '').replace(/\s+$/, '')
+      const so = cut(stdout, caps.text)
+      const se = cut(stderr, caps.text)
+      shell = clean({ ...shell, state: 'done', stdout: so || undefined, stderr: se || undefined, truncated: so.length < stdout.length || se.length < stderr.length ? true : undefined })
+      return shell
+    }
     if (t.startsWith('<local-command-')) return null
     if (t.startsWith('<task-notification>')) return { id, order, at, kind: 'notice', notice: 'agent-done' }
     if (!text && !images) return null
@@ -396,6 +426,9 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
               durationMs: typeof ms === 'number' && Number.isFinite(ms) && ms >= 0 ? ms : undefined,
               redacted: block.type === 'redacted_thinking' ? true : undefined,
               truncated: text.length < raw.length ? true : undefined,
+              // thinkingDisplay "updates": a block with text is the progress note the terminal shows (the hidden
+              // thinking is written empty); the chat shows it in 기본 too (the owner's session, 2026-11-17)
+              update: obj.thinkingDisplay === 'updates' && raw.trim() && block.type === 'thinking' ? true : undefined,
             }))
             return
           }

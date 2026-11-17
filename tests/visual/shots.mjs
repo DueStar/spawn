@@ -138,7 +138,7 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-send-double  a double click on 보내기 and two quick Enters → one chat.send each
                    chat-send-refuse  a dialog on screen → nothing sent, the note, 터미널로 보기 flips; prompt-busy → the note,
                               the draft kept; waiting → nothing sent; no echo → submit 'timeout', "남아 있어요", the draft cleared
-                   chat-queue  Claude Code's queue of 2 → 대기 중 2 and its first text, no button; none → no strip
+                   chat-queue  Claude Code's queue of 2 → 대기 중 2 and its first text, a click lists both; none → no strip
                    chat-stop  멈추기 in the working line → one chat.interrupt; Esc in the composer → one more; waiting: no 멈추기
                    chat-image  a pasted PNG → one chat.image and a chip; the lightbox and Esc (the focus back); × →
                               chat.dropImage; a dropped .txt → the type note; a text paste → no chat.image
@@ -868,24 +868,25 @@ const FLOWS = {
         const control = page.locator('.w-term-tabs .w-textsize')
         if ((await control.count()) !== 1) bad(`${await control.count()} text-size control(s) in the bar`)
         const curText = async () => (await control.locator('.w-textsize-cur').textContent()).trim()
-        if (await curText() !== '가보통') bad(`the control reads "${await curText()}", not 가 보통`)
+        if (await curText() !== '100%') bad(`the control reads "${await curText()}", not 100%`)
         const tip = await control.locator('.w-textsize-cur').getAttribute('title')
         if (!tip.includes(mac ? '⌘+=' : 'Ctrl+=') || (mac && tip.includes('Ctrl'))) bad(`the tooltip names the wrong key: ${tip}`)
         // Keys with the terminal focused: one step per press, the terminal's own handler never doubles it
         await page.locator('.w-term-body .xterm-helper-textarea').first().focus()
         await page.keyboard.press(`${mod}+Equal`)
-        await expectStep('ts-large', `${mod}+= once in the terminal`)
+        await expectStep('ts-110', `${mod}+= once in the terminal`)
         await page.keyboard.press(`${mod}+Equal`)
-        await expectStep('ts-xlarge', `${mod}+= twice in the terminal`)
-        if (await curText() !== '가아주 크게') bad(`at 아주 크게 the control reads "${await curText()}"`)
-        if (!(await control.locator('.w-textsize-step').last().isDisabled())) bad('+ is not disabled at 아주 크게')
+        await page.keyboard.press(`${mod}+Equal`)
+        await expectStep('ts-130', `${mod}+= three times in the terminal`)
+        if (await curText() !== '130%') bad(`at 130% the control reads "${await curText()}"`)
+        if (!(await control.locator('.w-textsize-step').last().isDisabled())) bad('+ is not disabled at 130%')
         // Another view: the keys still act (held at the top)
         await page.locator('.w-view-tabs button').nth(1).click()
         await page.waitForSelector('.w-dex-body', { timeout: 10_000 })
         await page.keyboard.press(`${mod}+Equal`)
-        if (await cls() !== 'ts-xlarge') bad(`${mod}+= on 도감 at the top: ${await cls()}`)
+        if (await cls() !== 'ts-130') bad(`${mod}+= on 도감 at the top: ${await cls()}`)
         await page.keyboard.press(`${mod}+Minus`)
-        if (await cls() !== 'ts-large') bad(`${mod}+- on 도감: ${await cls()}, want ts-large`)
+        if (await cls() !== 'ts-120') bad(`${mod}+- on 도감: ${await cls()}, want ts-120`)
         await page.keyboard.press(`${mod}+Digit0`)
         if (await cls() !== '(보통)') bad(`${mod}+0 on 도감: ${await cls()}, want no ts- class`)
         await page.locator('.w-view-tabs button').nth(0).click()
@@ -895,7 +896,7 @@ const FLOWS = {
         await page.keyboard.down(mod)
         await page.mouse.wheel(0, -100)
         await page.keyboard.up(mod)
-        await expectStep('ts-large', `${mod}+wheel up over the list`)
+        await expectStep('ts-110', `${mod}+wheel up over the list`)
         await page.locator('.w-term-body .term-view').first().hover({ position: { x: 200, y: 200 } })
         await page.keyboard.down(mod)
         await page.mouse.wheel(0, 100)
@@ -907,25 +908,28 @@ const FLOWS = {
         await expectStep('(보통)', 'a plain wheel')
         // The control: − / +, the menu (pick, Esc, outside press)
         await control.locator('.w-textsize-step').first().click()
-        await expectStep('ts-small', '− once')
-        if (!(await control.locator('.w-textsize-step').first().isDisabled())) bad('− is not disabled at 작게')
+        await expectStep('ts-90', '− once')
+        await control.locator('.w-textsize-step').first().click()
+        await expectStep('ts-80', '− twice')
+        if (!(await control.locator('.w-textsize-step').first().isDisabled())) bad('− is not disabled at 80%')
         await control.locator('.w-textsize-step').last().click()
-        await expectStep('(보통)', '+ once')
+        await control.locator('.w-textsize-step').last().click()
+        await expectStep('(보통)', '+ twice')
         await control.locator('.w-textsize-cur').click()
         const menu = control.locator('.w-textsize-menu')
         if (!(await menu.count())) bad('the middle button did not open the menu')
         else {
           const items = await menu.locator('.w-textsize-item').allTextContents()
-          if (items.join('|') !== '작게|보통|크게|아주 크게') bad(`the menu rows: ${items.join(' | ')}`)
-          if ((await menu.locator('.w-textsize-item.on').textContent()).indexOf('보통') !== 0) bad('보통 is not the checked row')
+          if (items.join('|') !== '80%|90%|100%|110%|120%|130%') bad(`the menu rows: ${items.join(' | ')}`)
+          if ((await menu.locator('.w-textsize-item.on').textContent()).indexOf('100%') !== 0) bad('100% is not the checked row')
           const mb = await menu.boundingBox(), term = await page.locator('.w-term').boundingBox()
           if (mb.x + mb.width > term.x + term.width + 0.5 || mb.width !== 140) bad(`the menu is ${mb.width}px wide, ends at ${mb.x + mb.width} (card ${term.x + term.width})`)
           const top = await page.evaluate(() => { const m = document.querySelector('.w-textsize-menu').getBoundingClientRect(); const el = document.elementFromPoint(m.left + 20, m.bottom - 12); return !!el?.closest('.w-textsize-menu') })
           if (!top) bad('the menu is covered by something (the terminal?)')
           // A picture of the open menu, for the record
           if (opts?.out) await page.screenshot({ path: join(opts.out, `flow-text-size-menu${mac ? '-mac' : ''}.png`), animations: 'disabled', caret: 'hide' })
-          await menu.locator('.w-textsize-item', { hasText: '아주 크게' }).click()
-          await expectStep('ts-xlarge', 'picking 아주 크게')
+          await menu.locator('.w-textsize-item', { hasText: '120%' }).click()
+          await expectStep('ts-120', 'picking 120%')
           if (await menu.count()) bad('the menu stayed open after a pick')
         }
         await control.locator('.w-textsize-cur').click()
@@ -934,7 +938,7 @@ const FLOWS = {
         await control.locator('.w-textsize-cur').click()
         await page.mouse.click(700, 500)
         if (await menu.count()) bad('a press outside did not close the menu')
-        if (await page.evaluate(() => localStorage.getItem('spawn-text-size')) !== 'xlarge') bad('the step was not remembered')
+        if (await page.evaluate(() => localStorage.getItem('spawn-text-size')) !== '120') bad('the step was not remembered')
         // The bar never scrolls: at 아주 크게 the views drop to icons when it is narrow
         await page.setViewportSize({ width: 900, height: 700 })
         await sleep(300)
@@ -953,9 +957,9 @@ const FLOWS = {
         await page.locator('.w-head .w-icon[aria-label="설정"]').click()
         await page.locator('.set-nav button', { hasText: /^앱$/ }).click()
         const row = page.locator('.set-row', { hasText: '글자 크기' })
-        if ((await row.locator('button.on').textContent()) !== '아주 크게') bad(`설정 shows ${await row.locator('button.on').textContent()}, not 아주 크게`)
-        await row.locator('button', { hasText: /^작게$/ }).click()
-        if (await cls() !== 'ts-small') bad(`설정's 작게: ${await cls()}`)
+        if ((await row.locator('button.on').textContent()) !== '120%') bad(`설정 shows ${await row.locator('button.on').textContent()}, not 120%`)
+        await row.locator('button', { hasText: /^90%$/ }).click()
+        if (await cls() !== 'ts-90') bad(`설정's 90%: ${await cls()}`)
       } catch (err) {
         bad(String(err.message).split('\n')[0])
       } finally {
@@ -1114,7 +1118,7 @@ const FLOWS = {
         const id = await firstTerm(page)
         await page.waitForSelector(COMPOSER, { timeout: 15_000 })
         await take(page, 'composer +', '.chat-cbar .chat-ib:not(.mono)')
-        await take(page, 'composer @', '.chat-cbar .chat-ib.mono')
+        await take(page, 'composer @', '.chat-cbar .chat-ib:nth-of-type(2)')
         await take(page, 'composer 보내기', '.chat-composer .chat-send')
         await composerField(page).click()
         await pasteImage(page, 1)
@@ -1344,9 +1348,9 @@ const FLOWS = {
       await cur.focus()
       await page.keyboard.press('Enter')
       await sleep(80)
-      if (!(await page.locator('.w-textsize-menu').count())) { bad('Enter on 가 opened no menu'); return }
-      if (await item() !== '보통') bad(`the menu opened with the focus on ${await item()}, not the checked 보통`)
-      for (const [key, want] of [['ArrowDown', '크게'], ['ArrowDown', '아주 크게'], ['ArrowDown', '작게'], ['ArrowUp', '아주 크게'], ['Home', '작게'], ['End', '아주 크게']]) {
+      if (!(await page.locator('.w-textsize-menu').count())) { bad('Enter on the text size opened no menu'); return }
+      if (await item() !== '100%') bad(`the menu opened with the focus on ${await item()}, not the checked 100%`)
+      for (const [key, want] of [['ArrowDown', '110%'], ['ArrowDown', '120%'], ['ArrowDown', '130%'], ['ArrowDown', '80%'], ['ArrowUp', '130%'], ['Home', '80%'], ['End', '130%']]) {
         await page.keyboard.press(key)
         if (await item() !== want) bad(`${key}: the focus is on ${await item()}, want ${want}`)
       }
@@ -1377,7 +1381,7 @@ const FLOWS = {
       await pasteImage(page, 1)
       await page.waitForSelector('.chat-ichip', { timeout: 3000 })
       const order = await page.evaluate(() => {
-        const sel = ['.chat-scroll', '.chat-queue', '.chat-ichip-pic', '.chat-ichip-x', 'textarea.chat-input:not(.chat-input-twin)', '.chat-cbar .chat-ib', '.chat-cbar .chat-ib.mono', '.chat-send', '.chat-ctrl']
+        const sel = ['.chat-scroll', '.chat-queue', '.chat-ichip-pic', '.chat-ichip-x', 'textarea.chat-input:not(.chat-input-twin)', '.chat-cbar .chat-ib', '.chat-cbar .chat-ib:nth-of-type(2)', '.chat-send', '.chat-ctrl']
         const els = sel.map(q => document.querySelector(q))
         const missing = sel.filter((q, i) => !els[i])
         const wrong = []
@@ -1547,9 +1551,9 @@ const FLOWS = {
         if (!mb) bad('the text-size menu did not open')
         else {
           if (mb.x < -0.5 || mb.x + mb.width > width + 0.5) bad(`the text-size menu runs out of the window: ${mb.x.toFixed(1)}–${(mb.x + mb.width).toFixed(1)}`)
-          await page.locator('.w-textsize-item', { hasText: '크게' }).first().click()
+          await page.locator('.w-textsize-item', { hasText: '110%' }).first().click()
           const cls = await page.evaluate(() => document.documentElement.className)
-          if (!/ts-large/.test(cls)) bad(`picking 크게 in the menu left <html class="${cls}">`)
+          if (!/ts-110/.test(cls)) bad(`picking 110% in the menu left <html class="${cls}">`)
         }
         for (const p of await fitProblems(page)) bad(`fit: ${p}`)
         if (opts?.out) await page.screenshot({ path: join(opts.out, `flow-narrow-${mac ? 'mac' : 'win'}-${folded ? 'folded' : 'open'}-${width}${chat ? '-chat' : ''}.png`), animations: 'disabled', caret: 'hide' })
@@ -2481,7 +2485,12 @@ const FLOWS = {
       else {
         const text = await strip.innerText()
         if (!text.includes('대기 중 2') || !text.includes('끝나면 테스트도 돌려 주세요')) bad(`the strip says ${JSON.stringify(text)}`)
+        // (display only: nothing to send now or take out; the strip itself opens the list)
         if (await strip.locator('button').count()) bad('a button in the queue strip (display only)')
+        await strip.click()
+        await sleep(150)
+        const items = await page.locator('.chat-queue-list li').allInnerTexts()
+        if (items.length !== 2 || !items[1].includes('그리고 정리')) bad(`the opened list says ${JSON.stringify(items)}`)
       }
       await pushStatus(page, id, { state: 'working', since: fixture.NOW })
       await sleep(300)

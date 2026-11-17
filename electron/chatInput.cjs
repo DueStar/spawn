@@ -24,6 +24,11 @@
 
 const ENTER = '\r'
 const ESC = '\x1b'
+/** Shift+Tab: Claude Code's key for the next permission mode (the chat's mode menu, 2026-11-17) */
+const SHIFT_TAB = '\x1b[Z'
+/** ↑ / ↓: a terminal dialog's mark moved from the chat's dialog card (2026-11-17) */
+const ARROW_UP = '\x1b[A'
+const ARROW_DOWN = '\x1b[B'
 const PASTE_START = '\x1b[200~'
 const PASTE_END = '\x1b[201~'
 const INPUT_CAPS = Object.freeze({ chars: 20_000, images: 8 })
@@ -92,9 +97,16 @@ const endGuard = (s) => (s.endsWith('\\') ? ' ' : '')
  * §6: 150 ms after the text worked every time; an image needs Claude Code to read its file).
  * @param {{ text: string, images: string[] }} p  the text sanitised already; absolute image paths
  */
-function encodeSend({ text, images = [] }) {
-  const paths = Array.isArray(images) ? images : []
+function encodeSend({ text, images = [], shell = false }) {
+  // shell: the composer's own shell mode (the user chose it), the one way a `!` is pasted as Claude Code's bash
+  // mode; a `!` written in the normal composer stays literal (literalPrefix). A command runs alone: no images
+  const paths = Array.isArray(images) && !shell ? images : []
   const t = String(text ?? '')
+  if (shell) {
+    const line = '!' + t
+    const head = [...line.replace(/\s+/g, ' ').trim()].slice(0, HEAD_CHARS).join('').trimEnd()
+    return { steps: [{ data: PASTE_START + line + endGuard(line) + PASTE_END, waitMs: 0 }], expect: { head, images: 0, long: t.includes('\n') || t.length > LONG_CHARS }, command: false, minEnterMs: 150 }
+  }
   if (isCommand(t) && !paths.length) {
     return { steps: [{ data: t + endGuard(t), waitMs: 0 }], expect: { head: t, images: 0, long: false }, command: true, minEnterMs: 150 }
   }
@@ -223,4 +235,4 @@ function busyReason(d) {
   return d === 'dirty' ? 'prompt-busy' : 'prompt-unknown'
 }
 
-module.exports = { ENTER, ESC, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, isCommand, literalPrefix, quotePath, pastablePath, encodeSend, tokens, isRealInput, nextDraft, mayType, busyReason }
+module.exports = { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, isCommand, literalPrefix, quotePath, pastablePath, encodeSend, tokens, isRealInput, nextDraft, mayType, busyReason }

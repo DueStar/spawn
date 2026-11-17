@@ -35,8 +35,14 @@ describe('promptRow', () => {
     }
   })
 
-  it('anything that is not the verified box is not one: bash mode, a shell, too little, no reader', () => {
-    expect(promptRow(screen('bash-mode'))).toEqual({ kind: 'unknown', why: 'no-box' })
+  // bash mode reads as `!` + its text since the composer's shell mode (2026-11-17): someone's text on the row, so a
+  // normal send refuses it (prompt-busy, or a mismatch never entered) and a shell send can see its own echo
+  it('bash mode is a row whose text starts with !', () => {
+    expect(promptRow(screen('bash-mode'))).toEqual({ kind: 'text', text: '!ls' })
+    expect(echoState(screen('bash-mode'), { head: '!ls', images: 0, long: false })).toBe('ok')
+  })
+
+  it('anything that is not the verified box is not one: a shell, too little, no reader', () => {
     expect(promptRow(screen('no-box-shell'))).toEqual({ kind: 'unknown', why: 'no-box' })
     expect(promptRow(screen('short'))).toEqual({ kind: 'unknown', why: 'short' })
     expect(promptRow(null)).toEqual({ kind: 'unknown', why: 'no-reader' })
@@ -160,7 +166,8 @@ describe('echoState', () => {
     expect(echoState(screen('dialog-bash'), { head, images: 0, long: false })).toBe('blocked')
     expect(echoState(screen('idle-empty'), { head, images: 0, long: false })).toBe('pending')
     expect(echoState(null, { head, images: 0, long: false })).toBe('pending')
-    expect(echoState(screen('bash-mode'), { head, images: 0, long: false })).toBe('pending')
+    // (bash mode under a normal send: something else on the row, never entered)
+    expect(echoState(screen('bash-mode'), { head, images: 0, long: false })).toBe('mismatch')
   })
 
   it('whitespace is collapsed on both sides', () => {

@@ -94,11 +94,15 @@ interface spawnBridge {
     changeFile(p: { id: string; file: string; before?: number }): Promise<{ ok: true; file: ChangeFile; edits: ChangeEdit[]; more: number } | { ok: false; reason: 'unknown' | 'gone' }>
     onUpdate(fn: (u: ChatUpdate) => void): () => void
     /** The composer, step one: the text typed into the terminal without Enter (src/chat/send.ts) */
-    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
     /** Step two: Enter, once, only when the page saw the echo (`echo: 'ok'`) */
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
     /** 멈추기: one Esc while the session works */
     interrupt(id: string): Promise<{ ok: true } | { ok: false; reason: InterruptRefusal }>
+    /** the mode menu: one Shift+Tab (main checks the session, no dialog, no send in flight) */
+    cycleMode(id: string): Promise<{ ok: true } | { ok: false; reason: string }>
+    /** the dialog card: one key, or one line of words (main checks the session, no hold, no send in flight) */
+    dialogKey(p: { id: string; key: 'up' | 'down' | 'enter' | 'esc' | 'text'; text?: string }): Promise<{ ok: true } | { ok: false; reason: string }>
     /** An image's bytes: main checks them by their first bytes and keeps the file; the page gets a token */
     image(p: { id: string; bytes: Uint8Array }): Promise<{ ok: true; token: string; type: 'png' | 'jpeg' | 'gif' | 'webp' } | { ok: false; reason: ImageRefusal }>
     /** A chip removed before sending: its file goes */
@@ -110,7 +114,7 @@ interface spawnBridge {
     /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */
     visible(id: string | null): void
     /** An answer card's choice: main checks it and builds what is sent (never the page) */
-    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
+    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
     /** 7-48: one resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
     redraw(id: string): Promise<{ ok: true } | { ok: false; reason: RedrawRefusal }>
     /** spawn.log only (1.5.3): a send the page refused for its screen, with the screen's masked shape */
@@ -225,7 +229,7 @@ export type Lang = 'ko' | 'en' | 'ja'
 export interface AppSettings {
   notify: { catch: boolean; flee: boolean; evolve: boolean; levelup: boolean; rareOnly: boolean; duration: 'short' | 'normal' | 'long'; quiet: boolean; quietFrom: string; quietTo: string; sound: boolean; sessions: boolean }
   privacy: { hidePrompts: boolean }
-  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string; chatView: boolean; linkPreviews: boolean }
+  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string; chatView: boolean; linkPreviews: boolean; autoSort: boolean }
   /** workMode: 업무 모드 (src/workMode.ts) */
   app: { openAtLogin: boolean; startHidden: boolean; widgetOnTop: boolean; language: 'auto' | Lang; workMode: boolean }
   terminal: { scrollback: 1000 | 5000 | 10000; font: TerminalFont }

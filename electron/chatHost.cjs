@@ -44,7 +44,7 @@
 const path = require('path')
 const { chatHookEntries, createChatEndpoint } = require('./chatHooks.cjs')
 const { versionVerdict } = require('./chatSchema.cjs')
-const { ENTER, ESC, INPUT_CAPS, sanitize, encodeSend, nextDraft, mayType, busyReason, isRealInput, pastablePath } = require('./chatInput.cjs')
+const { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, encodeSend, nextDraft, mayType, busyReason, isRealInput, pastablePath } = require('./chatInput.cjs')
 const { createImageStore } = require('./chatImages.cjs')
 const { scan: scanFiles, matchFiles } = require('./chatFiles.cjs')
 const { createHolds, HOLD } = require('./chatHolds.cjs')
@@ -306,9 +306,11 @@ function createChatHost({
     const id = typeof p?.id === 'string' ? p.id : ''
     if (!st.on || !holds) return { ok: false, reason: 'off' }
     const option = Number.isInteger(p?.option) ? p.option : undefined
+    // (several questions / a multi-select: each question's picked option indices; plain integers only, bounded)
+    const picks = Array.isArray(p?.picks) && p.picks.length <= 4 && p.picks.every(x => Array.isArray(x) && x.length <= 6 && x.every(Number.isInteger)) ? p.picks.map(x => [...x]) : undefined
     // (only the page that shows that chat answers for it)
     const shown = from === undefined || visibleFrom === null || from === visibleFrom ? visibleId : null
-    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, visibleId: shown, windowVisible })
+    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, visibleId: shown, windowVisible })
     // the side panel's 확인 필요 goes, as when the terminal is answered with Enter
     if (r.ok) { try { terminals.clearAsking?.(id) } catch {} }
     return r
@@ -804,7 +806,10 @@ function createChatHost({
     const paths = tokens.map(tok => imagePath(id, tok))
     // (a path is pasted quoted when it has a space: a quote or a control character in it, never)
     if (paths.some(x => !pastablePath(x))) return { ok: false, reason: 'images' }
-    const enc = encodeSend({ text, images: paths })
+    // (shell: the composer's own shell mode; a `!` command takes no images)
+    const shell = p.shell === true
+    if (shell && (tokens.length || !text.trim())) return { ok: false, reason: 'empty' }
+    const enc = encodeSend({ text, images: paths, shell })
 
     const f = { sendId, at: now(), lastStepAt: 0, minEnterMs: enc.minEnterMs, permSeq: c.permSeq, touched: false, partial: false, submitting: false, expiry: null }
     c.inFlight = f
@@ -893,6 +898,55 @@ function createChatHost({
     if (!terminals.typeForChat(id, ESC)) return { ok: false, reason: 'no-session' }
     c.lastEsc = now()
     draft(id, { via: 'esc' })
+    return { ok: true }
+  }
+
+  /**
+   * The chat's mode menu (2026-11-17): one Shift+Tab, Claude Code's own key for the next permission mode. The page
+   * reads the footer between presses (src/chat/modeSwitch.ts). Never while a dialog waits (Shift+Tab answers some),
+   * nor while a send is being typed; at most one every 80 ms. The prompt row is not touched, so the ledger stays.
+   */
+  const CYCLE_MS = 80
+  function cycleMode(idArg) {
+    const id = typeof idArg === 'string' ? idArg : ''
+    const term = termOf(id)
+    if (!st.on || !term || term.status === 'exited' || term.tool !== 'claude' || term.chat !== 'armed') return { ok: false, reason: 'no-session' }
+    if (waitingNow(id, term)) return { ok: false, reason: 'waiting' }
+    const c = inputOf(id)
+    if (c.inFlight) return { ok: false, reason: 'sending' }
+    if (now() - (c.lastCycle ?? -Infinity) < CYCLE_MS) return { ok: false, reason: 'debounced' }
+    if (!terminals.typeForChat(id, SHIFT_TAB)) return { ok: false, reason: 'no-session' }
+    c.lastCycle = now()
+    return { ok: true }
+  }
+
+  /**
+   * The chat's dialog card (2026-11-17): a dialog Claude Code draws that no hold covers (a `/model` confirmation,
+   * the folder trust, a plan's choices) is read from the screen by the page (src/chat/dialog.ts), which moves its
+   * mark one key at a time and checks the screen between keys. Here only the keys: ↑, ↓, Enter, Esc, or one line
+   * of words pasted (an option that takes them). Not while a hold waits (its card answers it) nor while a send is
+   * being typed; at most one key every 40 ms.
+   */
+  const DIALOG_KEYS = Object.freeze({ up: ARROW_UP, down: ARROW_DOWN, enter: ENTER, esc: ESC })
+  const DIALOG_MS = 40
+  function dialogKey(p) {
+    const id = typeof p?.id === 'string' ? p.id : ''
+    const term = termOf(id)
+    if (!st.on || !term || term.status === 'exited' || term.tool !== 'claude' || term.chat !== 'armed') return { ok: false, reason: 'no-session' }
+    if (holds && holds.openFor(id).length > 0) return { ok: false, reason: 'held' }
+    const c = inputOf(id)
+    if (c.inFlight) return { ok: false, reason: 'sending' }
+    if (now() - (c.lastDialogKey ?? -Infinity) < DIALOG_MS) return { ok: false, reason: 'debounced' }
+    let data = null
+    if (p?.key === 'text') {
+      // one line of the user's words, sanitised (no control character survives), as one paste
+      const text = sanitize(typeof p.text === 'string' ? p.text.slice(0, 4000) : '').replace(/\s*\n\s*/g, ' ')
+      if (!text.trim() || text.length > 2000) return { ok: false, reason: 'empty' }
+      data = PASTE_START + text + PASTE_END
+    } else if (Object.prototype.hasOwnProperty.call(DIALOG_KEYS, p?.key)) data = DIALOG_KEYS[p.key]
+    if (data === null) return { ok: false, reason: 'invalid' }
+    if (!terminals.typeForChat(id, data)) return { ok: false, reason: 'no-session' }
+    c.lastDialogKey = now()
     return { ok: true }
   }
 
@@ -1008,6 +1062,8 @@ function createChatHost({
     ipcMain.handle('chat:submit', guard(async (arg) => refused('submit', await submit(arg && typeof arg === 'object' ? arg : {}))))
     ipcMain.on('chat:diag', guard((arg) => diag(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:interrupt', guard((id) => interrupt(idOf(id))))
+    ipcMain.handle('chat:cycle-mode', guard((id) => cycleMode(idOf(id))))
+    ipcMain.handle('chat:dialog-key', guard((arg) => dialogKey(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:image', guard((arg) => image(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.on('chat:image-drop', guard((arg) => dropImage(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:files', guard((arg) => files(arg && typeof arg === 'object' ? arg : {})))
@@ -1039,7 +1095,7 @@ function createChatHost({
     if (e) await e.close().catch(() => {})
   }
 
-  return { state, enable, disable, ready, onTerminals, registerIpc, noteCreate, close: close_, onInput, onArrive, busy, stranded, send, submit, interrupt, inputState, image, dropImage, files, visible, pageGone, setWindowVisible, answer, releaseHolds, redraw, preview, setPreviews }
+  return { state, enable, disable, ready, onTerminals, registerIpc, noteCreate, close: close_, onInput, onArrive, busy, stranded, send, submit, interrupt, cycleMode, dialogKey, inputState, image, dropImage, files, visible, pageGone, setWindowVisible, answer, releaseHolds, redraw, preview, setPreviews }
 }
 
 /**
