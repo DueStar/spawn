@@ -30,7 +30,8 @@ const {
 const { createTray } = require('./tray.cjs')
 const { createTerminalManager, gitBranch } = require('./terminals.cjs')
 const { claudeCommand } = require('./adapters.cjs')
-const { listHistory } = require('./history.cjs')
+const { listHistory, claudeDir, runningSessions } = require('./history.cjs')
+const { trashSession, restoreSession, purgeTrash } = require('./sessionTrash.cjs')
 const { checkPrereqs, claudeVersion, LINKS: PREREQ_LINKS } = require('./prereqs.cjs')
 const { mergeLoginEnv } = require('./shellEnv.cjs')
 const { createStartGate } = require('./startGate.cjs')
@@ -1224,6 +1225,13 @@ function registerTerminalIpc() {
   ipcMain.handle('sessions:history', guard(() => {
     try { return listHistory({ limit: 40 }).map(h => (state.sessionTitles?.[h.id] ? { ...h, title: state.sessionTitles[h.id], named: true } : h)) } catch (err) { console.error('[main] history:', err.message); return [] }
   }))
+  // A session deleted from the resume list (2026-11-17): its transcript into ~/.spawn/trash for 7 days, never one
+  // open in this app or running elsewhere; restore puts it back (electron/sessionTrash.cjs)
+  ipcMain.handle('sessions:trash', guard((id) => {
+    const open = new Set(terminals.list().filter(x => x.status !== 'exited').map(x => x.sessionId))
+    return trashSession({ claudeDir: claudeDir(), spawnHome: runtimeDirFromEnv(process.env), id: String(id ?? ''), running: (x) => open.has(x) || runningSessions().has(x) })
+  }))
+  ipcMain.handle('sessions:restore', guard((id) => restoreSession({ claudeDir: claudeDir(), spawnHome: runtimeDirFromEnv(process.env), id: String(id ?? '') })))
   ipcMain.handle('terminals:buffer', guard((id) => terminals.buffer(String(id))))
   ipcMain.on('terminals:write', guard(({ id, data } = {}) => terminals.write(String(id), data)))
   // Only a window on screen sizes a session: a hidden or minimized one must not win
@@ -1387,6 +1395,8 @@ if (lockWaits < 0) {
   app.on('second-instance', reopen)
 
   app.whenReady().then(async () => {
+    // deleted sessions are kept 7 days (electron/sessionTrash.cjs)
+    try { purgeTrash({ spawnHome: runtimeDirFromEnv(process.env) }) } catch { /* the next start tries again */ }
     // Started from Finder the app has launchd's bare PATH: take the login shell's PATH and
     // LANG once, before the server and the terminals are started (both read process.env)
     if (process.platform === 'darwin') {

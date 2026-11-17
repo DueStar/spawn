@@ -120,4 +120,4 @@ function isTempCwd(cwd) {
   return /[\\/]AppData[\\/]Local[\\/]Temp[\\/]/i.test(cwd) || /^(\/private)?\/var\/folders\//.test(cwd)
 }
 
-module.exports = { listHistory, promptText, isTempCwd }
+module.exports = { listHistory, promptText, isTempCwd, claudeDir, runningSessions }

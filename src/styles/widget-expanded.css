@@ -327,6 +327,21 @@
 /* A destructive confirm keeps its red */
 .resume-warn-actions button.danger, .resume-warn-actions button.danger:hover { background: var(--danger); border-color: transparent; color: #fff; }
 
+/* deleting a past session (2026-11-17): a trash button on the row's right when hovered, the row asking once, an undo bar */
+.resume-row { position: relative; }
+.resume-row .resume-item { padding-right: 40px; }
+.resume-trash { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer; opacity: 0; }
+.resume-row:hover .resume-trash, .resume-trash:focus-visible { opacity: 1; }
+.resume-trash:hover { color: var(--red-text); background: var(--hover); }
+.resume-ask { cursor: default; border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+.resume-ask .resume-title b { font-weight: var(--w-name); color: var(--ink-2); }
+.resume-ask-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.resume-ask-acts button, .resume-undo button { background: transparent; color: var(--ink); border: 1px solid var(--line); border-radius: var(--r-s); padding: 4px 11px; font: inherit; font-size: var(--t-ui); cursor: pointer; }
+.resume-ask-acts button:hover, .resume-undo button:hover { border-color: var(--line-hover); background: var(--hover); }
+.resume-ask-acts button.danger, .resume-ask-acts button.danger:hover { background: var(--danger); border-color: transparent; color: #fff; }
+.resume-undo { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: var(--t-ui); color: var(--ink-2); }
+.resume-undo span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
 /* ---------- Resize grip: small, and clear of the rounded corner ---------- */
 .w-grip {
   position: fixed;

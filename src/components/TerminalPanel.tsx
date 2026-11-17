@@ -459,6 +459,23 @@ export const ResumePicker: React.FC<{
 }> = ({ onPick, onClose, openIds, monFor }) => {
   const [items, setItems] = useState<PastSession[] | null>(null)
   const [warn, setWarn] = useState<PastSession | null>(null)
+  // deleting (2026-11-17): the row asks once; a deleted one can be put back from the bar under the list
+  const [asking, setAsking] = useState<string | null>(null)
+  const [deleted, setDeleted] = useState<PastSession | null>(null)
+  const [trashNote, setTrashNote] = useState<string | null>(null)
+  const remove = async (it: PastSession) => {
+    setAsking(null)
+    const r = await bridge?.terminals.trash(it.id).catch(() => null)
+    if (r && r.ok) { setItems(cur => (cur ?? []).filter(x => x.id !== it.id)); setDeleted(it); setTrashNote(null) }
+    else setTrashNote(r && !r.ok && r.reason === 'running' ? t('실행 중인 세션은 지울 수 없어요') : t('지우지 못했어요'))
+  }
+  const undo = async () => {
+    const it = deleted
+    if (!it) return
+    const r = await bridge?.terminals.restore(it.id).catch(() => null)
+    if (r?.ok) { setDeleted(null); bridge?.terminals.history().then(setItems).catch(() => {}) }
+    else setTrashNote(t('되돌리지 못했어요'))
+  }
   useEffect(() => { bridge?.terminals.history().then(setItems).catch(() => setItems([])) }, [])
   return (
     <div className="resume-backdrop" onClick={onClose}>
@@ -483,9 +500,19 @@ export const ResumePicker: React.FC<{
             {items?.length === 0 && <div className="resume-empty">{t('이어할 세션이 없어요.')}</div>}
             {items?.map(it => {
               const open = openIds.has(it.id)
+              if (asking === it.id) return (
+                <div key={it.id} className="resume-item resume-ask" role="group">
+                  <span className="resume-title">{t('기록까지 삭제할까요?')} <b>{it.title}</b></span>
+                  <span className="resume-meta">{t('휴지통에 7일 동안 있다가 지워져요')}</span>
+                  <span className="resume-ask-acts">
+                    <button className="danger" onClick={() => { void remove(it) }}>{t('삭제')}</button>
+                    <button onClick={() => setAsking(null)}>{t('취소')}</button>
+                  </span>
+                </div>
+              )
               return (
+                <div key={it.id} className="resume-row">
                 <button
-                  key={it.id}
                   className={`resume-item${it.running ? ' running' : ''}`}
                   disabled={open}
                   onClick={() => (it.running ? setWarn(it) : onPick(it))}
@@ -501,8 +528,20 @@ export const ResumePicker: React.FC<{
                     {open ? <span className="resume-badge">{t('앱에서 열림')}</span> : it.running && <span className="resume-badge run">{t('실행 중')}</span>}
                   </span>
                 </button>
+                {!open && !it.running && (
+                  <button className="resume-trash" onClick={() => setAsking(it.id)} title={t('기록까지 삭제')} aria-label={`${t('기록까지 삭제')}: ${it.title}`}>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9M6.8 7v4.5M9.2 7v4.5" /></svg>
+                  </button>
+                )}
+                </div>
               )
             })}
+          </div>
+        )}
+        {(deleted || trashNote) && (
+          <div className="resume-undo" role="status">
+            <span>{trashNote ?? t('삭제했어요 · {title}', { title: deleted!.title })}</span>
+            {deleted && !trashNote && <button onClick={() => { void undo() }}>{t('되돌리기')}</button>}
           </div>
         )}
       </div>

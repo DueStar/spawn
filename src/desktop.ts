@@ -57,6 +57,10 @@ interface spawnBridge {
     /** The git branch of each folder (null: not in a repository) */
     branches(dirs: string[]): Promise<Record<string, string | null>>
     history(): Promise<PastSession[]>
+    /** Deletes a past session (its transcript into the trash for 7 days); never one open or running */
+    trash(id: string): Promise<{ ok: true; moved: number } | { ok: false; reason: 'invalid' | 'running' | 'none' | 'failed' }>
+    /** Puts a trashed session back */
+    restore(id: string): Promise<{ ok: boolean; reason?: string }>
     /** The output so far, and the number of the last batch in it (terminals:data carries each batch's) */
     buffer(id: string): Promise<{ data: string; seq: number }>
     write(id: string, data: string): void

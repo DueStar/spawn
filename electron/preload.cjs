@@ -20,6 +20,9 @@ contextBridge.exposeInMainWorld('spawn', {
     restorable: () => ipcRenderer.invoke('terminals:restorable'),
     branches: (dirs) => ipcRenderer.invoke('terminals:branches', dirs),
     history: () => ipcRenderer.invoke('sessions:history'),
+    // a session deleted from the resume list: into the trash for 7 days, and back (main checks it is not running)
+    trash: (id) => ipcRenderer.invoke('sessions:trash', String(id)),
+    restore: (id) => ipcRenderer.invoke('sessions:restore', String(id)),
     buffer: (id) => ipcRenderer.invoke('terminals:buffer', id),
     write: (id, data) => ipcRenderer.send('terminals:write', { id, data }),
     resize: (id, cols, rows) => ipcRenderer.send('terminals:resize', { id, cols, rows }),
