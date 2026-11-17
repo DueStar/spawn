@@ -75,8 +75,15 @@ export function parseDialog(screen: string | null): Dialog | null {
   while (body.length && !body[0]) body.shift()
   while (body.length && !body[body.length - 1]) body.pop()
   const collapsed = body.filter((l, i) => l || (i > 0 && body[i - 1]))
-  const title = collapsed.length ? collapsed[collapsed.length - 1] : ''
-  return { title, body: collapsed.slice(0, -1), options, selected, hints, esc: hints.some(h => /\besc\b/i.test(h)) }
+  // the title: the question (the last line ending in ?), else the last line; the rest is the body, in order
+  let at = -1
+  for (let i = collapsed.length - 1; i >= 0; i--) if (/\?\s*$/.test(collapsed[i])) { at = i; break }
+  if (at < 0) at = collapsed.length - 1
+  const title = at >= 0 ? collapsed[at] : ''
+  const rest = collapsed.filter((_, i) => i !== at)
+  while (rest.length && !rest[0]) rest.shift()
+  while (rest.length && !rest[rest.length - 1]) rest.pop()
+  return { title, body: rest, options, selected, hints, esc: hints.some(h => /\besc\b/i.test(h)) }
 }
 
 /** Two readings are the same dialog (its options' labels) */

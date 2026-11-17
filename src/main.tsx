@@ -17,7 +17,9 @@ captureServerToken()
 const params = new URLSearchParams(window.location.search)
 const isToast = params.has('toast')
 const isQa = params.has('qa')
-if (isQa) document.documentElement.classList.add('qa-mode')
+// the design system (?system, 2026-11-17): every component, live, on one page (src/SystemPage.tsx)
+const isSystem = params.has('system')
+if (isQa || isSystem) document.documentElement.classList.add('qa-mode')
 else if (isToast) document.documentElement.classList.add('toast-mode')
 else if (params.has('widget')) document.documentElement.classList.add('widget-mode')
 // A Mac: the native traffic lights instead of the page's own window buttons (.is-mac rules)
@@ -31,7 +33,7 @@ if (params.has('smoke')) registerSmokeGlobals()
 // the notification window showed without its styles (1.3.18).
 // The app's page opens terminals: it waits for the bundled terminal faces as
 // its code loads, so xterm measures its cell with them (src/fontsReady.ts)
-const Page = isQa ? lazy(() => import('./QaPage')) : isToast ? lazy(() => import('./Toast'))
+const Page = isQa ? lazy(() => import('./QaPage')) : isSystem ? lazy(() => import('./SystemPage')) : isToast ? lazy(() => import('./Toast'))
   : lazy(() => Promise.all([import('./Widget'), terminalFontsReady()]).then(([page]) => page))
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

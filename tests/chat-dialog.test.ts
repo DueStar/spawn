@@ -37,8 +37,9 @@ describe('parseDialog', () => {
   })
   it('the folder trust and a question (descriptions under options)', () => {
     const trust = parseDialog(screen('dialog-trust'))!
-    expect(trust.title).toMatch(/only use files from trusted sources/)
-    expect(trust.body[0]).toBe('Do you trust the files in this folder?')
+    // (the question is the title, the line ending in ?; the rest stays the body, in order)
+    expect(trust.title).toBe('Do you trust the files in this folder?')
+    expect(trust.body[0]).toBe('C:\\Users\\user\\work\\demo')
     expect(trust.options.map(o => o.label)).toEqual(['Yes, proceed', 'No, exit'])
     const q = parseDialog(screen('dialog-question'))!
     expect(q.options.map(o => [o.label, o.desc, o.free])).toEqual([['JSON', ['Machine-readable, for scripts'], false], ['Markdown', ['Human-readable, for the README'], false], ['Type something.', [], true]])
@@ -46,14 +47,14 @@ describe('parseDialog', () => {
   })
   it('a plan: its choices; the option\'s own hint stays with it', () => {
     const p = parseDialog(screen('dialog-plan'))!
-    expect(p.title).toMatch(/ready to execute/)
+    expect(p.title).toMatch(/Would you like to proceed\?$/)
     expect(p.options.map(o => o.label)).toEqual(['Yes, and use auto mode', 'Yes, manually approve edits', 'Tell Claude what to change'])
     expect(p.options[2]).toMatchObject({ free: true, desc: ['shift+tab to approve with this feedback'] })
   })
   it('the /model confirmation (a > mark, a ▔ rule)', () => {
     const d = parseDialog(MODEL)!
-    expect(d.title).toBe('This will clear the prompt cache for this conversation.')
-    expect(d.body).toEqual(['Switch model?'])
+    expect(d.title).toBe('Switch model?')
+    expect(d.body).toEqual(['This will clear the prompt cache for this conversation.'])
     expect(d.options.map(o => o.label)).toEqual(['Yes, switch to Sonnet 5.5', 'No, keep Opus 5.5'])
     expect(d.selected).toBe(0)
   })
