@@ -652,3 +652,26 @@
 .w-input-pointer span { min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
 .w-input-to { flex: none; min-height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); white-space: nowrap; cursor: pointer; -webkit-app-region: no-drag; }
 .w-input-to:hover { color: var(--ink); border-color: var(--line-hover); }
+
+/* ---------- The session tabs (2026-11-17): up to three over the right side; the one in view on the quiet selection ---------- */
+.w-sess-head.tabbed { align-items: center; }
+.w-sess-tabs { display: flex; align-items: stretch; align-self: stretch; gap: 2px; min-width: 0; flex: 0 1 auto; }
+.w-sess-tab { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 260px; padding: 0 4px 0 8px; border-radius: var(--r-s) var(--r-s) 0 0; color: var(--ink-3); cursor: pointer; }
+.w-sess-tab:hover { background: var(--hover); color: var(--ink-2); }
+.w-sess-tab.on { flex: 0 1 auto; background: var(--hover); color: var(--ink); cursor: default; box-shadow: inset 0 -2px 0 var(--ink-2); }
+.w-sess-tab .w-sess-head-pic { width: 18px; height: 18px; }
+.w-sess-tab.on .w-sess-head-pic { width: 20px; height: 20px; }
+.w-sess-tab-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-ui); }
+.w-sess-tab.on .w-sess-head-name { line-height: 1.4; }
+.w-sess-tab.on .w-sess-head-branch { flex: 0 1 auto; max-width: 140px; }
+.w-sess-tab-dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: transparent; }
+.w-sess-tab.mood-working .w-sess-tab-dot { background: var(--green); }
+.w-sess-tab.mood-needs-you .w-sess-tab-dot { background: var(--amber); }
+.w-sess-tab-x { flex: none; display: inline-grid; place-items: center; width: 20px; height: 20px; padding: 0; font: inherit; font-size: var(--t-name); line-height: 1; color: var(--ink-3); background: none; border: 0; border-radius: var(--r-xs); cursor: pointer; opacity: 0; }
+.w-sess-tab:hover .w-sess-tab-x, .w-sess-tab.on .w-sess-tab-x, .w-sess-tab-x:focus-visible { opacity: 1; }
+.w-sess-tab-x:hover { color: var(--ink); background: var(--hover); }
+/* a session dragged from the left list over the right side: where it would go */
+.w-tab-drop { position: absolute; inset: 8px; z-index: 50; display: grid; place-items: center; border: 1.5px dashed var(--line-hover); border-radius: var(--r-l); background: color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none; }
+.w-tab-drop span { padding: 8px 14px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink); }
+.w-tab-drop.full span { color: var(--red-text); }
+.w-tab-note { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 12px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink-2); }

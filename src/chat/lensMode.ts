@@ -40,6 +40,18 @@ export function readLensModes(): Record<string, LensMode> {
   return out
 }
 
+/**
+ * The one 채팅 / 터미널 choice for every session (2026-11-17, the owner's call: the flip is the app's, not a session's).
+ * Until it is chosen once: 채팅 when the most recent session's old choice was 채팅.
+ */
+export function readLensAll(): LensMode {
+  const all = readCarry().chatModeAll
+  if (all === 'chat' || all === 'terminal') return all
+  const old = Object.values(readLensModes())
+  return old.length && old[old.length - 1] === 'chat' ? 'chat' : 'terminal'
+}
+export function writeLensAll(m: LensMode): LensMode { writeCarry({ chatModeAll: m }); return m }
+
 /** Keep a session's choice (it becomes the most recent; the oldest beyond LENS_KEEP go) */
 export function writeLensMode(sessionId: string, m: LensMode): Record<string, LensMode> {
   const modes = readLensModes()

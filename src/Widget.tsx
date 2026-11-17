@@ -36,7 +36,8 @@ import { useDragOrder } from './useDragOrder'
 import { clampSideWidth, readSideWidth, sideMin, SIDE_DEFAULT, SIDE_MAX, writeSideWidth } from './sideWidth'
 import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, readChangesWidth, readOpen, writeChangesWidth, writeOpen } from './changesWidth'
 import { modeFromUrl, readCarry, writeCarry } from './carry'
-import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensModes, writeLensMode, type LensMode } from './chat/lensMode'
+import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
+import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
@@ -658,17 +659,50 @@ const Widget: React.FC = () => {
   }
   const chosen = sendable.find(r => r.sessionId === target) ?? sendable[0]
   const shown = withTerminal.find(r => r.sessionId === target) ?? chosen ?? withTerminal[0]
-  // The chat view (src/chat/lensMode.ts): 채팅 / 터미널 per session, kept in the carry. Only a session whose
-  // terminal carries the chat key (the feature on, Claude Code) offers it, never the widget; the terminal
-  // stays mounted either way and only its `active` follows the choice
-  const [lensModes, setLensModes] = useState<Record<string, LensMode>>(readLensModes)
+  // The chat view (src/chat/lensMode.ts): 채팅 / 터미널, one choice for every session (2026-11-17; per session until
+  // then), kept in the carry. Only a session whose terminal carries the chat key (the feature on, Claude Code) offers
+  // it, never the widget; the terminal stays mounted either way and only its `active` follows the choice
+  const [lensAll, setLensAll] = useState<LensMode>(readLensAll)
   const lens = lensAvailability(shown?.terminal, mode)
-  const lensMode = effectiveMode(shown?.terminal, mode, (shown && lensModes[shown.sessionId]) || 'terminal')
+  const lensMode = effectiveMode(shown?.terminal, mode, lensAll)
   const lensSid = shown?.sessionId
   // The chat view takes the focus only on the user's own flip or session switch (never on its own mount:
   // a session restored in chat, a /clear, a first row arriving while the side panel is being typed into)
   // (a mark in lensMode.ts, not state: asking draws nothing again)
-  const setLens = useCallback((m: LensMode) => { if (lensSid) { setLensModes(writeLensMode(lensSid, m)); if (m === 'chat') askChatFocus() } }, [lensSid])
+  const setLens = useCallback((m: LensMode) => { setLensAll(writeLensAll(m)); if (m === 'chat') askChatFocus() }, [])
+  // The session tabs (src/sessionTabs.ts, 2026-11-17): up to three over the right side; the left list's click shows a
+  // session in the tab in view, a session dropped on the right side (or Ctrl+clicked) gets a tab of its own
+  const [tabs, setTabsState] = useState<string[]>(() => { const c = readCarry().tabs; return Array.isArray(c) ? c.filter(x => typeof x === 'string').slice(0, MAX_TABS) : [] })
+  const setTabs = useCallback((next: string[]) => { setTabsState(next); writeCarry({ tabs: next }) }, [])
+  const shownTab = useRef<string | null>(lensSid ?? null)
+  useEffect(() => {
+    if (!lensSid) return
+    setTabsState(cur => { const next = showIn(cur, shownTab.current, lensSid); if (next !== cur) writeCarry({ tabs: next }); return next })
+    shownTab.current = lensSid
+  }, [lensSid])
+  const aliveKey = withTerminal.map(r => r.sessionId).join('|')
+  useEffect(() => {
+    if (!withTerminal.length) return
+    setTabsState(cur => { const next = pruneTabs(cur, new Set(withTerminal.map(r => r.sessionId))); if (next !== cur) writeCarry({ tabs: next }); return next })
+  }, [aliveKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [tabNote, setTabNote] = useState<string | null>(null)
+  useEffect(() => { if (!tabNote) return; const timer = setTimeout(() => setTabNote(null), 3000); return () => clearTimeout(timer) }, [tabNote])
+  const openInTab = useCallback((sid: string) => {
+    const r = openTab(tabs, sid)
+    if (!r.ok) { setTabNote(t('탭은 {n}개까지 열 수 있어요. 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
+    setTabs(r.tabs)
+    shownTab.current = sid
+    setTarget(sid)
+    setView('terminal')
+  }, [tabs, setTabs])
+  const closeTabOf = useCallback((sid: string) => {
+    const r = closeTab(tabs, lensSid, sid)
+    setTabs(r.tabs)
+    if (r.next) { shownTab.current = r.next; setTarget(r.next) }
+  }, [tabs, lensSid, setTabs])
+  // a session dragged from the left list over the right side: where it would go
+  const [dropHint, setDropHint] = useState<string | null>(null)
+  const SESSION_MIME = 'application/x-spawn-session'
   const toTerminal = useCallback(() => setLens('terminal'), [setLens])
   const lastShownSid = useRef(lensSid)
   // (a layout effect: it runs before the chat view's own effect, which takes the focus)
@@ -1210,7 +1244,12 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 onPointerUp={drag.onPointerUp}
                 onPointerCancel={drag.onPointerCancel}
                 className={`w-row${rowOrder.stateClass(sid)} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
-                onClick={rowOrder.click(open)}
+                // (2026-11-17) dragged onto the right side, or Ctrl+clicked: the session opens in a tab of its own
+                // (with 자동 정렬 on the rows do not reorder by dragging, so the drag is free for this)
+                draggable={!!r.terminal && autoSort && expanded}
+                onDragStart={e => { if (!r.terminal) return; e.dataTransfer.setData(SESSION_MIME, r.sessionId); e.dataTransfer.effectAllowed = 'copy' }}
+                onDragEnd={() => setDropHint(null)}
+                onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } rowOrder.click(open)() }}
                 // The keyboard and screen readers: a row is a button (Tab reaches it, Enter / Space
                 // open it, F2 renames it), the one in view is the current one, and its name says
                 // the session's name and status (간략 shows only the status's dot)
@@ -1408,6 +1447,14 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   onCloseCancel={() => setClosing(null)}
                   lens={lens.show ? { mode: lensMode, enabled: lens.enabled, reason: lens.reason, onMode: setLens } : undefined}
                   // the chat's own tools, only while the chat is shown: 보기 정도, then 변경 사항
+                  tabs={tabs.length >= 2 ? tabs.map(sid => {
+                    const r = rowById.get(sid)
+                    const p = r ? sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode) : null
+                    return { sid, name: p?.name ?? t('새 세션'), sprite: r?.sprite ?? '', picture: p?.picture ?? 'glyph', title: r?.project, mood: r?.mood }
+                  }) : undefined}
+                  activeTab={shown.sessionId}
+                  onTab={sid => { shownTab.current = sid; setTarget(sid) }}
+                  onTabClose={closeTabOf}
                   chatTools={lensMode === 'chat' && lens.show ? (
                     <Suspense fallback={null}>
                       <DensityMenu />
@@ -1426,7 +1473,25 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </Suspense>
           {/* (the 변경 사항 panel's width for the chat pane and the panel; folded for it, the terminals keep the box they
               had with the left panel open: --fold-pad, so a terminal fitted under the chat gets the size it will be shown at) */}
-          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(panelOn ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}>
+          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(panelOn ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}
+            // a session dragged from the left list: where it would go, said while it is over the right side
+            onDragOver={e => {
+              if (!e.dataTransfer.types.includes(SESSION_MIME)) return
+              e.preventDefault()
+              e.dataTransfer.dropEffect = 'copy'
+              const hint = tabs.length < MAX_TABS ? t('놓으면 탭으로 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS }) : t('탭이 가득 찼어요 ({max}/{max})', { max: MAX_TABS })
+              if (hint !== dropHint) setDropHint(hint)
+            }}
+            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHint(null) }}
+            onDrop={e => {
+              const sid = e.dataTransfer.getData(SESSION_MIME)
+              if (!sid) return
+              e.preventDefault()
+              setDropHint(null)
+              openInTab(sid)
+            }}>
+            {dropHint && <div className={`w-tab-drop${tabs.length >= MAX_TABS ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
+            {tabNote && <div className="w-tab-note" role="status">{tabNote}</div>}
             {withTerminal.length === 0 && (
               <div className="w-term-empty">
                 <p>{t('아직 터미널이 없어요')}</p>

@@ -93,7 +93,8 @@ describe('rows from the keyboard and for screen readers (final review I2)', () =
     expect(w).toContain('if (e.target !== e.currentTarget || !r.terminal) return')
     expect(w).toContain('rowKeyAction(e.key, e.nativeEvent.isComposing)')
     // the mouse goes through the same open() (the drag's click guard kept)
-    expect(w).toContain('onClick={rowOrder.click(open)}')
+    // (2026-11-17: Ctrl+click opens the session in a tab of its own; a plain click as before)
+    expect(w).toContain('rowOrder.click(open)()')
   })
 
   it('the focus ring is a quiet hairline (no yellow, none on a click); 간략 shows its × on keyboard focus; an ended 간략 row is dimmed', () => {
@@ -135,12 +136,14 @@ describe('the session header', () => {
 
 describe('the session tab row is gone', () => {
   const src = (...p: string[]) => join(__dirname, '..', 'src', ...p)
-  it('no SessionTabs, no glint, no tab rules', () => {
+  // (2026-11-17: the owner asked for tabs again — up to three, in the session header, src/sessionTabs.ts; the old
+  // tab row with its glint stays gone)
+  it('no SessionTabs component, no glint; the tabs live in the session header', () => {
     const widget = readFileSync(src('Widget.tsx'), 'utf8')
     expect(widget).not.toContain('SessionTabs')
     expect(widget).not.toContain('w-glint')
     expect(existsSync(src('components', 'SessionTabs.tsx'))).toBe(false)
-    expect(readFileSync(src('styles', 'widget-expanded.css'), 'utf8')).not.toContain('.w-sess-tab')
+    expect(readFileSync(src('components', 'SessionHeader.tsx'), 'utf8')).toContain('w-sess-tab')
     expect(readFileSync(src('styles', 'pokedex.css'), 'utf8')).not.toContain('.w-sess-tab')
   })
 

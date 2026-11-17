@@ -2469,6 +2469,48 @@ const FLOWS = {
   },
 
   /** Claude Code's own queue: 대기 중 2 and the first text; no button in the strip; none → no strip */
+  // 2026-11-17: the session tabs — a row dragged onto the right side opens a tab (the drop says where), Ctrl+click
+  // too, at most three (the fourth is refused, said so), a tab's × closes only the tab, a tab click shows it
+  'session-tabs': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser)
+      const { page } = app
+      const rows = page.locator('.w-party .w-row')
+      const tabs = page.locator('.w-sess-tabs .w-sess-tab')
+      if (await tabs.count()) bad('tabs drawn with one session in view')
+      // drag the second row onto the right side: the hint while over it, then a tab
+      const body = page.locator('.w-term-body')
+      const box = await body.boundingBox()
+      await rows.nth(1).dragTo(body, { targetPosition: { x: box.width / 2, y: box.height / 2 } })
+      await sleep(300)
+      if ((await tabs.count()) !== 2) bad(`after a drop: ${await tabs.count()} tabs, want 2`)
+      if (!(await page.locator('.w-sess-tab.on').count())) bad('no tab in view after the drop')
+      // Ctrl+click the third: a third tab; the fourth is refused, said so
+      await rows.nth(2).click({ modifiers: ['Control'] })
+      await sleep(200)
+      if ((await tabs.count()) !== 3) bad(`after Ctrl+click: ${await tabs.count()} tabs, want 3`)
+      await rows.nth(3).click({ modifiers: ['Control'] })
+      await sleep(200)
+      if ((await tabs.count()) !== 3) bad(`a fourth tab opened: ${await tabs.count()}`)
+      if (!(await page.locator('.w-tab-note').count())) bad('the fourth was refused without a word')
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-session-tabs.png'), animations: 'disabled', caret: 'hide' })
+      // a click on another tab shows it; its × closes only the tab
+      const first = tabs.nth(0)
+      await first.click()
+      await sleep(200)
+      if (!(await first.evaluate(el => el.classList.contains('on')))) bad('a tab click did not show it')
+      await tabs.nth(1).hover()
+      await tabs.nth(1).locator('.w-sess-tab-x').click()
+      await sleep(200)
+      if ((await tabs.count()) !== 2) bad(`after a tab's ×: ${await tabs.count()} tabs, want 2`)
+      if ((await rows.count()) < 4) bad('closing a tab closed a session')
+    } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close() }
+    return problems
+  },
+
   'chat-queue': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)

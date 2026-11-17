@@ -9,6 +9,9 @@ export interface Carried {
   view?: 'terminal' | 'dex' | 'box' | 'today' | 'rank'; target?: string | null; text?: string; dexScroll?: number; dexPick?: { id: number; at: number } | null
   /** The chat view: each session's 채팅 / 터미널 choice (session ids only, at most 24: src/chat/lensMode.ts) */
   chatModes?: Record<string, 'chat' | 'terminal'>
+  /** (2026-11-17) the one 채팅 / 터미널 choice for every session, and the session tabs on the right (src/sessionTabs.ts) */
+  chatModeAll?: 'chat' | 'terminal'
+  tabs?: string[]
 }
 
 /** A species to open the Pokédex at, if it was asked for in the last few seconds (a clicked notification) */
