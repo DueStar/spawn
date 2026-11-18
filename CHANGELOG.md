@@ -2,6 +2,15 @@
 
 ## spawn
 
+### 1.8.0
+- 오른쪽 위에 세션 탭을 3개까지 열어요. 왼쪽 목록에서 세션을 끌어 오른쪽에 놓거나 Ctrl+클릭하면 새 탭이 돼요. 탭의 ×는 탭만 닫고 세션은 계속 돌아요.
+- 채팅 · 터미널 전환이 모든 세션에 한 번에 적용돼요.
+- Claude Code 입력란에 쓰던 글이 남아서 보내지 못할 때, 그 글을 채팅으로 가져오거나 지우고 보낼 수 있어요.
+- 길어서 잘린 답·메시지·명령 결과는 "전체 보기"로 채팅 안에서 다 볼 수 있어요.
+- 이어하기 목록에서 예전 세션을 기록까지 지울 수 있어요. 7일 동안 휴지통에 있다가 지워지고, 바로 되돌릴 수도 있어요.
+- 앱 전체 아이콘을 Phosphor 아이콘 하나로 통일했어요. 굵기와 크기가 이제 고르게 보여요.
+- 터미널 선택 창 카드가 질문을 제목으로 보여 줘요.
+
 ### 1.7.0
 - 채팅에서 터미널로 돌아가지 않아도 되게 했어요. 터미널에 뜨는 선택 창(모델 바꾸기 확인, 폴더 신뢰, 계획 선택지 등)이 채팅에 카드로 떠서 눌러서 고르고, 글이 필요한 보기는 그 자리에서 적어요.
 - 질문을 여러 개 한 번에 묻거나 여러 개를 고르는 질문, 계획 승인(승인 · 계속 계획하기)도 채팅에서 답해요.
@@ -451,6 +460,15 @@
 
 ## spawn (English)
 
+### 1.8.0
+- Open up to three session tabs at the top right: drag a session from the left list onto the right side, or Ctrl+click it. A tab's × closes only the tab; the session keeps running.
+- The chat · terminal switch now applies to every session at once.
+- When words left in Claude Code's input stop a send, bring them into the chat or clear them and send.
+- Long answers, messages and command output cut in the chat open whole with Show all.
+- Delete a past session with its record from the resume list: it stays in a trash for 7 days, and can be undone.
+- Every icon in the app is now one Phosphor set, with an even weight and size.
+- The dialog card shows the question as its title.
+
 ### 1.7.0
 - The chat no longer sends you back to the terminal. Dialogs Claude Code draws there (switching the model, trusting a folder, a plan's choices, …) show in the chat as cards: click to choose, and type right there when an option needs words.
 - Several questions at once, multi-select questions and plan approval (Approve · Keep planning) are answered in the chat too.
@@ -759,6 +777,15 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.8.0
+- 右上にセッションタブを3つまで開けます。左のリストからセッションを右側にドラッグするか、Ctrl+クリックで新しいタブになります。タブの × はタブだけを閉じ、セッションは続きます。
+- チャット · ターミナルの切り替えがすべてのセッションに一度に適用されます。
+- Claude Code の入力欄に書きかけの文が残って送れないとき、チャットに取り込むか、消して送れます。
+- 長くて途中までの回答・メッセージ・コマンド結果は「すべて表示」でチャット内で全部見られます。
+- 再開リストから過去のセッションを記録ごと削除できます。7日間ゴミ箱に置かれてから消え、すぐ元に戻すこともできます。
+- アプリのアイコンを Phosphor のひとつのセットにそろえました。太さと大きさが均一になりました。
+- ターミナルの選択カードが質問をタイトルに表示します。
 
 ### 1.7.0
 - チャットからターミナルに戻らなくてよくなりました。ターミナルに出る選択画面（モデル切り替えの確認、フォルダの信頼、プランの選択肢など）がチャットにカードで表示され、押して選べます。文字が必要な項目はその場で入力します。
