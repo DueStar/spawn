@@ -63,6 +63,26 @@ describe('the answer surface: the next card after an answer', () => {
   })
 })
 
+// 2026-11-19: every question offers its own answer, as Claude Code's dialog does (its "Other" row)
+describe('the question card: 직접 입력', () => {
+  const render = (card: AskCard) => renderToStaticMarkup(React.createElement(AnswerSurface, {
+    id: 't', who: { name: 'Pika', kind: 'pokemon' } as never, onTerminal() {}, answer: async () => ({ ok: true as const }), asks: [card],
+  }))
+  const question = { text: 'Which format?', header: 'Format', options: [{ label: 'JSON', description: '' }, { label: 'Markdown', description: '' }] }
+  it('one question: its options, then 직접 입력 with a field and 보내기 (off until words are written)', () => {
+    const html = render(ask('q', 'open', { kind: 'question', tool: 'AskUserQuestion', input: {}, question } as Partial<AskCard>))
+    expect(html.indexOf('Markdown')).toBeLessThan(html.indexOf('직접 입력'))
+    expect(html).toMatch(/<input[^>]*class="chat-card-field"/)
+    expect(html).toMatch(/<button[^>]*disabled=""[^>]*>보내기<\/button>/)
+  })
+  it('several questions: one field per question; a card handed to the terminal has none', () => {
+    const two = [question, { ...question, text: 'Which areas?', multiSelect: true }]
+    const html = render(ask('q', 'open', { kind: 'question', tool: 'AskUserQuestion', input: {}, question, questions: two } as Partial<AskCard>))
+    expect(html.match(/class="chat-card-field"/g)).toHaveLength(2)
+    expect(render(ask('q', 'terminal', { kind: 'question', tool: 'AskUserQuestion', input: {}, question } as Partial<AskCard>))).not.toContain('chat-card-field')
+  })
+})
+
 /** A terminal that shows its dialogs one after another: Enter answers the one on the screen, the next appears */
 function sequence(screens: string[]) {
   let at = 0

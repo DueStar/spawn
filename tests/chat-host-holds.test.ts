@@ -127,6 +127,16 @@ describe('the terminal answers first', () => {
 })
 
 describe('chat:answer', () => {
+  it('a question\'s own words (직접 입력, 2026-11-19) reach the registry: the answer is those words', async () => {
+    const s = await setup()
+    s.call('chat:visible', { id: A })
+    const q = s.request('question', A)
+    s.bind(q.holdId!, A, 'question')
+    expect(s.call('chat:answer', { id: A, holdId: q.holdId, choice: 'options', picks: [[]], other: [42] })).toEqual({ ok: false, reason: 'invalid' })
+    expect(s.call('chat:answer', { id: A, holdId: q.holdId, choice: 'options', picks: [[]], other: ['Maybe later'] })).toEqual({ ok: true })
+    expect(JSON.parse(q.got[0]!).hookSpecificOutput.updatedInput.answers).toEqual({ 'Q?': 'Maybe later' })
+  })
+
   it('for a terminal that is not the visible one: hidden, nothing sent; accepted: clearAsking once', async () => {
     const s = await setup()
     const p = s.request('permission', A)

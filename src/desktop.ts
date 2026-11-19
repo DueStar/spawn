@@ -136,7 +136,7 @@ interface spawnBridge {
     /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */
     visible(id: string | null): void
     /** An answer card's choice: main checks it and builds what is sent (never the page) */
-    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
+    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][]; other?: (string | null)[] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
     /** 7-48: one resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
     redraw(id: string): Promise<{ ok: true } | { ok: false; reason: RedrawRefusal }>
     /** spawn.log only (1.5.3): a send the page refused for its screen, with the screen's masked shape */

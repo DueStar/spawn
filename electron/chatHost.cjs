@@ -316,9 +316,11 @@ function createChatHost({
     const option = Number.isInteger(p?.option) ? p.option : undefined
     // (several questions / a multi-select: each question's picked option indices; plain integers only, bounded)
     const picks = Array.isArray(p?.picks) && p.picks.length <= 4 && p.picks.every(x => Array.isArray(x) && x.length <= 6 && x.every(Number.isInteger)) ? p.picks.map(x => [...x]) : undefined
+    // (2026-11-19: each question's own words, its "Other" row — a string or null per question; the registry checks them)
+    const other = Array.isArray(p?.other) && p.other.length <= 4 && p.other.every(x => x === null || typeof x === 'string') ? [...p.other] : undefined
     // (only the page that shows that chat answers for it)
     const shown = from === undefined || visibleFrom === null || from === visibleFrom ? visibleId : null
-    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, visibleId: shown, windowVisible })
+    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, other, visibleId: shown, windowVisible })
     // the side panel's 확인 필요 goes, as when the terminal is answered with Enter
     if (r.ok) { try { terminals.clearAsking?.(id) } catch {} }
     return r
@@ -773,7 +775,11 @@ function createChatHost({
     if (noDialog !== true) return true
     const since = Math.max(lensWaits ? (waitingAt.get(id) ?? -Infinity) : -Infinity, asking ? (c.askingAt ?? -Infinity) : -Infinity)
     if (now() - since < STALE_WAIT_MS) return true
-    if (!staleLogged.has(id)) { staleLogged.add(id); log('info', `chat composer: a wait no dialog shows (${lensWaits ? 'status' : ''}${lensWaits && asking ? ', ' : ''}${asking ? 'asking' : ''}) let a send through`) }
+    if (!staleLogged.has(id)) {
+      staleLogged.add(id)
+      const why = lensWaits && asking ? 'status, asking' : lensWaits ? 'status' : 'asking'
+      log('info', `chat composer: a wait no dialog shows (${why}) let a send through`)
+    }
     return false
   }
 

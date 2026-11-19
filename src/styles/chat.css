@@ -568,6 +568,12 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-words { display: flex; gap: 6px; margin-top: 8px; }
 .chat-card-field { flex: 1; min-width: 0; height: 30px; padding: 0 10px; box-sizing: border-box; font: inherit; font-size: var(--t-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-s); outline: none; }
 .chat-card-field:focus { border-color: var(--line-hover); }
+/* a question's 직접 입력 (2026-11-19): its last option, a label and a field (Claude Code's "Other" row) */
+.chat-card-words.chat-card-other { align-items: center; margin-top: 0; width: 100%; }
+.chat-card-otherlabel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: var(--t-ui); color: var(--ink-2); }
+.chat-card-otherlabel > span:not(.chat-card-mark) { flex: none; }
+.chat-card-mark.multi { border-radius: var(--r-xs); }
+.chat-card-other.on .chat-card-mark { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 2px var(--card); }
 /* "전체 보기": an item read again whole, over the conversation */
 .chat-full-btn { margin-left: 4px; }
 .chat-full { position: absolute; inset: 0; z-index: 40; display: flex; align-items: stretch; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }

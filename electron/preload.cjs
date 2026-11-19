@@ -92,6 +92,8 @@ contextBridge.exposeInMainWorld('spawn', {
       ...(Number.isInteger(p?.option) ? { option: p.option } : {}),
       // (several questions / a multi-select: each question's option indices, plain integers only)
       ...(Array.isArray(p?.picks) ? { picks: p.picks.slice(0, 4).map(x => (Array.isArray(x) ? x.filter(Number.isInteger).slice(0, 6) : [])) } : {}),
+      // (each question's own words, its "Other" row: a string or null per question)
+      ...(Array.isArray(p?.other) ? { other: p.other.slice(0, 4).map(x => (typeof x === 'string' ? x.slice(0, 4000) : null)) } : {}),
     }),
     // 7-48: one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
     redraw: (id) => ipcRenderer.invoke('chat:redraw', String(id)),

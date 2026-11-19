@@ -123,6 +123,22 @@ function questionsBody(input, picked) {
   return JSON.stringify({ hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'allow', updatedInput: { ...input, answers } } })
 }
 
+/** The most a question's own answer may hold (the terminal's field has no limit; a chat answer is a sentence or two) */
+const OTHER_MAX = 2000
+
+/**
+ * A question's own words (its "Other" row): null for none (absent, null, blank), the words trimmed, or false when
+ * they cannot be an answer (not a string, too long, a control character other than a line break or a tab)
+ */
+function otherWords(v) {
+  if (v === undefined || v === null) return null
+  if (typeof v !== 'string') return false
+  const w = v.replace(/\r\n?/g, '\n').trim()
+  if (!w) return null
+  if (w.length > OTHER_MAX || /[\u0000-\u0008\u000b-\u001f\u007f]/.test(w)) return false
+  return w
+}
+
 const FINAL = new Set(['answered', 'released', 'gone'])
 
 /**
@@ -238,7 +254,7 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
    * An answer from the chat. Accepted only for an open hold of this terminal while its chat is the
    * visible view (and the window is), a choice that fits, and — for "always" — rules to add.
    */
-  function answer(holdId, { id, choice, option, picks, visibleId, windowVisible } = {}) {
+  function answer(holdId, { id, choice, option, picks, other, visibleId, windowVisible } = {}) {
     const h = typeof holdId === 'string' ? holds.get(holdId) : undefined
     if (!h || h.done) return { ok: false, reason: 'gone' }
     if (h.state !== 'open') return { ok: false, reason: 'not-bound' }
@@ -250,15 +266,22 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
       if (choice === 'always' && !h.data.rules.length) return { ok: false, reason: 'not-answerable' }
       body = permissionBody(choice, h.data.rules)
     } else if (choice === 'options') {
-      // several questions or a multi-select: each question's picked options, by index
+      // several questions or a multi-select: each question's picked options, by index — and (2026-11-19) each one's
+      // own words, Claude Code's "Other" row (Type something): the words are that question's answer, after its picks
+      // in a multi-select, alone in a single-select (as the terminal's dialog answers it)
       const { sets, multi } = h.data
       if (!Array.isArray(picks) || picks.length !== sets.length) return { ok: false, reason: 'invalid' }
+      if (other !== undefined && (!Array.isArray(other) || other.length !== sets.length)) return { ok: false, reason: 'invalid' }
       const picked = []
       for (let i = 0; i < sets.length; i++) {
         const p = picks[i]
-        if (!Array.isArray(p) || !p.length || (p.length > 1 && !multi[i]) || new Set(p).size !== p.length) return { ok: false, reason: 'invalid' }
-        if (!p.every(n => Number.isInteger(n) && n >= 0 && n < sets[i].length)) return { ok: false, reason: 'invalid' }
-        picked.push([...p].sort((a, b) => a - b).map(n => sets[i][n]))
+        const words = otherWords(other?.[i])
+        if (words === false) return { ok: false, reason: 'invalid' }
+        const n = (Array.isArray(p) ? p.length : 0) + (words === null ? 0 : 1)
+        if (!Array.isArray(p) || !n || (n > 1 && !multi[i]) || new Set(p).size !== p.length) return { ok: false, reason: 'invalid' }
+        if (!p.every(x => Number.isInteger(x) && x >= 0 && x < sets[i].length)) return { ok: false, reason: 'invalid' }
+        const labels = [...p].sort((a, b) => a - b).map(x => sets[i][x])
+        picked.push(words === null ? labels : [...labels, words])
       }
       body = questionsBody(h.data.input, picked)
     } else {
@@ -286,4 +309,4 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
   return { open, bind, pass, release, releaseWhere, releaseAll, gone, answer, get, openFor, close, reopen, size: () => holds.size }
 }
 
-module.exports = { questionsBody, MULTI_JOIN, HOLD, DENY_MESSAGE, entryTimeoutS, shortHolds, permissionBody, questionBody, cleanRules, createHolds, FINAL }
+module.exports = { questionsBody, otherWords, OTHER_MAX, MULTI_JOIN, HOLD, DENY_MESSAGE, entryTimeoutS, shortHolds, permissionBody, questionBody, cleanRules, createHolds, FINAL }
