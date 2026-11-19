@@ -27,7 +27,7 @@ A Windows and macOS desktop app for running Claude Code sessions with Pokémon. 
 - You can swap the working Pokémon for any other one you caught, at any time.
 
 ### Chat view and side-by-side sessions
-- Turn on Settings › Sessions › "View sessions as chat (preview)" to see a Claude Code session as a conversation. The chat · terminal switch applies to every session at once.
+- See a Claude Code session as a conversation (the default). For the terminal, use the chat · terminal switch at the top, or turn off Settings › Sessions › "View sessions as chat". The chat · terminal switch applies to every session at once.
 - See two or three sessions side by side: drag a session from the left list onto the right side, or Ctrl+click it, and it opens in a pane of its own with its own conversation and composer. A pane's × closes only the pane; the session keeps running.
 - Type / in the chat box for a list of commands: the built-in ones and your own commands and skills, found by name.
 - Dialogs Claude Code draws in the terminal (permission requests, questions, plan approval, …) show in the chat as cards: click to choose.

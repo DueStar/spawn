@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.10.5
+- 채팅 보기가 기본이 됐어요. 이전에 꺼져 있던 경우도 한 번 켜지고, 그다음부터는 설정 › 세션 › 채팅으로 보기에서 고른 대로 따라요.
+- 채팅에서 만난 야생 포켓몬 줄을 옅은 박스로 묶어서 대화와 구분되게 했어요.
+
 ### 1.10.4
 - 도감의 오류를 정리해요. 예전에 처음 시작할 때 고른 스타팅이 지금 게임에 없는데도 도감에 "잡음"으로 남아 있던 기록을 지우고, 볼이 비어 있던 기록에 볼을 채워요. 앱을 켤 때와 동기화할 때마다 확인해요.
 - 패치노트에서 예전 버전이 잘려 보이지 않던 문제를 고쳤어요. 이제 스크롤되고, 마이너 버전(1.10, 1.9 …)별로 묶여요.
@@ -498,6 +502,10 @@
 
 ## spawn (English)
 
+### 1.10.5
+- The chat view is now the default. If it was off, it is turned on once; after that, Settings › Sessions › View sessions as chat decides.
+- A wild Pokémon met in the chat sits in a quiet box, apart from the conversation.
+
 ### 1.10.4
 - The Pokédex mends its own errors: a starter chosen at an earlier start of the game, not in this game, no longer counts as caught, and a record without a ball gets one. Checked at every start and sync.
 - The patch notes cut off their older releases. They scroll now and are grouped by minor version (1.10, 1.9 …).
@@ -853,6 +861,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.5
+- チャット表示が既定になりました。オフだった場合も一度オンになり、その後は 設定 › セッション › セッションをチャットで表示 の選択に従います。
+- チャットで出会った野生のポケモンの行を薄い枠で囲み、会話と見分けやすくしました。
 
 ### 1.10.4
 - 図鑑の誤りを直します。以前はじめに選んだスターターが今のゲームにいないのに「捕まえた」と残っていた記録を消し、ボールが空の記録にボールを入れます。起動と同期のたびに確認します。
