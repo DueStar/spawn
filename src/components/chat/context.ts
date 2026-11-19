@@ -46,6 +46,10 @@ export interface ChatContextValue {
   wildPlayed?(rowKey: string): void
   /** Link preview cards are on (the flag, 채팅으로 보기 and 링크 미리보기): a finished answer's first links get one */
   previews?: boolean
+  /** The sub-agent panel (src/components/chat/AgentPanel.tsx) at this Agent row; absent: no panel here */
+  openAgent?(toolId: string): void
+  /** The Agent row the sub-agent panel shows now (its row says so) */
+  agentShown?: string | null
 }
 
 const noop = () => {}

@@ -11,6 +11,7 @@ import { ArrowUpIcon as ArrowUp } from '@phosphor-icons/react/dist/csr/ArrowUp'
 import { AtIcon as At } from '@phosphor-icons/react/dist/csr/At'
 import { CaretDownIcon as CaretDown } from '@phosphor-icons/react/dist/csr/CaretDown'
 import { CaretRightIcon as CaretRight } from '@phosphor-icons/react/dist/csr/CaretRight'
+import { CheckIcon as Check } from '@phosphor-icons/react/dist/csr/Check'
 import { ChatCircleIcon as ChatCircle } from '@phosphor-icons/react/dist/csr/ChatCircle'
 import { ClipboardTextIcon as ClipboardText } from '@phosphor-icons/react/dist/csr/ClipboardText'
 import { CpuIcon as Cpu } from '@phosphor-icons/react/dist/csr/Cpu'
@@ -59,6 +60,8 @@ export const SendUpIcon = ph(ArrowUp, B)
 export const PlusIcon = ph(Plus, B)
 export const AtIcon = ph(At, B)
 export const XIcon = ph(X, S)
+// the sub-agent strip: a chip that finished
+export const CheckIcon = ph(Check, S)
 export const CpuIcon = ph(Cpu, I)
 export const ShieldIcon = ph(ShieldCheck, I)
 export const EffortIcon = ph(Lightbulb, I)

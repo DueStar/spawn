@@ -36,7 +36,7 @@ const STATES = ['running', 'done', 'failed', 'rejected', 'interrupted', 'unknown
 const NOTICES = ['interrupted', 'command', 'compact', 'summary', 'agent-done', 'unknown-block', 'model']
 const INPUT_KEYS: Record<string, string> = {
   file: 'string', command: 'string', description: 'string', pattern: 'string', path: 'string', url: 'string',
-  query: 'string', question: 'string', options: 'string[]', plan: 'string', todos: 'todos', agentType: 'string', server: 'string', mcpTool: 'string',
+  query: 'string', question: 'string', options: 'string[]', plan: 'string', todos: 'todos', agentType: 'string', server: 'string', mcpTool: 'string', background: 'true',
 }
 
 type Problem = string
@@ -99,6 +99,7 @@ export function itemProblems(item: any): Problem[] {
           if (t === 'string') check(typeof v === 'string', p, `tool.input.${k}`)
           if (t === 'string[]') check(Array.isArray(v) && (v as unknown[]).every(x => typeof x === 'string'), p, `tool.input.${k}`)
           if (t === 'todos') check(isNum((v as any)?.done) && isNum((v as any)?.total), p, 'tool.input.todos')
+          if (t === 'true') check(v === true, p, `tool.input.${k}`)
         }
         if (item.output !== undefined) {
           only(item.output, ['text', 'lines', 'truncated', 'error'], p, 'output')

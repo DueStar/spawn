@@ -318,6 +318,16 @@ const SURFACES = {
     view: 'terminal', chat: 'chat-agent', ready: '.chat-agent-body .chat-tool',
     open: async page => { await page.locator('.chat-agent .chat-tool-toggle').first().click() },
   },
+  // the sub-agents at work (2026-11-19): the strip above the composer; a chip opens the sub-agent panel beside the chat
+  'chat-agents': { view: 'terminal', chat: 'chat-agents', sizes: [[1440, 900]], ready: '.chat-agents.on .chat-agent-chip + .chat-agent-chip' },
+  'chat-agents-panel': {
+    view: 'terminal', chat: 'chat-agents', sizes: [[1440, 900]], ready: '.chat-ag-panel .chat-ag-body .chat-tool',
+    open: async page => { await page.locator('.chat-agent-chip').first().click() },
+  },
+  'chat-agents-narrow': {
+    view: 'terminal', chat: 'chat-agents', sizes: [[900, 720]], ready: '.chat-ag-panel .chat-ag-body .chat-tool',
+    open: async page => { await page.locator('.chat-agent-chip').first().click() },
+  },
   // The composer (chat view phase 3): a two-line draft with two pasted images, Claude Code's queue of
   // one and the control row; the prompt-busy refusal; a bubble sending and one not in the record yet
   'chat-compose': { view: 'terminal', chat: 'chat', ready: '.chat-composer .chat-ichip + .chat-ichip', open: async page => composeDraft(page) },
@@ -2075,6 +2085,68 @@ const FLOWS = {
       const meta = (await p2.locator('.chat-agent .chat-tool-meta').innerText().catch(() => '')).trim()
       if (!meta.includes('터미널에서 답해 주세요')) bad(`a sub-agent's wait does not show on its Agent row (${JSON.stringify(meta)})`)
       if (!(await p2.locator('.chat-agent .chat-dot.amber').count())) bad('the Agent row of a waiting sub-agent has no amber dot')
+    } catch (err) {
+      bad(String(err.message).split('\n')[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
+
+  /**
+   * The sub-agents at work (2026-11-19): a chip opens the panel (chat.agent asked once, not again for nothing; again
+   * when the sub-agent moved on), a finished chip says 끝남 then leaves, the strip folds away when none runs, the
+   * panel then says its sub-agent is done, Esc closes it, and the Agent row's 열어 보기 opens it again.
+   */
+  'chat-agents': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat-agents' })
+      const { page, shot } = app
+      const t1 = shot.terminals[0].id
+      await page.waitForSelector('.chat-agents.on .chat-agent-chip', { timeout: 15_000 })
+      if ((await page.locator('.chat-agent-chip').count()) !== 2) bad('the strip does not show two chips')
+      if (!(await page.locator('.chat-agent-chip').nth(1).isDisabled())) bad('a chip with no Agent row yet can be clicked')
+      await page.locator('.chat-agent-chip').first().click()
+      await page.waitForSelector('.chat-ag-panel .chat-ag-body .chat-tool', { timeout: 5000 })
+      const asks = async () => (await calls(page)).filter(c => c.fn === 'chat.agent').length
+      await sleep(1300)
+      const n = await asks()
+      if (n !== 1) bad(`opening the panel asked for the rows ${n} times`)
+      const base = shot.chat[t1].ops[0].status
+      const agents = base.agents
+      const push = st => page.evaluate(([id, s]) => window.__CHAT_PUSH__(id, [{ op: 'status', status: s }]), [t1, st])
+      // the sub-agent moved on: asked again
+      await push({ ...base, agents: [{ ...agents[0], tools: 5 }, agents[1]] })
+      await sleep(1500)
+      if (await asks() <= n) bad('the panel did not ask again when its sub-agent moved on')
+      // the second one finished: 끝남, then gone
+      await push({ ...base, agents: [{ ...agents[0], tools: 5 }] })
+      await sleep(300)
+      const gone = page.locator('.chat-agent-chip.gone')
+      if (!(await gone.count())) bad('a finished chip did not say so')
+      else if (!(await gone.innerText()).includes('끝남')) bad('a finished chip does not say 끝남')
+      await sleep(2000)
+      if ((await page.locator('.chat-agent-chip').count()) !== 1) bad('a finished chip did not leave')
+      // none runs: the strip folds away; the open panel says its sub-agent is done
+      const rest = { ...base }
+      delete rest.agents
+      await push(rest)
+      await sleep(2200)
+      if (await page.locator('.chat-agents.on').count()) bad('the strip did not fold away with no sub-agent at work')
+      const sub = (await page.locator('.chat-ag-sub').innerText().catch(() => '')).trim()
+      if (!sub.includes('끝남')) bad(`the panel of a finished sub-agent says ${JSON.stringify(sub)}`)
+      // Esc in the panel closes it
+      await page.locator('.chat-ag-panel .chat-ch-x').focus()
+      await page.keyboard.press('Escape')
+      await sleep(400)
+      if (await page.locator('.chat-ag-panel').count()) bad('Esc did not close the panel')
+      // the Agent row's 열어 보기 opens it again
+      await page.locator('.chat-agent .chat-tool-head').first().hover()
+      await page.locator('.chat-ag-open').first().click()
+      await page.waitForSelector('.chat-ag-panel', { timeout: 3000 }).catch(() => bad('열어 보기 did not open the panel'))
     } catch (err) {
       bad(String(err.message).split('\n')[0])
     } finally {

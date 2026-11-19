@@ -577,3 +577,46 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-full-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; outline: none; }
 .chat-full-pre { margin: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-full-note { margin: 0 0 8px; font-size: var(--t-meta); color: var(--ink-3); }
+
+/* ---- the sub-agents at work (src/components/chat/AgentPanel.tsx, 2026-11-19) ----
+   The strip above the composer: one quiet chip per sub-agent at work, unfolded (grid rows 0fr to 1fr) while any
+   runs. Still here (chat.css moves nothing); its unfolding, a chip's coming and going and the breathing dot are in
+   chat-game.css, with the rest of the chat's motion. */
+.chat-agents { flex: none; display: grid; grid-template-rows: 0fr; }
+.chat-agents.on { grid-template-rows: 1fr; }
+.chat-agents-clip { min-height: 0; overflow: hidden; padding: 0 32px; }
+@container (max-width: 900px) { .chat-agents-clip { padding: 0 16px; } }
+.chat-agents-in { max-width: var(--read-w); margin: 0 auto; padding: 2px 8px 8px; box-sizing: border-box; display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; }
+.chat-agents-in::-webkit-scrollbar { display: none; }
+.chat-agent-chip { flex: 0 1 auto; min-width: 0; max-width: 340px; display: inline-flex; align-items: center; gap: 7px; height: 28px; padding: 0 11px 0 10px; border: 1px solid var(--line); border-radius: var(--r-l); background: rgba(255, 255, 255, 0.025); color: var(--ink-2); font: inherit; font-size: var(--t-meta); white-space: nowrap; cursor: pointer; }
+.chat-agent-chip:hover:not(:disabled), .chat-agent-chip.on { background: var(--hover); border-color: var(--line-hover); color: var(--ink); }
+.chat-agent-chip:disabled { cursor: default; }
+.chat-agent-name { flex: 0 1 auto; min-width: 0; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.chat-agent-last { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ink-3); }
+.chat-agent-time { flex: none; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chat-agent-mark { flex: none; display: inline-grid; place-items: center; width: 10px; height: 10px; color: var(--ink-3); }
+.chat-agent-mark i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.chat-agent-chip.wait .chat-agent-mark i { background: var(--amber); }
+
+/* The panel: the chat's right column (the 변경 사항 panel's look); the conversation leaves it --ag-w, or, with no room
+   for both, it lies over the conversation */
+.chat.has-ag:not(.over) { padding-right: var(--ag-w, 380px); }
+.chat-ag-panel { position: absolute; top: 0; right: 0; bottom: 0; z-index: 3; width: var(--ag-w, 380px); box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--side-bg); color: var(--ink); }
+.chat-ag-panel.over { box-shadow: -12px 0 32px rgba(0, 0, 0, 0.35); }
+.chat-ag-panel button { -webkit-app-region: no-drag; }
+.chat.ag-resizing { cursor: col-resize; user-select: none; }
+.chat.ag-resizing .chat-ag-rz::after { background: rgba(255, 255, 255, 0.3); }
+.chat-ag-head .chat-tool-ico { margin-right: -2px; }
+.chat-ag-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chat-ag-sub { flex-direction: row; flex-wrap: wrap; gap: 2px 12px; border-bottom: 1px solid var(--line); padding-bottom: 8px; }
+.chat-ag-state { display: inline-flex; align-items: center; gap: 6px; }
+.chat-ag-state i { width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.chat-ag-state.run i { background: var(--green); }
+.chat-ag-state.wait i { background: var(--amber); }
+.chat-ag-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 10px 14px 18px; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-ui); }
+.chat-ag-body .chat-ch-empty { padding: 4px 0; }
+.chat-ag-text { color: var(--ink-2); padding: 4px 0 6px; }
+/* an Agent row's 열어 보기: there on hover or focus (and while its panel is open), quiet otherwise */
+.chat-ag-open { margin-left: 4px; opacity: 0; }
+.chat-agent > .chat-tool-head:hover .chat-ag-open, .chat-ag-open:focus-visible, .chat-ag-open.on { opacity: 1; }
+.chat-ag-open.on { color: var(--ink); border-color: var(--line-hover); }

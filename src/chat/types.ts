@@ -32,7 +32,8 @@ export interface ToolItem extends ItemBase {
 export interface ToolInput {   // a whitelisted, capped excerpt (Task 4) — never the whole input
   file?: string; command?: string; description?: string; pattern?: string; path?: string; url?: string
   query?: string; question?: string; options?: string[]; plan?: string; todos?: { done: number; total: number }
-  agentType?: string; server?: string; mcpTool?: string
+  agentType?: string; background?: true                 // Agent / Task: run_in_background
+  server?: string; mcpTool?: string
 }
 export interface ToolOutput { text: string; lines: number; truncated: boolean; error: boolean }
 /** `truncated`: a line or the block's text was cut (a minified file, a long line); the counts are still whole */
@@ -69,6 +70,19 @@ export interface LensStatus {
   mode?: PermissionMode | null         // the permission mode the hooks last reported (null: one not known; absent: none yet)
   asks?: AskCard[]                     // Phase 4: what waits on the user, oldest first (absent when none)
   changes?: ChangeSummary              // Phase 5: the conversation's file changes (absent: no index for this view)
+  agents?: RunningAgent[]              // the sub-agents at work now, oldest first (absent when none; electron/chatLens.cjs syncAgents)
+}
+
+/** A sub-agent at work (from the hooks: SubagentStart to SubagentStop, a background one until its wake-up) */
+export interface RunningAgent {
+  id: string                           // the agent id (Agent rows' agentId)
+  since: number                        // its start (ms epoch)
+  tools: number                        // tool calls so far
+  toolId?: string                      // its Agent / Task call (the row), when known
+  type?: string                        // subagent_type
+  description?: string                 // what it was asked (its call's description)
+  background?: boolean                 // run_in_background (absent: not known)
+  last?: { tool: string; input: ToolInput }   // its latest tool call
 }
 
 // ---- the changes panel (Phase 5): electron/chatChanges.cjs mirrors these in JSDoc

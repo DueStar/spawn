@@ -71,9 +71,12 @@ function terminalFor(sessionId, terminals, current, readLink, onClash) {
   return null
 }
 
-/** A transcript the lens may read: a real .jsonl inside <claudeDir>/projects/ (symlinks resolved) */
-async function transcriptAllowed(p, claudeDir, fs) {
-  if (typeof p !== 'string' || !p.endsWith('.jsonl')) return false
+/**
+ * A transcript the lens may read: a real .jsonl inside <claudeDir>/projects/ (symlinks resolved). `ext`: another
+ * ending allowed instead (a sub-agent's .meta.json beside its transcript)
+ */
+async function transcriptAllowed(p, claudeDir, fs, ext = '.jsonl') {
+  if (typeof p !== 'string' || !p.endsWith(ext)) return false
   // a lexical check first, so a path from a hook body (a UNC share, another drive) is never even looked up
   if (/^(\\\\|\/\/)/.test(p)) return false
   const win = process.platform === 'win32'
@@ -83,7 +86,7 @@ async function transcriptAllowed(p, claudeDir, fs) {
     const real = await fs.promises.realpath(p)
     const root = await fs.promises.realpath(path.join(claudeDir, 'projects'))
     const rel = path.relative(root, real)
-    return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel) && real.endsWith('.jsonl')
+    return !!rel && !rel.startsWith('..') && !path.isAbsolute(rel) && real.endsWith(ext)
   } catch {
     return false
   }
@@ -354,6 +357,8 @@ function createLens({
       // part two: the turn's prompt mark, the canary, a stall, the schema window, versions, sub-agents
       prompt: null, canary: null, stall: null, soft: [], softCount: 0, lineVersion: null,
       agentPaths: new Map(), unpairedAgentTools: 0, logged: new Set(),
+      // the sub-agents at work now (status.agents, the chat's strip), by agent id
+      running: new Map(),
       // the session's launch (a tab reopened under the same id is a new session), the turn's prompt text
       // (to find the turn's own user line), the next MessageDisplay index per message seen (even unseen views)
       createdAt: typeof createdAt === 'number' ? createdAt : null, promptText: null, streams: new Map(),
@@ -1202,6 +1207,8 @@ function createLens({
       setState(t, 'working', at)
       t.current = body.session_id
       if (typeof body.transcript_path === 'string') t.hookPath = body.transcript_path
+      // a background sub-agent reporting back (its wake-up): it is done
+      if (typeof body.prompt === 'string') agentReported(t, body.prompt)
       // (a long paste may come wrapped as the transcript records it: compared unwrapped)
       t.promptText = typeof body.prompt === 'string' ? unwrapPasted(body.prompt) : null
       // (nor is the turn's missing check armed again: a long tool call may keep the file still for minutes)
@@ -1217,7 +1224,7 @@ function createLens({
       // another conversation in this terminal (a /clear, a resume): the view moves to its file
       // (a view still waiting for its first file just looks for the new conversation's)
       const moving = (t.open || t.timers.close) && t.loaded && t.path && t.conv !== body.session_id
-      if (moving) { t.turnStart = 0; switchConversation(t) }
+      if (moving) { t.turnStart = 0; t.running.clear(); switchConversation(t) }
       else showPrompt(t, body, at, ops)
       onPrompt(t, body, at)
       if (moving) t.prompt = { path: null, end: 0 }
@@ -1239,11 +1246,13 @@ function createLens({
     },
     PostToolUse(t, body, at, ops) {
       if (typeof body.agent_id === 'string') return
+      agentCallOver(t, body)
       onPost(t, body, at, 'done', ops)
       onToolHook(t, at)
     },
     PostToolUseFailure(t, body, at, ops) {
       if (typeof body.agent_id === 'string') return
+      agentCallOver(t, body)
       onPost(t, body, at, body.is_interrupt === true ? 'interrupted' : 'failed', ops)
       onToolHook(t, at)
     },
@@ -1253,13 +1262,13 @@ function createLens({
       if (t.status.state === 'idle') setState(t, 'working', at)
       onMessageDisplay(t, body, at, ops)
     },
-    Stop(t, body, at, ops) { onTurnOver(t, at, ops); onStop(t, body, at, 'Stop', ops) },
+    Stop(t, body, at, ops) { onTurnOver(t, at, ops); foregroundOver(t); onStop(t, body, at, 'Stop', ops) },
     // a failed turn (a usage limit): its message is an error, not an answer — no canary
-    StopFailure(t, body, at, ops) { onTurnOver(t, at, ops); onStop(t, body, at, 'StopFailure', ops) },
+    StopFailure(t, body, at, ops) { onTurnOver(t, at, ops); foregroundOver(t); onStop(t, body, at, 'StopFailure', ops) },
     // a /compact typed between turns is work too (the view says it is compacting); one inside a turn keeps the turn's state
     PreCompact(t, body, at) { t.status.label = 'compact'; if (t.status.state === 'idle') setState(t, 'working', at) },
     PostCompact(t) { t.status.label = null; if (!t.turnOpen && t.status.state === 'working') setState(t, 'idle') },
-    SubagentStart(t, body, at, ops) { onSubagentStart(t, body, at, ops) },
+    SubagentStart(t, body, at, ops) { onSubagentStart(t, body, at, ops); agentStarted(t, body, at) },
     SubagentStop(t, body) { onSubagentStop(t, body) },
   }
 
@@ -1366,6 +1375,7 @@ function createLens({
   /** A sub-agent's tool call: counted on its Agent row (only one paired for certain) */
   function onAgentTool(t, body, at, ops) {
     const agentId = body.agent_id
+    agentWorked(t, body, at)
     if (!rowsOn(t)) return
     const row = [...t.items.values()].find(i => i.kind === 'tool' && i.agentId === agentId && !i.parent)
     if (row) upsertRow(t, { ...row, agentTools: (row.agentTools ?? 0) + 1 }, ops)
@@ -1373,6 +1383,7 @@ function createLens({
   }
 
   function onSubagentStop(t, body) {
+    if (typeof body.agent_id === 'string') t.running.delete(body.agent_id)
     if (typeof body.agent_id === 'string' && AGENT_ID.test(body.agent_id) && typeof body.agent_transcript_path === 'string') {
       t.agentPaths.set(body.agent_id, body.agent_transcript_path)
     }
@@ -1381,6 +1392,132 @@ function createLens({
     if (c && c.state !== 'scanning' && typeof body.agent_id === 'string' && c.index.agents().some(a => a.agentId === body.agent_id)) {
       scanAgent(t, c, body.agent_id).then(() => noteChanges(t, c), () => {})
     }
+  }
+
+  // ---- the sub-agents at work (status.agents: the chat's strip of 일하는 보조 에이전트) -----------
+  //
+  // From the hooks only: SubagentStart adds one (or, missed — the app started mid-run — its first tool call),
+  // its tool calls move it on, and it goes with SubagentStop, its Agent call's end (a foreground one), a
+  // background one's wake-up (<task-notification>'s task id), the turn's end (one known to be foreground),
+  // another conversation, the session's end, or an hour without a call. Its .meta.json beside its transcript
+  // (Claude Code 2.1.32x) says which Agent call it is (toolUseId), what it was asked (description) and whether
+  // it runs in the background; it is read at most AGENT_META_TRIES times, only inside <Claude folder>/projects/.
+
+  const AGENTS_MAX = 12
+  const AGENT_QUIET_MS = 60 * 60_000
+  const AGENT_META_BYTES = 64 * 1024
+  const AGENT_META_TRIES = 3
+  const TOOL_USE_ID = /^[A-Za-z0-9_-]{1,100}$/
+  const short = (v, n) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, n) : undefined)
+  /** the meta reads in flight (idle() waits for them too) */
+  const metaReads = new Set()
+
+  function agentStarted(t, body, at) {
+    const agentId = body.agent_id
+    // (agent_type "": the compaction summariser, the prompt-suggestion pass — no sub-agent anyone sent)
+    if (typeof agentId !== 'string' || !AGENT_ID.test(agentId) || !short(body.agent_type, 80)) return
+    if (!t.running.has(agentId)) addAgent(t, body, at)
+  }
+
+  function addAgent(t, body, at) {
+    if (t.running.size >= AGENTS_MAX) return null
+    const agentId = body.agent_id
+    const row = [...t.items.values()].find(i => i.kind === 'tool' && i.agentId === agentId && !i.parent)
+    const a = { id: agentId, since: at, lastAt: at, tools: 0, type: short(body.agent_type, 80), toolId: row?.id, metaTries: 0, meta: false, metaBusy: false }
+    t.running.set(agentId, a)
+    readAgentMeta(t, a, body)
+    return a
+  }
+
+  /** A sub-agent's tool call (its PreToolUse): the strip's count and last tool */
+  function agentWorked(t, body, at) {
+    const agentId = body.agent_id
+    if (!AGENT_ID.test(agentId) || !short(body.agent_type, 80)) return
+    const a = t.running.get(agentId) ?? addAgent(t, body, at)
+    if (!a) return
+    a.tools++
+    a.lastAt = at
+    if (typeof body.tool_name === 'string') a.last = { tool: body.tool_name.slice(0, 80), input: toolInput(body.tool_name, body.tool_input, t.cwd) }
+    if (!a.meta) readAgentMeta(t, a, body)
+  }
+
+  /** The main thread's Agent / Task call is over: a foreground sub-agent with it (a background one goes on) */
+  function agentCallOver(t, body) {
+    if (!AGENT_TOOLS.has(body.tool_name) || (isObj(body.tool_input) && body.tool_input.run_in_background === true)) return
+    const r = isObj(body.tool_response) ? body.tool_response : null
+    // (a background call's answer says it was launched: it goes on, known now to run in the background)
+    if (r && (r.status === 'async_launched' || r.isAsync === true)) {
+      for (const [k, a] of t.running) if ((a.toolId && a.toolId === body.tool_use_id) || r.agentId === k) a.background = true
+      return
+    }
+    for (const [k, a] of t.running) if ((a.toolId && a.toolId === body.tool_use_id) || (r && r.agentId === k)) t.running.delete(k)
+  }
+
+  /** A wake-up: <task-notification> with the background sub-agent's id */
+  function agentReported(t, prompt) {
+    if (!prompt.trimStart().startsWith('<task-notification>')) return
+    const m = /<task-id>\s*([^<\s]+)\s*<\/task-id>/.exec(prompt)
+    if (m) t.running.delete(m[1])
+  }
+
+  /** The turn's end: the sub-agents known to run in the foreground are over with it */
+  function foregroundOver(t) {
+    for (const [k, a] of t.running) {
+      const row = a.toolId ? t.items.get(a.toolId) : null
+      const fore = a.background === false || (a.background === undefined && row?.kind === 'tool' && row.input?.background !== true)
+      if (fore) t.running.delete(k)
+    }
+  }
+
+  /** status.agents, oldest first (absent when none); an hour without a call lets one go */
+  function syncAgents(t, at) {
+    const quiet = at - AGENT_QUIET_MS
+    for (const [k, a] of t.running) if (a.lastAt < quiet) t.running.delete(k)
+    if (!t.running.size) { delete t.status.agents; return }
+    t.status.agents = [...t.running.values()].sort((a, b) => a.since - b.since).map(a => {
+      const out = { id: a.id, since: a.since, tools: a.tools }
+      if (a.toolId) out.toolId = a.toolId
+      if (a.type) out.type = a.type
+      if (a.description) out.description = a.description
+      if (a.background !== undefined) out.background = a.background
+      if (a.last) out.last = a.last
+      return out
+    })
+  }
+
+  /** <transcript folder>/<conversation>/subagents/agent-<id>.meta.json: its Agent call, what it was asked, background or not */
+  function readAgentMeta(t, a, body) {
+    if (a.meta || a.metaTries >= AGENT_META_TRIES || a.metaBusy) return
+    a.metaTries++
+    a.metaBusy = true
+    const bases = [body.transcript_path, t.path, t.hookPath].filter(p => typeof p === 'string' && p.endsWith('.jsonl'))
+    const read = (async () => {
+      for (const base of bases) {
+        const file = path.join(path.dirname(base), path.basename(base, '.jsonl'), 'subagents', `agent-${a.id}.meta.json`)
+        if (!await transcriptAllowed(file, claudeDir, fs, '.meta.json')) continue
+        const st = await fs.promises.stat(file)
+        if (st.size > AGENT_META_BYTES) return
+        const m = JSON.parse(await fs.promises.readFile(file, 'utf8'))
+        if (!isObj(m)) return
+        a.meta = true
+        if (typeof m.toolUseId === 'string' && TOOL_USE_ID.test(m.toolUseId)) a.toolId = m.toolUseId
+        a.description = short(m.description, CAPS.field) ?? a.description
+        a.type = short(m.agentType, 80) ?? a.type
+        if (typeof m.requestShape === 'string') a.background = m.requestShape === 'background'
+        return
+      }
+    })().catch(() => {}).finally(() => {
+      metaReads.delete(read)
+      a.metaBusy = false
+      if (t.disposed || t.running.get(a.id) !== a || !a.meta) return
+      const ops = []
+      // its Agent row, when the view has it unpaired: paired now (its rows can be asked for)
+      const row = a.toolId ? t.items.get(a.toolId) : null
+      if (row && row.kind === 'tool' && !row.agentId && rowsOn(t) && ![...t.items.values()].some(i => i.kind === 'tool' && i.agentId === a.id)) upsertRow(t, { ...row, agentId: a.id }, ops)
+      syncAgents(t, now())
+      flush(t, ops)
+    })
+    metaReads.add(read)
   }
 
   function logOnce(t, key, msg, level = 'info') {
@@ -1441,6 +1578,7 @@ function createLens({
       }
       if (held) { onHeld(t, event, body, when, held, urlId); told = true }
       noteAsking(t, event, body)
+      syncAgents(t, when)
       flush(t, ops)
       scheduleRead(t, READ_AFTER_HOOK_MS)
     } catch (err) {
@@ -1479,7 +1617,7 @@ function createLens({
       if (typeof x.cwd === 'string') t.cwd = x.cwd
       t.armed = x.armed === true
       const alive = x.status !== 'exited'
-      if (t.alive && !alive) { t.alive = false; t.status.state = 'ended'; t.status.since = null; settleAll(t, 'gone'); flush(t) }
+      if (t.alive && !alive) { t.alive = false; t.status.state = 'ended'; t.status.since = null; t.running.clear(); delete t.status.agents; settleAll(t, 'gone'); flush(t) }
     }
     for (const [id, t] of terms) {
       if (seen.has(id)) continue
@@ -1849,8 +1987,9 @@ function createLens({
   async function idle() {
     for (let i = 0; i < 20; i++) {
       const qs = [...terms.values()].map(t => t.queue)
-      await Promise.all(qs)
-      if ([...terms.values()].every((t, j) => t.queue === qs[j])) return
+      const metas = [...metaReads]
+      await Promise.all([...qs, ...metas])
+      if ([...terms.values()].every((t, j) => t.queue === qs[j]) && metaReads.size === 0) return
     }
   }
 

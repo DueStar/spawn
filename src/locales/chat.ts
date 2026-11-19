@@ -323,6 +323,19 @@ const en: Record<string, string> = {
   '높음': 'High',
   '매우 높음': 'Extra high',
   '최대': 'Max',
+  // the sub-agents at work (AgentPanel.tsx): the strip above the composer and the panel beside the chat
+  '일하는 보조 에이전트 {n}개': '{n} {n|sub-agent|sub-agents} at work',
+  '끝남': 'Done',
+  '허락을 기다려요': 'Waiting for permission',
+  '백그라운드': 'Background',
+  '기록을 아직 찾는 중이에요': 'Still looking for its record',
+  '보조 에이전트 패널 폭': 'Sub-agent panel width',
+  '보조 에이전트 닫기': 'Close sub-agent',
+  '일하는 중 · {time}': 'Working · {time}',
+  '아직 기록이 없어요. 일을 시작하면 여기에 보여요': 'Nothing recorded yet. Its work shows here once it starts',
+  '이 보조 에이전트의 기록을 찾지 못했어요': "Couldn't find this sub-agent's record",
+  '열어 보기': 'Open',
+  '이 보조 에이전트의 작업을 옆에서 보기': "See this sub-agent's work alongside",
 }
 
 const ja: Record<string, string> = {
@@ -635,6 +648,19 @@ const ja: Record<string, string> = {
   '높음': '高',
   '매우 높음': '非常に高',
   '최대': '最大',
+  // the sub-agents at work (AgentPanel.tsx)
+  '일하는 보조 에이전트 {n}개': '作業中のサブエージェント {n}件',
+  '끝남': '完了',
+  '허락을 기다려요': '許可を待っています',
+  '백그라운드': 'バックグラウンド',
+  '기록을 아직 찾는 중이에요': '記録をまだ探しています',
+  '보조 에이전트 패널 폭': 'サブエージェントパネルの幅',
+  '보조 에이전트 닫기': 'サブエージェントを閉じる',
+  '일하는 중 · {time}': '作業中 · {time}',
+  '아직 기록이 없어요. 일을 시작하면 여기에 보여요': 'まだ記録がありません。作業を始めるとここに表示されます',
+  '이 보조 에이전트의 기록을 찾지 못했어요': 'このサブエージェントの記録が見つかりませんでした',
+  '열어 보기': '開く',
+  '이 보조 에이전트의 작업을 옆에서 보기': 'このサブエージェントの作業を横で見る',
 }
 
 export default { en, ja }
