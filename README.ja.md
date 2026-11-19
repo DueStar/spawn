@@ -1,8 +1,19 @@
+<div align="center">
+
 # spawn
 
 [한국어](README.md) · [English](README.en.md) · **日本語**
 
 Claude Code のセッションをポケモンと一緒に使う Windows デスクトップアプリです。セッションごとに自分のポケモンが1匹ずつ出て働き、Claude が作業している間に野生のポケモンと出会って図鑑を埋めていきます。バトルはなく、**収集**が中心です。
+
+[![最新リリース](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
+[![ダウンロード](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)
+![プラットフォーム](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+[![ライセンス](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+<img src="docs/images/hero-chat-ja.png" width="900" alt="spawn のチャット画面: 左にポケモンが担当するセッションの一覧、右に Claude との会話。会話の合間に野生のコラッタ・ミニリュウ・色違いのイーブイと出会った行があります">
+
+</div>
 
 > 非営利のファンプロジェクトです。ポケモンに関する名前とイラストの権利は Nintendo / Creatures Inc. / GAME FREAK inc. にあります。詳しくは [NOTICE.md](NOTICE.md) をご覧ください。
 
@@ -15,11 +26,36 @@ Claude Code のセッションをポケモンと一緒に使う Windows デス�
 - セッション名はダブルクリックか ✎ で変えられます。
 - 働いているポケモンは、いつでも捕まえた別のポケモンと入れ替えられます。
 
+### チャットで表示と並べて表示
+- 設定 › セッション › 「セッションをチャットで表示(プレビュー)」をオンにすると、Claude Code のセッションを会話として表示できます。チャット · ターミナルの切り替えはすべてのセッションに一度に適用されます。
+- セッションを2〜3個並べて見られます。左のリストからセッションを右側にドラッグするか Ctrl+クリックすると横に枠ができ、枠ごとに会話と入力欄があります。枠の × は枠だけを閉じ、セッションは続きます。
+- チャットの入力欄で / を入力するとコマンドの一覧が出ます。標準のコマンドと自分のコマンド・スキルを名前で探して選べます。
+- ターミナルに出る選択画面(権限の確認、質問、プランの承認など)がチャットにカードで表示され、押して選べます。
+
+<p align="center">
+  <img src="docs/images/split-view-ja.png" width="900" alt="セッションを3つ並べた画面。枠ごとに会話と入力欄があります">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/slash-commands-ja.png" width="430" alt="チャットの入力欄で / を入力すると出るコマンドの一覧"></td>
+    <td width="50%" valign="top"><img src="docs/images/answer-card-permission-ja.png" width="430" alt="コマンドを実行してよいか聞くカード: 許可 · 常に許可 · 拒否"><br><img src="docs/images/answer-card-question-ja.png" width="430" alt="Claude の質問に選択肢を押して答えるカード"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>/ コマンドの一覧</sub></td>
+    <td align="center"><sub>権限の確認と質問にチャットでそのまま答えられます</sub></td>
+  </tr>
+</table>
+
 ### 捕獲
 - Claude がツールを1回使うたびに1歩です。ツールなしで1分以上考えたり書いたりしても1歩です。1歩ごとに1%の確率で野生のポケモンと出会い、歩数がたまったときは順番に(8秒間隔で)処理されます。
 - 毎日最初のセッションでは、まだ捕まえていないポケモンが必ず1匹出ます(今日の出会い)。
 - 出会う場所は使うツールで決まります。Edit は草むら、Bash は洞窟、Read は森で、夜はゴースト・あく・エスパータイプが出やすくなります。
 - 捕まえると画面の一番上に通知が出ます。どのリクエストでどのツールを使っていたときに捕まえたか、どのボールで捕まえたかも記録されます。
+
+<p align="center">
+  <img src="docs/images/catch-toast-ja.png" width="900" alt="捕獲通知のカード3枚: マスターボールで捕まえた伝説のミュウツー、幻のミュウ、色違いのピカチュウ">
+</p>
 
 | 等級 | 出会う確率 | 基準 |
 |---|---|---|
@@ -57,6 +93,21 @@ Claude Code のセッションをポケモンと一緒に使う Windows デス�
 - **図鑑**: 全1025種を世代・等級別に見られます。捕まえたのにまだ開いていないポケモンには赤い点が付きます。
 - **ボックス**: 最大1200匹まで入ります。並べ替え、検索、色違いの絞り込みがあり、逃がすこともできます。いっぱいになると、新しく捕まえたポケモンは図鑑にだけ登録され、博士に送られます。
 
+<p align="center">
+  <img src="docs/images/pokedex-ja.png" width="900" alt="図鑑の画面: 1025種を世代・等級別に見て、選んだポケモンの情報と捕まえた経緯を右に表示します">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/catch-log-ja.png" width="430" alt="記録の画面: 今日と昨日の捕獲・逃走・進化・レベルアップを時間順に表示します"></td>
+    <td width="50%" valign="top"><img src="docs/images/ranking-ja.png" width="430" alt="ランキングの画面: 今週の捕獲数の順位と代表のポケモン"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>記録</b>: 捕獲・逃走・進化・レベルアップを時間順に</sub></td>
+    <td align="center"><sub><b>ランキング</b>: 今週の捕獲・図鑑・色違い・伝説と幻</sub></td>
+  </tr>
+</table>
+
 ### アプリ
 - **ウィジェット / ウィンドウ / 全画面**: ウィジェットは常に最前面に表示され、ウィンドウと全画面は通常のウィンドウです。全画面はタスクバーの上までを使います。
 - **ターミナル**:
@@ -69,6 +120,11 @@ Claude Code のセッションをポケモンと一緒に使う Windows デス�
 - **Google ログイン**(任意): 図鑑がクラウド(Supabase)に保存されます。
 - **アップデート**: 新しいバージョンが出ると、ウィジェット上部にアップデートボタンが出ます。アプリ部分だけをダウンロードして再起動します。
 
+<p align="center">
+  <img src="docs/images/widget-ja.png" width="280" alt="ウィジェットモード: 常に最前面に出る細い窓に、上限、図鑑の数、セッション一覧と確認が必要なセッションのターミナルが表示されます"><br>
+  <sub>ウィジェットモード</sub>
+</p>
+
 ## インストール
 
 [Releases](https://github.com/DueStar/spawn/releases/latest) から `spawn-Setup-<バージョン>.exe` をダウンロードして実行します。すぐにインストールされて spawn が起動し、デスクトップとスタートメニューにショートカットができます。
@@ -76,6 +132,8 @@ Claude Code のセッションをポケモンと一緒に使う Windows デス�
 zip でインストールする場合:
 1. `spawn-<バージョン>-win-x64.zip` をダウンロードし、好きな場所に展開します。
 2. `win-unpacked\spawn.exe` を実行します。
+
+macOS 版(Apple Silicon・Intel)も同じ Releases ページにあります。最初に開くときだけ、システム設定 › プライバシーとセキュリティで「このまま開く」を押してください。Mac ではショートカットの Ctrl の代わりに ⌘ を使います。
 
 必要なプログラムがないときは、アプリがインストール先を案内します。
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/setup)(ログイン済み)

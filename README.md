@@ -1,8 +1,19 @@
+<div align="center">
+
 # spawn
 
 **한국어** · [English](README.en.md) · [日本語](README.ja.md)
 
 Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에요. 세션마다 내 포켓몬이 하나씩 나가서 일하고, Claude가 일하는 동안 야생 포켓몬을 만나 도감을 채워요. 싸움은 없고 **수집**이 중심이에요.
+
+[![최신 릴리스](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
+[![다운로드](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)
+![플랫폼](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+[![라이선스](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+<img src="docs/images/hero-chat.png" width="900" alt="spawn 채팅 화면: 왼쪽에 포켓몬이 맡은 세션 목록, 오른쪽에 Claude와의 대화. 대화 사이에 야생 꼬렛·미뇽·색이 다른 이브이를 만난 줄이 보여요">
+
+</div>
 
 > 비영리 팬 프로젝트예요. 포켓몬과 관련된 이름과 그림의 권리는 Nintendo / Creatures Inc. / GAME FREAK inc.에 있어요. 자세한 내용은 [NOTICE.md](NOTICE.md)를 봐 주세요.
 
@@ -15,11 +26,36 @@ Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에�
 - 세션 이름은 더블클릭이나 ✎로 바꿀 수 있어요.
 - 일하는 포켓몬은 언제든 잡은 다른 포켓몬으로 바꿀 수 있어요.
 
+### 채팅으로 보기와 나란히 보기
+- 설정 › 세션 › "채팅으로 보기 (미리보기)"를 켜면 Claude Code 세션을 대화처럼 볼 수 있어요. 채팅 · 터미널 전환은 모든 세션에 한 번에 적용돼요.
+- 세션을 2~3개 나란히 볼 수 있어요. 왼쪽 목록에서 세션을 오른쪽으로 끌어다 놓거나 Ctrl+클릭하면 옆에 칸이 생기고, 칸마다 대화와 입력란이 따로 있어요. 칸의 ×는 칸만 닫고 세션은 계속 돌아요.
+- 채팅 입력란에서 /를 치면 명령 목록이 떠요. 기본 명령과 내 명령·스킬을 이름으로 찾아 골라요.
+- 터미널에 뜨는 선택 창(권한 요청, 질문, 계획 승인 등)이 채팅에 카드로 떠서 눌러서 골라요.
+
+<p align="center">
+  <img src="docs/images/split-view.png" width="900" alt="세션 세 개를 나란히 본 화면. 칸마다 대화와 입력란이 따로 있어요">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/slash-commands.png" width="430" alt="채팅 입력란에서 /를 쳤을 때 뜨는 명령 목록"></td>
+    <td width="50%" valign="top"><img src="docs/images/answer-card-permission.png" width="430" alt="명령 실행 권한을 묻는 카드: 허용 · 항상 허용 · 거부"><br><img src="docs/images/answer-card-question.png" width="430" alt="Claude의 질문에 보기를 눌러 답하는 카드"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>/ 명령 목록</sub></td>
+    <td align="center"><sub>권한 요청과 질문을 채팅에서 바로 답해요</sub></td>
+  </tr>
+</table>
+
 ### 포획
 - Claude가 도구를 한 번 쓸 때마다 한 걸음이에요. 도구 없이 1분 넘게 생각하거나 글을 써도 한 걸음이에요. 걸음마다 1% 확률로 야생 포켓몬을 만나고, 걸음이 몰리면 차례대로(8초 간격) 처리돼요.
 - 매일 첫 세션에는 아직 못 잡은 포켓몬이 꼭 한 마리 나와요(출석 조우).
 - 만나는 곳은 쓰는 도구로 정해져요. Edit은 풀숲, Bash는 동굴, Read는 숲이고, 밤에는 고스트·악·에스퍼 타입이 더 잘 나와요.
 - 잡히면 화면 맨 위에 알림이 떠요. 어떤 요청에서 어떤 도구를 쓰다 잡았는지와 어떤 볼에 잡혔는지가 같이 남아요.
+
+<p align="center">
+  <img src="docs/images/catch-toast.png" width="900" alt="포획 알림 카드 세 장: 마스터볼로 잡은 전설 뮤츠, 환상 뮤, 색이 다른 피카츄">
+</p>
 
 | 등급 | 만날 확률 | 기준 |
 |---|---|---|
@@ -57,6 +93,21 @@ Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에�
 - **도감**: 1025종 전체를 세대·등급별로 볼 수 있어요. 잡았지만 아직 열어보지 않은 포켓몬에는 빨간 점이 붙어요.
 - **박스**: 최대 1200마리까지 들어가요. 정렬, 검색, 색이 다른 포켓몬 필터가 있고 놓아주기를 할 수 있어요. 꽉 차면 새로 잡은 포켓몬은 도감에만 등록되고 박사님께 보내져요.
 
+<p align="center">
+  <img src="docs/images/pokedex.png" width="900" alt="도감 화면: 1025종을 세대·등급별로 보고, 고른 포켓몬의 정보와 잡은 경위를 오른쪽에 보여 줘요">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/catch-log.png" width="430" alt="기록 화면: 오늘과 어제의 포획, 도망, 진화, 레벨업을 시간순으로 보여 줘요"></td>
+    <td width="50%" valign="top"><img src="docs/images/ranking.png" width="430" alt="랭킹 화면: 이번 주 포획 순위와 대표 포켓몬"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>기록</b>: 포획·도망·진화·레벨업을 시간순으로</sub></td>
+    <td align="center"><sub><b>랭킹</b>: 이번 주 포획·도감·색이 다른 포켓몬·전설 환상</sub></td>
+  </tr>
+</table>
+
 ### 앱
 - **위젯 / 창 / 전체화면**: 위젯은 항상 위에 떠 있고, 창과 전체화면은 일반 창이에요. 전체화면은 작업 표시줄 위까지만 채워요.
 - **터미널**:
@@ -69,6 +120,11 @@ Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에�
 - **구글 로그인**(선택): 도감이 클라우드(Supabase)에 저장돼요.
 - **업데이트**: 새 버전이 나오면 위젯 상단에 업데이트 버튼이 떠요. 앱 부분만 받아서 재시작해요.
 
+<p align="center">
+  <img src="docs/images/widget.png" width="280" alt="위젯 모드: 항상 위에 뜨는 좁은 창에 한도, 도감 수, 세션 목록과 확인이 필요한 세션의 터미널이 보여요"><br>
+  <sub>위젯 모드</sub>
+</p>
+
 ## 설치
 
 [Releases](https://github.com/DueStar/spawn/releases/latest)에서 `spawn-Setup-<버전>.exe`를 받아 실행해요. 바로 설치되고 spawn이 켜져요. 바탕화면과 시작 메뉴에 바로가기가 생겨요.
@@ -76,6 +132,8 @@ Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에�
 zip으로 설치하려면:
 1. `spawn-<버전>-win-x64.zip`을 받아 원하는 곳에 풀어요.
 2. `win-unpacked\spawn.exe`를 실행해요.
+
+macOS(Apple Silicon·Intel)용도 같은 Releases 페이지에 있어요. 처음 열 때 한 번만 시스템 설정 › 개인정보 보호 및 보안에서 "그래도 열기"를 눌러 주세요. Mac에서는 단축키의 Ctrl 대신 ⌘를 써요.
 
 필요한 프로그램이 없으면 앱이 설치 링크를 보여줘요.
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) (로그인된 상태)

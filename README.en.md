@@ -1,8 +1,19 @@
+<div align="center">
+
 # spawn
 
 [한국어](README.md) · **English** · [日本語](README.ja.md)
 
 A Windows desktop app for running Claude Code sessions with Pokémon. Each session is worked by one of your Pokémon, and while Claude works you meet wild Pokémon and fill your Pokédex. There is no battling: it is about **collecting**.
+
+[![Latest release](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)
+![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS-lightgrey?style=flat-square)
+[![License](https://img.shields.io/badge/license-MIT-blue?style=flat-square)](LICENSE)
+
+<img src="docs/images/hero-chat-en.png" width="900" alt="spawn in chat view: the sessions each Pokémon works on at the left, the conversation with Claude at the right, with wild Rattata, Dratini and a Shiny Eevee met along the way">
+
+</div>
 
 > A non-commercial fan project. The rights to Pokémon names and artwork belong to Nintendo / Creatures Inc. / GAME FREAK inc. See [NOTICE.md](NOTICE.md).
 
@@ -15,11 +26,36 @@ A Windows desktop app for running Claude Code sessions with Pokémon. Each sessi
 - Rename a session by double-clicking it or with ✎.
 - You can swap the working Pokémon for any other one you caught, at any time.
 
+### Chat view and side-by-side sessions
+- Turn on Settings › Sessions › "View sessions as chat (preview)" to see a Claude Code session as a conversation. The chat · terminal switch applies to every session at once.
+- See two or three sessions side by side: drag a session from the left list onto the right side, or Ctrl+click it, and it opens in a pane of its own with its own conversation and composer. A pane's × closes only the pane; the session keeps running.
+- Type / in the chat box for a list of commands: the built-in ones and your own commands and skills, found by name.
+- Dialogs Claude Code draws in the terminal (permission requests, questions, plan approval, …) show in the chat as cards: click to choose.
+
+<p align="center">
+  <img src="docs/images/split-view-en.png" width="900" alt="Three sessions side by side, each pane with its own conversation and composer">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/slash-commands-en.png" width="430" alt="The list of commands that opens when you type / in the chat box"></td>
+    <td width="50%" valign="top"><img src="docs/images/answer-card-permission-en.png" width="430" alt="A card asking to run a command: Allow · Always allow · Decline"><br><img src="docs/images/answer-card-question-en.png" width="430" alt="A card answering Claude's question with a click"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>/ commands</sub></td>
+    <td align="center"><sub>Answer permission requests and questions right in the chat</sub></td>
+  </tr>
+</table>
+
 ### Catching
 - Every tool Claude uses is one step. Thinking or writing for over a minute without a tool is also one step. Each step has a 1% chance of a wild encounter, and when steps pile up they are handled in turn (8 seconds apart).
 - The first session of each day always meets one Pokémon you have not caught yet (daily encounter).
 - Where you meet them depends on the tool: Edit is tall grass, Bash is a cave, Read is a forest. At night Ghost, Dark and Psychic types show up more.
 - A catch shows a notice at the top of the screen. It records the request and the tool that were in use, and the ball it was caught in.
+
+<p align="center">
+  <img src="docs/images/catch-toast-en.png" width="900" alt="Three catch cards: a Legendary Mewtwo in a Master Ball, a Mythical Mew and a Shiny Pikachu">
+</p>
 
 | Tier | Encounter rate | Rule |
 |---|---|---|
@@ -57,6 +93,21 @@ A Windows desktop app for running Claude Code sessions with Pokémon. Each sessi
 - **Pokédex**: all 1025 species by generation and tier. Pokémon you caught but have not opened yet get a red dot.
 - **Box**: holds up to 1200. Sort, search and a Shiny filter, plus releasing. When it is full, new catches are only registered in the Pokédex and sent to the Professor.
 
+<p align="center">
+  <img src="docs/images/pokedex-en.png" width="900" alt="The Pokédex: all 1025 species by generation and tier, with the chosen Pokémon's details and how it was caught at the right">
+</p>
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><img src="docs/images/catch-log-en.png" width="430" alt="The log: catches, escapes, evolutions and level-ups of today and yesterday, in order"></td>
+    <td width="50%" valign="top"><img src="docs/images/ranking-en.png" width="430" alt="The leaderboard: this week's catches and each trainer's featured Pokémon"></td>
+  </tr>
+  <tr>
+    <td align="center"><sub><b>Log</b>: catches, escapes, evolutions and level-ups in order</sub></td>
+    <td align="center"><sub><b>Leaderboard</b>: this week's catches, Pokédex, Shiny, Legendary & Mythical</sub></td>
+  </tr>
+</table>
+
 ### The app
 - **Widget / window / full screen**: the widget stays on top; the window and full screen are normal windows. Full screen stops at the taskbar.
 - **Terminal**:
@@ -69,6 +120,11 @@ A Windows desktop app for running Claude Code sessions with Pokémon. Each sessi
 - **Google sign-in** (optional): your Pokédex is saved to the cloud (Supabase).
 - **Updates**: when a new version is out, an update button appears at the top of the widget. Only the app part is downloaded, then it restarts.
 
+<p align="center">
+  <img src="docs/images/widget-en.png" width="280" alt="Widget mode: a narrow always-on-top window with the limits, the Pokédex count, the sessions and the terminal of a session that needs you"><br>
+  <sub>Widget mode</sub>
+</p>
+
 ## Install
 
 Download `spawn-Setup-<version>.exe` from [Releases](https://github.com/DueStar/spawn/releases/latest) and run it. It installs right away, opens spawn, and adds shortcuts to the Desktop and Start menu.
@@ -76,6 +132,8 @@ Download `spawn-Setup-<version>.exe` from [Releases](https://github.com/DueStar/
 To install from the zip instead:
 1. Download `spawn-<version>-win-x64.zip` and unzip it anywhere.
 2. Run `win-unpacked\spawn.exe`.
+
+The macOS version (Apple Silicon and Intel) is on the same Releases page. The first time you open it, choose "Open Anyway" once under System Settings › Privacy & Security. On a Mac the shortcuts use ⌘ instead of Ctrl.
 
 If something it needs is missing, the app shows where to install it.
 - [Claude Code](https://docs.claude.com/en/docs/claude-code/setup) (signed in)
