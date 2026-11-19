@@ -10,6 +10,8 @@
  * gets them pasted and seen on the screen first. Pure: the screen, the keys and the clock are injected.
  */
 
+import { isBoxLine } from './boxTable'
+
 export interface DialogOption { n: number; label: string; desc: string[]; free: boolean }
 /**
  * `numbered`: options drawn `1.`, `2.` … (false: a panel's plain rows, one marked — /remote-control's, 2026-11-19);
@@ -84,11 +86,14 @@ function numbered(lines: string[]): Dialog | null {
 function bodyAbove(lines: string[], first: number, fallback: 'first' | 'last') {
   const body: string[] = []
   let ruled = false
-  for (let j = first - 1; j >= 0 && body.length < 16; j--) {
+  // (a table's drawn lines do not count to the 16: a plan's table stays whole)
+  let counted = 0
+  for (let j = first - 1; j >= 0 && counted < 16; j--) {
     const l = lines[j]
     const r = RULE.exec(l)
     if (r) { if (r[1] === '╌') { if (body.length && body[0] !== '') body.unshift(''); continue } ruled = true; break }
     body.unshift(l.trim())
+    if (!isBoxLine(l)) counted++
   }
   while (body.length && !body[0]) body.shift()
   while (body.length && !body[body.length - 1]) body.pop()

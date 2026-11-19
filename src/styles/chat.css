@@ -552,6 +552,9 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 /* the dialog card (a terminal dialog read from the screen): its body, the marked option, a field for words */
 .chat-card-dbody { margin: 0 0 8px; font-size: var(--t-ui); line-height: 1.55; color: var(--ink-2); }
 .chat-card-dbody p { margin: 0; overflow-wrap: anywhere; }
+/* a table the terminal drew, in a dialog's body (2026-11-19): a table again, or its lines lined up */
+.chat-card-dtable .tbl-wrap { margin: 2px 0 6px; }
+.chat-card-dpre { margin: 2px 0 6px; overflow-x: auto; white-space: pre; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); line-height: 1.35; color: var(--ink-2); }
 /* a panel's link (2026-11-19, /remote-control): whole, selectable, with a copy button */
 .chat-card-dlinks { display: grid; gap: 6px; margin: 0 0 8px; }
 .chat-card-dlink { display: flex; align-items: center; gap: 8px; min-width: 0; }

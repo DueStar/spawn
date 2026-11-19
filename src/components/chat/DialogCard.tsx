@@ -12,6 +12,7 @@ import { t } from '../../i18n'
 import { termText } from '../../termMetrics'
 import { answerDialog, dialogSig, parseDialog, type Dialog, type DialogKey } from '../../chat/dialog'
 import { commandRecent } from '../../chat/slash'
+import { boxSegments } from '../../chat/boxTable'
 import { CardShell, Exact } from './AnswerSurface'
 import { copyText } from './CodeBlock'
 
@@ -81,7 +82,17 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
         <CardShell title={<Exact text={label} />} label={label} kind={t('선택')} className="question dialog">
           {dialog.body.length > 0 && (
             <div className="chat-card-dbody">
-              {dialog.body.map((l, i) => (l ? <p key={i}><Exact text={l} /></p> : <span key={i} className="chat-card-dgap" />))}
+              {/* (a table the terminal drew: rows and cells again, or its lines in a monospace block: src/chat/boxTable.ts) */}
+              {boxSegments(dialog.body).map((s, k) => (s.kind === 'table'
+                ? (
+                  <div key={k} className="chat-prose chat-card-dtable"><div className="tbl-wrap"><table>
+                    <thead><tr>{s.table.head.map((c, i) => <th key={i}><Exact text={c} /></th>)}</tr></thead>
+                    <tbody>{s.table.rows.map((r, ri) => <tr key={ri}>{r.map((c, i) => <td key={i}><Exact text={c} /></td>)}</tr>)}</tbody>
+                  </table></div></div>
+                )
+                : s.kind === 'mono'
+                  ? <pre key={k} className="chat-card-dpre">{s.lines.join('\n')}</pre>
+                  : s.lines.map((l, i) => (l ? <p key={`${k}-${i}`}><Exact text={l} /></p> : <span key={`${k}-${i}`} className="chat-card-dgap" />))))}
             </div>
           )}
           {/* the panel's links, whole (the terminal may have wrapped them), to select or copy */}
