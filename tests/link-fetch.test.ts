@@ -22,7 +22,7 @@ import { join } from 'node:path'
 import zlib from 'node:zlib'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { FIX } from './chat-helpers'
-import { growth, GROWTH_LINEAR, memoryBudget, showGrowth } from './timing'
+import { growth, growthLimit, memoryBudget, showGrowth } from './timing'
 
 const require = createRequire(import.meta.url)
 const LF = require('../electron/linkFetch.cjs')
@@ -885,7 +885,7 @@ describe('HTML: readMeta, a linear scanner (nothing executed), and decodeHtml', 
     // 500 ms (a few ms on a desktop; a busy CI runner took over 100). A wall-clock 50 ms alone measured the runner.
     expect(make(4 * n).length).toBeGreaterThanOrEqual(1_000_000)
     const g = growth(make, readMeta, n)
-    expect(g.ratio, showGrowth(g)).toBeLessThan(GROWTH_LINEAR)
+    expect(g.ratio, showGrowth(g)).toBeLessThan(growthLimit())
     expect(g.large, showGrowth(g)).toBeLessThan(500)
   })
   it('decodeHtml: header charset, BOM, meta charset, http-equiv, unknown → UTF-8, a meta naming UTF-16 → UTF-8', () => {
