@@ -678,7 +678,11 @@ function createLens({
       : t.canary.fresh
     // (a thinking item alone is not the turn: Claude Code writes it before anything the turn did)
     if (!t.canary.msg) return lines.some(i => i.kind !== 'user' && i.kind !== 'thinking')
-    return lines.some(i => i.kind === 'text' && sameAnswer(t.canary.msg, i))
+    if (lines.some(i => i.kind === 'text' && sameAnswer(t.canary.msg, i))) return true
+    // no user line of its own (a wake-up's prompt is an `agent-done` notice, a prompt the record words otherwise):
+    // the answer may have been read before Stop reached the lens (the file is written ~0.1 s after Stop is sent),
+    // so the turn's own part of the file counts too — every line past where the file stood at its prompt
+    return anchor === null && [...t.items.values()].some(i => i.kind === 'text' && !i.parent && i.order >= t.canary.start && i.order < LIVE_BASE && sameAnswer(t.canary.msg, i))
   }
 
   function clearCanary(t) {
