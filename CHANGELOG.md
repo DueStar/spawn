@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.10.1
+- 보낸 메시지가 채팅에 바로 떠요. 터미널에서 친 메시지도 Claude Code가 받는 순간 보여요(다른 플러그인 훅이 오래 걸리면 6~12초 늦게 뜨던 문제).
+- 채팅에서 보낸 메시지가 "기록에서 아직 보이지 않아요"로 잘못 바뀌던 문제를 고쳤어요.
+- 백그라운드 에이전트가 끝난 뒤 "방금 끝난 답이 세션 기록에서 보이지 않아요"가 뜨고 다시 읽어야 대화가 보이던 문제를 고쳤어요.
+- 업데이트 버튼(받기 · 재시작)을 작게 줄였어요.
+
 ### 1.10.0
 - 세션을 2~3개 나란히 볼 수 있어요. 왼쪽 목록에서 세션을 오른쪽으로 끌어다 놓거나 Ctrl+클릭하면 옆에 칸이 생기고, 칸마다 대화와 입력란이 따로 있어요. 터미널로 바꾸면 칸마다 그 세션의 터미널이 보여요. 칸의 ×는 칸만 닫고 세션은 계속 돌아요.
 - 채팅 입력란에서 /를 치면 명령 목록이 떠요. 기본 명령과 내 명령·스킬을 이름으로 찾아 골라요.
@@ -475,6 +481,12 @@
 
 ## spawn (English)
 
+### 1.10.1
+- A message you send shows in the chat at once, also one typed in the terminal, the moment Claude Code takes it (it came 6–12 s late when another plugin's hook was slow).
+- A message sent from the chat no longer turns "not in the record yet" by mistake.
+- After a background agent finished, "the answer that just ended is not in the session record" could show and the chat needed 다시 읽기. Fixed.
+- The update button (get · restart) is smaller.
+
 ### 1.10.0
 - See two or three sessions side by side: drag a session from the left list onto the right side, or Ctrl+click it, and it opens in a pane of its own with its own conversation and composer. In terminal mode each pane shows its session's terminal. A pane's × closes only the pane; the session keeps running.
 - Type / in the chat box for a list of commands: the built-in ones and your own commands and skills, found by name.
@@ -807,6 +819,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.1
+- 送ったメッセージがすぐチャットに表示されます。ターミナルで入力したものも Claude Code が受け取った瞬間に表示されます(ほかのプラグインのフックが遅いと6〜12秒遅れていた問題)。
+- チャットから送ったメッセージが「記録にまだ見えません」に誤って変わる問題を直しました。
+- バックグラウンドのエージェントが終わったあと「終わったばかりの返答がセッション記録に見えません」が出て、読み直さないと会話が見えなかった問題を直しました。
+- アップデートボタン(取得 · 再起動)を小さくしました。
 
 ### 1.10.0
 - セッションを2〜3個並べて見られます。左のリストからセッションを右側にドラッグするか Ctrl+クリックすると横に枠ができ、枠ごとに会話と入力欄があります。ターミナルに切り替えると枠ごとにそのセッションのターミナルが表示されます。枠の × は枠だけを閉じ、セッションは続きます。
