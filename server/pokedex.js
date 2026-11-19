@@ -382,6 +382,40 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
     state.party = []
     return true
   }
+  /**
+   * The Pokédex's own errors, mended on load and after every sync (2026-11-19, the owner: "every caught Pokémon has its
+   * ball; no record of one that is not there"). Returns whether anything changed.
+   *  - A starter chosen before this trainer began (an earlier start of the game, before a sync joined the PCs) whose
+   *    line has no Pokémon in this game: its caught and seen records go (it was never met in this game: seen only as
+   *    that starter). A starter of this trainer, or one with a Pokémon of its line here, stays.
+   *  - A caught record without a ball takes the ball of a Pokémon of its species here (the first caught), else a Poké Ball.
+   */
+  function repairDex() {
+    let changed = false
+    const since = state.trainer?.since
+    const lineHas = (id) => {
+      const line = new Set([id])
+      for (let grew = true; grew;) { grew = false; for (const [from, tos] of nextOf) if (line.has(from)) for (const to of tos) if (!line.has(to)) { line.add(to); grew = true } }
+      return Object.values(state.mons ?? {}).some(m => line.has(m.dex))
+    }
+    for (const [key, c] of Object.entries(state.caught ?? {})) {
+      const id = Number(key)
+      if (c?.how === 'starter' && typeof since === 'number' && typeof c.lastAt === 'number' && c.lastAt < since && !lineHas(id)) {
+        delete state.caught[key]
+        if (state.seen) delete state.seen[key]
+        console.log(`[pokedex] mended: the starter ${byId.get(id)?.ko ?? id} of an earlier start (not in this game) left the Pokédex`)
+        changed = true
+        continue
+      }
+      if (c && !c.ball) {
+        const mine = Object.values(state.mons ?? {}).filter(m => m.dex === id && m.ball).sort((a, b) => (a.at ?? 0) - (b.at ?? 0))[0]
+        c.ball = mine?.ball ?? 'poke-ball'
+        changed = true
+      }
+    }
+    for (const m of Object.values(state.mons ?? {})) if (m && !m.ball) { m.ball = 'poke-ball'; changed = true }
+    return changed
+  }
   upgradeMons()
   let traitsBackfilled = false
   function backfillTraits() {
@@ -439,6 +473,7 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
   }
   // After the save timers exist: a 1.5.4 party joins the box, and the save says so
   if (foldParty()) save()
+  if (repairDex()) save()
 
   function publish(event) {
     broadcast({ type: 'pokedex', state: publicState(), ...(event ? { event } : {}) })
@@ -1192,6 +1227,7 @@ ${agentId}`
     state = { ...emptyState(), ...next }
     upgradeMons()
     foldParty()
+    repairDex()
     traitsBackfilled = false
     // A synced game may bring Pokémon that rest: waiting sessions take them
     assignWaiting()
