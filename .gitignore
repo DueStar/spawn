@@ -34,3 +34,9 @@ tests/visual/.home/
 
 # The chat view spike (the final review M10: never committed; it was kept out by .git/info/exclude only)
 spike/
+
+# working notes kept on this PC only (handoff, status, plans)
+/docs/HANDOFF.md
+/docs/STATUS-*.md
+/docs/superpowers/
+/.claude/
