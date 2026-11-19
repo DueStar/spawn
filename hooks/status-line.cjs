@@ -61,6 +61,9 @@ function buildStatus(d, env = process.env) {
     if (resets !== null) limits[`${dst}ResetsAt`] = resets
   }
   if (Object.keys(limits).length) event.rateLimits = limits
+  // The effort level (low … max), only for a model that has one
+  const effort = text(obj(d.effort).level, 20)
+  if (effort) event.effort = effort
 
   const line = `${modelName} · ctx ${used !== null ? Math.round(used) : 0}% · $${totalCost.toFixed(2)}`
   return { event: sessionId ? event : null, line }

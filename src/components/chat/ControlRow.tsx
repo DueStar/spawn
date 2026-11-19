@@ -12,10 +12,12 @@ import { lang, t } from '../../i18n'
 import { useTextStep } from '../../textSize'
 import { hpTone } from '../../sessionList'
 import type { PermissionMode } from '../../chat/types'
-import { CpuIcon, ShieldIcon } from './ChatIcons'
+import { CpuIcon, EffortIcon, ShieldIcon } from './ChatIcons'
 
 export interface ComposerControl {
   model: string | null
+  /** Claude Code's effort level as its status line last said it (low … max); null / absent: not known */
+  effort?: string | null
   /** left: the context left in %, tip: the side panel's tooltip; label: the side panel's barLabel */
   context: { left: number | null; tip: string; label: 'HP' | '컨텍스트' }
   usage: { fiveHour?: number; weekly?: number }
@@ -26,12 +28,27 @@ export const MODELS: readonly { alias: string; label: string }[] = [
   { alias: 'default', label: '기본값' }, { alias: 'fable', label: 'Fable' }, { alias: 'opus', label: 'Opus' },
   { alias: 'sonnet', label: 'Sonnet' }, { alias: 'haiku', label: 'Haiku' },
 ]
+/**
+ * The effort levels offered (2026-11-19), sent as `/effort <level>` (Claude Code 2.1.327: low, medium, high, xhigh,
+ * max, and auto for the model's own default)
+ */
+export const EFFORTS: readonly { level: string; label: string }[] = [
+  { level: 'auto', label: '자동' }, { level: 'low', label: '낮음' }, { level: 'medium', label: '보통' },
+  { level: 'high', label: '높음' }, { level: 'xhigh', label: '매우 높음' }, { level: 'max', label: '최대' },
+]
+/** An effort level's label (Claude Code's own word when it is one this list lacks) */
+export function effortLabel(level: string): string {
+  const e = EFFORTS.find(x => x.level === level.toLowerCase())
+  return e ? t(e.label) : level
+}
 /** The modes offered, in Claude Code's own Shift+Tab order (auto and bypass only where the session was started so) */
 export const MODES_OFFERED: readonly FooterMode[] = ['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions']
 
 /** What the row may change now (absent: display only, as before) */
 export interface ControlActions {
   onModel(alias: string): void
+  /** (absent: no effort menu) */
+  onEffort?(level: string): void
   onMode(mode: FooterMode): void
   /** why the model cannot change now (Claude works, a card waits); null: it can */
   modelWhy: string | null
@@ -63,7 +80,7 @@ const useLayoutEffectInPage = typeof window === 'undefined' ? useEffect : useLay
 
 export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMode | null | undefined; actions?: ControlActions }> = ({ control, mode, actions }) => {
   const change = t('눌러서 바꾸기')
-  const [menu, setMenu] = useState<'model' | 'mode' | null>(null)
+  const [menu, setMenu] = useState<'model' | 'effort' | 'mode' | null>(null)
   const { left, tip, label } = control.context
   const pct = (v: number) => `${Math.round(v)}%`
   // (the menu is there even before the mode is known: it reads 권한 모드 until then)
@@ -72,7 +89,7 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
   const [level, setLevel] = useState(0)
   const needed = useRef<number[]>([])
   const textStep = useTextStep()
-  const content = [control.model, modeKey, left === null, control.usage.fiveHour !== undefined, control.usage.weekly !== undefined, lang(), textStep].join('|')
+  const content = [control.model, control.effort, modeKey, left === null, control.usage.fiveHour !== undefined, control.usage.weekly !== undefined, lang(), textStep].join('|')
   const contentSeen = useRef(content)
   useLayoutEffectInPage(() => {
     const row = rowRef.current
@@ -117,6 +134,8 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
   const showFive = control.usage.fiveHour !== undefined && level < 2
   const modelName = `${t('모델')} ${control.model ?? ''}`
   const modeName = modeKey ? `${t('권한 모드')} ${t(modeKey)}` : ''
+  const effortShown = control.effort ? effortLabel(control.effort) : t('생각 정도')
+  const effortName = control.effort ? `${t('생각 정도')} ${effortShown}` : effortShown
   return (
     <div className="chat-ctrl" ref={rowRef} data-level={level}>
       {control.model && (actions ? (
@@ -140,6 +159,28 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
           )}
         </span>
       ) : <span className="chat-ctrl-item" title={`${t('모델')} ${control.model}`} aria-label={level >= 4 ? modelName : undefined}><CpuIcon />{level < 4 && <b>{control.model}</b>}</span>)}
+      {/* the effort level: a menu sending `/effort <level>` (the same rule as the model: on an idle prompt only) */}
+      {actions?.onEffort ? (
+        <span className="chat-ctrl-anchor">
+          <button type="button" className={`chat-ctrl-item btn${menu === 'effort' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu === 'effort'}
+            title={`${effortName} · ${actions.modelWhy ? t(actions.modelWhy) : change}`} aria-label={level >= 3 ? effortName : undefined}
+            disabled={actions.busy} onClick={() => setMenu(menu === 'effort' ? null : 'effort')}><EffortIcon />{level < 3 && <b>{effortShown}</b>}</button>
+          {menu === 'effort' && (
+            <span className="chat-ctrl-menu" role="menu" aria-label={t('생각 정도')}>
+              {actions.modelWhy && <span className="chat-ctrl-menu-note">{t(actions.modelWhy)}</span>}
+              {EFFORTS.map(e => {
+                const on = !!control.effort && control.effort.toLowerCase() === e.level
+                return (
+                  <button key={e.level} type="button" role="menuitemradio" aria-checked={on} className={`chat-ctrl-opt${on ? ' on' : ''}`}
+                    disabled={!!actions.modelWhy} onClick={() => { setMenu(null); if (!on) actions.onEffort!(e.level) }}>
+                    <span className="chat-ctrl-check" aria-hidden="true">{on ? '✓' : ''}</span>{t(e.label)}
+                  </button>
+                )
+              })}
+            </span>
+          )}
+        </span>
+      ) : control.effort ? <span className="chat-ctrl-item" title={effortName} aria-label={level >= 3 ? effortName : undefined}><EffortIcon />{level < 3 && <b>{effortShown}</b>}</span> : null}
       {modeKey && (actions ? (
         <span className="chat-ctrl-anchor">
           <button type="button" className={`chat-ctrl-item btn${menu === 'mode' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu === 'mode'}

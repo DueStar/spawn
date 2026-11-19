@@ -41,7 +41,7 @@ import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
-import { BoxIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, UpdateIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
+import { BoxIcon, SwapIcon, SidePanelIcon, TodayIcon, DexIcon, GearIcon, RankIcon, MinimizeIcon, MaximizeIcon, RestoreIcon, CloseIcon, FolderIcon, PlusIcon, PokeBall, SessionsIcon, UpdateIcon, RestartIcon, TerminalIcon, WidgetModeIcon } from './components/Icons'
 // The views and the terminal (xterm) are their own chunks: the widget's first
 // paint needs none of them. They are fetched right after it (preloadViews), so
 // opening one later does not wait.
@@ -803,6 +803,7 @@ const Widget: React.FC = () => {
     const barLabel = sessionRowParts({ title: shown?.title ?? null, name: shown?.name ?? '', project: shown?.project ?? '', level: null, helpers: 0, shell: false }, workMode).barLabel
     return {
       model: modelLabel(shown?.meter?.model, shown?.session?.model) || null,
+      effort: shown?.meter?.effort ?? null,
       context: { left, tip, label: barLabel },
       usage: { ...(typeof fiveHour === 'number' ? { fiveHour } : {}), ...(typeof sevenDay === 'number' ? { weekly: sevenDay } : {}) },
     }
@@ -995,8 +996,9 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
         else if (update.status === 'ready') bridge?.update.restart()
       }}
     >
-      {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's */}
-      <UpdateIcon size={14} />
+      {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's. A downloaded update
+          (ready) is told apart from one to get (2026-11-19, the owner: the two looked the same): a restart arrow and 재시작 */}
+      {update.status === 'ready' ? <><RestartIcon size={14} /><span className="w-update-word">{t('재시작')}</span></> : <UpdateIcon size={14} />}
     </button>
   ) : null
 

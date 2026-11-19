@@ -7,7 +7,7 @@
  * through their --settings file, electron/terminals.cjs): the numbers are the
  * ones Claude Code hands its status line.
  *
- *   POST /status  { type: 'session_status', sessionId, project, model, modelId,
+ *   POST /status  { type: 'session_status', sessionId, project, model, modelId, effort?,
  *                   context: { used, size, input, output },
  *                   rateLimits?: { fiveHour, sevenDay, spendLimit, <window>ResetsAt } }
  *   GET  /status  → { sessions: [...] }
@@ -112,6 +112,8 @@ export function createStatusStore({ staleMs = 120 * 60_000, now = () => Date.now
       project: clampString(body.project) || prev?.project,
       model: clampString(body.model) || prev?.model,
       modelId: clampString(body.modelId) || prev?.modelId,
+      // (absent for a model without effort levels: never carried over from the one before)
+      effort: clampString(body.effort, 20),
       context: {
         used: clampNumber(ctx.used, 0, 100),
         size: clampNumber(ctx.size),

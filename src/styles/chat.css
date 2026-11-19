@@ -77,11 +77,11 @@
 .chat-dot.amber { background: var(--amber); }
 
 /* ---------------------------------------------------------------- tool rows: one line each, open for the details */
-.chat-tools { display: flex; flex-direction: column; }
+.chat-tools { display: flex; flex-direction: column; gap: 2px; }
 .chat-tool { display: flex; flex-direction: column; min-width: 0; }
-.chat-tool-head { display: flex; align-items: center; gap: 6px; min-height: 26px; margin-left: -4px; border-radius: var(--r-s); font-size: var(--t-ui); color: var(--ink-2); min-width: 0; }
+.chat-tool-head { display: flex; align-items: center; gap: 6px; min-height: 30px; margin-left: -4px; border-radius: var(--r-s); font-size: var(--t-ui); color: var(--ink-2); min-width: 0; }
 .chat-tool-head:hover { background: var(--hover); }
-.chat-tool-toggle { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px; min-height: 26px; padding: 2px 6px 2px 4px; border: 0; border-radius: var(--r-s); background: none; color: inherit; font: inherit; text-align: left; }
+.chat-tool-toggle { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 4px 6px 4px 4px; border: 0; border-radius: var(--r-s); background: none; color: inherit; font: inherit; text-align: left; }
 button.chat-tool-toggle { cursor: pointer; }
 .chat-tool-chev { color: var(--ink-3); flex: none; display: inline-flex; }
 .chat-tool.open > .chat-tool-head .chat-tool-chev { transform: rotate(90deg); }

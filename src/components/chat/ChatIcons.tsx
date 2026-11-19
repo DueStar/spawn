@@ -18,6 +18,7 @@ import { EyeIcon as Eye } from '@phosphor-icons/react/dist/csr/Eye'
 import { FileIcon as File } from '@phosphor-icons/react/dist/csr/File'
 import { FilesIcon as Files } from '@phosphor-icons/react/dist/csr/Files'
 import { GlobeIcon as Globe } from '@phosphor-icons/react/dist/csr/Globe'
+import { LightbulbIcon as Lightbulb } from '@phosphor-icons/react/dist/csr/Lightbulb'
 import { ListChecksIcon as ListChecks } from '@phosphor-icons/react/dist/csr/ListChecks'
 import { MagnifyingGlassIcon as MagnifyingGlass } from '@phosphor-icons/react/dist/csr/MagnifyingGlass'
 import { PencilSimpleIcon as PencilSimple } from '@phosphor-icons/react/dist/csr/PencilSimple'
@@ -53,13 +54,14 @@ export const DownIcon = ph(ArrowDown, S)
 // the density menu
 export const EyeIcon = ph(Eye, I)
 export const ChevDownIcon = ph(CaretDown, S)
-// the composer: send, attach, mention, a chip's ×, the control row's model and mode
+// the composer: send, attach, mention, a chip's ×, the control row's model, effort and mode
 export const SendUpIcon = ph(ArrowUp, B)
 export const PlusIcon = ph(Plus, B)
 export const AtIcon = ph(At, B)
 export const XIcon = ph(X, S)
 export const CpuIcon = ph(Cpu, I)
 export const ShieldIcon = ph(ShieldCheck, I)
+export const EffortIcon = ph(Lightbulb, I)
 
 const BY_NAME: Record<ToolIconName, React.FC<P>> = {
   file: FileIcon, search: SearchIcon, run: RunIcon, edit: EditIcon, agent: AgentIcon, web: WebIcon,

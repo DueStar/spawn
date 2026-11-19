@@ -156,7 +156,7 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-row-bottom { display: flex; align-items: center; gap: 8px; padding-left: 34px; }
 .w-ctx { flex: 1; height: var(--hp-h); border-radius: 2px; background: var(--track); overflow: hidden; }
 .w-ctx span { display: block; height: 100%; border-radius: 2px; background: var(--hp); }
-.w-row-num { flex: none; width: 4.4em; font-size: var(--t-meta); color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.w-row-num { flex: none; width: 3em; font-size: var(--t-meta); color: var(--ink-3); font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
 
 /* The instruction box: the note sits above it, 보내기 inside it */
 .w-compose { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
@@ -244,6 +244,8 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-update { -webkit-app-region: no-drag; flex: none; width: 26px; height: 26px; padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-s); border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
 .w-update:hover:not(:disabled) { background: var(--accent-hover); }
 .w-update.downloading { opacity: 0.5; cursor: default; }
+/* downloaded: restart to apply, in words as well (a pill, not the square of 'one to get') */
+.w-update.ready { width: auto; padding: 0 8px 0 7px; gap: 4px; display: inline-flex; align-items: center; font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); white-space: nowrap; }
 .w-update.failed { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent); color: var(--red-text); }
 .w-update.failed:hover { background: var(--hover); }
 .widget.expanded .w-term-tabs .w-update { align-self: center; margin-left: 4px; }
@@ -321,8 +323,10 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 /* Limits: a hint before any session */
 .w-limits.idle { flex-direction: row; align-items: center; gap: 10px; padding: 11px 12px; }
 .w-limits-hint { font-size: var(--t-meta); color: var(--ink-3); }
-/* The session's model, left of its context bar */
-.w-row-model { flex: none; width: 6.4em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-size: var(--t-meta); color: var(--ink-3); }
+/* The session's model, left of its context bar. The model and the number are fixed columns (every HP bar the same
+   length), sized to what they hold (2026-11-19: 'Sonnet 5.5', '200K'), the two a little closer than the rest */
+.w-row-model + .w-row-num { margin-left: -3px; }
+.w-row-model { flex: none; width: 5.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-size: var(--t-meta); color: var(--ink-3); }
 /* The context window as HP: what is left drains like a Pokémon's HP bar (hpTone, src/sessionList.ts) */
 .w-hp-label { flex: none; font-size: var(--t-micro); font-weight: var(--w-body); color: var(--ink-3); }
 .w-ctx.w-hp span { transition: width 0.6s ease-out, background-color 0.3s; }

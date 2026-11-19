@@ -32,7 +32,7 @@ import { isCommandText, newSendId, sendDraft, type SendDeps } from '../../chat/s
 import { useChat, type ChatState } from '../../chat/store'
 import { cardNote, shownCard } from '../../chat/answer'
 import type { ImageRefusal, InterruptRefusal, SendRefusal, SubmitRefusal } from '../../chat/types'
-import { ControlRow, type ComposerControl } from './ControlRow'
+import { ControlRow, effortLabel, type ComposerControl } from './ControlRow'
 import { ImageChips, type Chip } from './ImageChips'
 import { FileChips } from './FileChips'
 import { withRefs } from '../../chat/mentions'
@@ -345,6 +345,28 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     }
   }
 
+  // The effort level (2026-11-19): `/effort <level>`, as the model. The status line says the new level only after
+  // Claude Code's next state change, so the one chosen here shows until then
+  const [effortChosen, setEffortChosen] = useState<string | null>(null)
+  useEffect(() => { setEffortChosen(null) }, [control.effort, id])
+  async function changeEffort(level: string) {
+    if (sending.current || !chat || ended) return
+    sending.current = true
+    setCtrlBusy(true)
+    say(null)
+    try {
+      const r = await sendDraft({ id, text: `/effort ${level}`, images: [] }, depsFor())
+      if (r.ok) {
+        setEffortChosen(level)
+        say({ key: '생각 정도를 바꿨어요 · {level}', vars: { level: effortLabel(level) } }, 4000)
+      }
+      else say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.ok === false && 'row' in r ? r.row : undefined))
+    } finally {
+      sending.current = false
+      setCtrlBusy(false)
+    }
+  }
+
   async function changeMode(target: FooterMode) {
     if (sending.current || !chat?.cycleMode || ended) return
     const press = chat.cycleMode
@@ -622,8 +644,9 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         </div>
         {shell ? <div className="chat-chint">{t('터미널에서 !로 실행하는 것과 같아요. 명령과 결과가 Claude의 대화에도 들어가요')}</div> : null}
         {!shell && isCommandText(text) && !chips.length ? <div className="chat-chint">{t('/로 시작하면 Claude Code 명령으로 보내요. 글자 그대로 보내려면 앞에 띄어쓰기를 넣어요')}</div> : null}
-        <ControlRow control={control} mode={modeShown ?? status?.mode} actions={chat && !fixed ? {
+        <ControlRow control={effortChosen ? { ...control, effort: effortChosen } : control} mode={modeShown ?? status?.mode} actions={chat && !fixed ? {
           onModel: m => { void changeModel(m) },
+          onEffort: e => { void changeEffort(e) },
           onMode: m => { void changeMode(m) },
           // (a model is a command: typed only on an idle prompt; a mode is a key: not while a card waits on it)
           modelWhy: ended ? '세션이 끝났어요' : status?.state === 'working' ? '일이 끝나면 바꿀 수 있어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : null,

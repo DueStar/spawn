@@ -72,6 +72,7 @@ const EXPECTED_EVENT = {
   modelId: 'claude-haiku-5-5',
   context: { used: 4.4, size: 1000000, input: 44051, output: 358 },
   rateLimits: { fiveHour: 23.5, fiveHourResetsAt: 1738425600, sevenDay: 41.2, sevenDayResetsAt: 1738857600 },
+  effort: 'medium',
 }
 
 interface Captured { url: string; authorization?: string; ts?: string; sig?: string; body: any }

@@ -309,6 +309,13 @@ const en: Record<string, string> = {
   '불러온 대화에서만 찾아요': 'Searching only what is loaded',
   // link preview cards (Phase 5)
   '링크 미리보기: {title}': 'Link preview: {title}',
+  // the effort menu (2026-11-19; 자동 and 보통 come from settings)
+  '생각 정도': 'Effort',
+  '생각 정도를 바꿨어요 · {level}': 'Effort changed · {level}',
+  '낮음': 'Low',
+  '높음': 'High',
+  '매우 높음': 'Extra high',
+  '최대': 'Max',
 }
 
 const ja: Record<string, string> = {
@@ -607,6 +614,13 @@ const ja: Record<string, string> = {
   '찾기 닫기': '検索を閉じる',
   '불러온 대화에서만 찾아요': '読み込んだ会話だけを検索します',
   '링크 미리보기: {title}': 'リンクプレビュー:{title}',
+  // the effort menu (2026-11-19; 자동 and 보통 come from settings)
+  '생각 정도': '思考の深さ',
+  '생각 정도를 바꿨어요 · {level}': '思考の深さを変更しました · {level}',
+  '낮음': '低',
+  '높음': '高',
+  '매우 높음': '非常に高',
+  '최대': '最大',
 }
 
 export default { en, ja }

@@ -90,6 +90,13 @@ describe('POST /status', () => {
     expect(again.body.sessions[0]).toMatchObject({ model: 'Haiku 5.5', context: { used: 6 } })
   })
 
+  it('keeps the effort level a status names, and none once a status names none (a model without levels)', async () => {
+    await postStatus(office.server, status({ effort: 'xhigh' }))
+    expect((await request(office.server.app).get('/status')).body.sessions[0].effort).toBe('xhigh')
+    await postStatus(office.server, status({ effort: undefined }))
+    expect((await request(office.server.app).get('/status')).body.sessions[0].effort).toBeUndefined()
+  })
+
   it('clamps strings and numbers before anything reaches the page', async () => {
     const long = 'x'.repeat(500)
     await postStatus(office.server, status({

@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.9.0
+- 채팅 아래 모델 옆에서 생각 정도(자동 · 낮음 · 보통 · 높음 · 매우 높음 · 최대)를 눌러서 바꿀 수 있어요.
+- 업데이트를 다 받아서 재시작만 남으면 버튼이 다시 시작 아이콘과 "재시작" 글자로 바뀌어요. 받을 업데이트가 있을 때와 구분돼요.
+- 왼쪽 목록에서 모델 이름과 남은 토큰 칸을 좁혀서 HP 바가 더 길어졌어요.
+- 채팅의 도구 실행 줄 사이를 넓혀서 덜 빡빡해 보여요.
+
 ### 1.8.0
 - 오른쪽 위에 세션 탭을 3개까지 열어요. 왼쪽 목록에서 세션을 끌어 오른쪽에 놓거나 Ctrl+클릭하면 새 탭이 돼요. 탭의 ×는 탭만 닫고 세션은 계속 돌아요.
 - 채팅 · 터미널 전환이 모든 세션에 한 번에 적용돼요.
@@ -460,6 +466,12 @@
 
 ## spawn (English)
 
+### 1.9.0
+- Change the effort (auto · low · medium · high · extra high · max) next to the model under the chat.
+- Once an update is downloaded and only a restart is left, the button turns into a restart arrow with "Restart", so it no longer looks like an update waiting to be fetched.
+- The model name and the tokens left take less room in the left list, so the HP bar is longer.
+- The tool rows in the chat have more room between them.
+
 ### 1.8.0
 - Open up to three session tabs at the top right: drag a session from the left list onto the right side, or Ctrl+click it. A tab's × closes only the tab; the session keeps running.
 - The chat · terminal switch now applies to every session at once.
@@ -777,6 +789,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.9.0
+- チャット下のモデルの隣で、思考の深さ(自動 · 低 · 普通 · 高 · 非常に高 · 最大)を選べます。
+- アップデートをダウンロードし終えて再起動だけが残ると、ボタンが再起動の矢印と「再起動」に変わります。取得待ちのアップデートと見分けられます。
+- 左のリストでモデル名と残りトークンの幅を詰め、HP バーが長くなりました。
+- チャットのツール実行行の間隔を広げました。
 
 ### 1.8.0
 - 右上にセッションタブを3つまで開けます。左のリストからセッションを右側にドラッグするか、Ctrl+クリックで新しいタブになります。タブの × はタブだけを閉じ、セッションは続きます。

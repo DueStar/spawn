@@ -37,6 +37,8 @@ export interface SessionStatus {
   project?: string
   model?: string
   modelId?: string
+  /** Claude Code's effort level (low, medium, high, xhigh, max), for a model that has one */
+  effort?: string
   context: ContextStatus
   rateLimits?: RateLimitStatus
   updatedAt?: number

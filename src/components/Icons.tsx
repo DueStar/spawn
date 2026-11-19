@@ -14,6 +14,7 @@ import React, { useState } from 'react'
 // (one module per icon: the whole set is 3000+ icons, which a test or a build should never load)
 import type { Icon as PhIcon } from '@phosphor-icons/react/dist/lib/types'
 import { AppWindowIcon as AppWindow } from '@phosphor-icons/react/dist/csr/AppWindow'
+import { ArrowClockwiseIcon as ArrowClockwise } from '@phosphor-icons/react/dist/csr/ArrowClockwise'
 import { ArrowLineDownIcon as ArrowLineDown } from '@phosphor-icons/react/dist/csr/ArrowLineDown'
 import { ArrowsLeftRightIcon as ArrowsLeftRight } from '@phosphor-icons/react/dist/csr/ArrowsLeftRight'
 import { BookOpenIcon as BookOpen } from '@phosphor-icons/react/dist/csr/BookOpen'
@@ -106,6 +107,8 @@ export const SearchIcon = ph(MagnifyingGlass)
 export const PlusIcon = ph(Plus)
 /** An arrow down onto a line: an update to take (the update button) */
 export const UpdateIcon = ph(ArrowLineDown)
+/** An update downloaded: restart to apply it (2026-11-19: told apart from 'one to get') */
+export const RestartIcon = ph(ArrowClockwise)
 /** 설정 */
 export const GearIcon = ph(Gear)
 
