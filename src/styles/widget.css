@@ -94,26 +94,36 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
   display: flex;
   flex-direction: column;
 }
-/* The list's header: 세션 n, then 간략 / 상세, a new shell, a new session */
-.w-list-head { display: flex; align-items: center; gap: 4px; margin: 2px 0 6px; font-size: var(--t-meta); color: var(--ink-3); min-width: 0; }
+/* The list's header: 세션 n, then 자동 / 직접, 간략 / 상세, a new shell, a new session */
+.w-list-head { display: flex; align-items: center; gap: 4px; margin: 2px 0 6px; font-size: var(--t-meta); color: var(--ink-3); min-width: 0; container-type: inline-size; }
 .w-list-count { margin-right: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-.w-list-mode { flex: none; display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); padding: 1px; margin-right: 2px; }
-.w-list-mode button {
+/* a narrow panel: the count alone (세션 would be cut to 세…), its full words in the tooltip */
+.w-list-count-short { display: none; }
+@container (max-width: 250px) {
+  .w-list-count-full { display: none; }
+  .w-list-count-short { display: inline; }
+}
+.w-list-mode, .w-list-sort { flex: none; display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); padding: 1px; margin-right: 2px; }
+.w-list-mode button, .w-list-sort button {
   position: relative; font: inherit; font-size: var(--t-micro); line-height: 1.4; color: var(--ink-3);
   padding: 1px 7px; border: 0; border-radius: calc(var(--r-s) - 1px); background: none; cursor: pointer; white-space: nowrap;
 }
 /* the hit area reaches 22px tall, the box stays small */
-.w-list-mode button::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 22px; transform: translateY(-50%); }
-.w-list-mode button:hover { color: var(--ink-2); }
-.w-list-mode button.on { background: var(--sel-bg); color: var(--ink); }
+.w-list-mode button::after, .w-list-sort button::after { content: ''; position: absolute; left: 0; right: 0; top: 50%; height: 22px; transform: translateY(-50%); }
+.w-list-mode button:hover, .w-list-sort button:hover { color: var(--ink-2); }
+.w-list-mode button.on, .w-list-sort button.on { background: var(--sel-bg); color: var(--ink); }
 .w-list-btn {
   flex: none; display: inline-grid; place-items: center; width: 22px; height: 22px; padding: 0;
   border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer;
   font: 500 var(--t-micro)/1 'Monaspace Neon Var', Consolas, monospace;
 }
 .w-list-btn:hover { background: var(--hover); color: var(--ink); }
-.w-list-mode button:focus-visible, .w-list-btn:focus-visible, .w-sess-head-close:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
-.w-rows { display: flex; flex-direction: column; gap: var(--row-gap); }
+.w-list-mode button:focus-visible, .w-list-sort button:focus-visible, .w-list-btn:focus-visible, .w-sess-head-close:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.w-rows { position: relative; display: flex; flex-direction: column; gap: var(--row-gap); }
+/* A row dragged within the list: it stays dimmed in its place, a line where it would land */
+.w-row.lifted { opacity: 0.45; }
+.w-row-drop { position: absolute; left: -4px; right: 0; height: 2px; margin-top: -1px; border-radius: 2px; background: var(--accent); pointer-events: none; z-index: 4; }
+.w-row-drop::before { content: ''; position: absolute; left: -2px; top: -2px; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
 /* Session rows: no fill and no ring; hovered a faint grey, the chosen one a little lighter with a
    2px yellow bar at the panel's left edge. They reach 8px into the card's side padding (the
    sections pad 16px), so the bar sits at the edge itself */
@@ -299,8 +309,6 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-rows.compact .w-row-close:focus-visible { outline: 1px solid var(--ink-3); outline-offset: -1px; }
 /* an ended session, dimmed as the rail does (its dot alone looks like 쉬는 중) */
 .w-rows.compact .w-row.mood-ended { opacity: 0.45; }
-.w-rows.compact .w-row.dragging .w-row-state > .w-row-close { display: none; }
-.w-rows.compact .w-row.dragging .w-row-state > .w-pill { display: inline-flex; }
 /* the × a 22px target; the negative margins keep the line as it was (the dot's 14px slot, the 20px line) */
 .w-rows.compact .w-row-close { padding: 0 4px; min-width: 22px; height: 22px; margin: -2px -4px; }
 .w-rows.compact .w-row-close.confirm { padding: 0 6px; }

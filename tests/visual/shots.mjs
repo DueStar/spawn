@@ -2536,6 +2536,89 @@ const FLOWS = {
     return problems
   },
 
+  // the left list's order (2026-11-19, src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
+  // list goes where it is put (an insertion line on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
+  'session-order': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    const names = async page => page.locator('.w-party .w-row .w-row-name').allInnerTexts()
+    const sortOn = async page => (await page.locator('.w-list-sort button.on').innerText().catch(() => '')).trim()
+    try {
+      app = await openApp(browser, {})
+      const { page } = app
+      const rows = page.locator('.w-party .w-row')
+      if ((await sortOn(page)) !== '자동') bad(`the header says ${JSON.stringify(await sortOn(page))}, want 자동`)
+      const before = await names(page)
+      if (before.length < 4) throw new Error(`only ${before.length} rows`)
+      // drag the fourth row above the first: a line on the way, then it is first and the list is 직접
+      // (the line, from the page's own drag events: Playwright's mouse sends one dragover per drag, the drop's)
+      const dragAt = (type, row, y) => page.evaluate(([type, row, y]) => {
+        window.__DT__ = type === 'dragstart' ? new DataTransfer() : window.__DT__
+        const el = type === 'dragstart' || type === 'dragend' ? document.querySelectorAll('.w-party .w-row')[row] : document.querySelector('.w-party .w-rows')
+        el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: 80, clientY: y, dataTransfer: window.__DT__ }))
+      }, [type, row, y])
+      const to = await rows.nth(0).boundingBox()
+      const r2 = await rows.nth(2).boundingBox()
+      await dragAt('dragstart', 3, 0)
+      await dragAt('dragover', 3, r2.y + r2.height - 4) // just above its own place: no line
+      await sleep(100)
+      if (await page.locator('.w-row-drop').count()) bad('a line where the row already is')
+      await dragAt('dragover', 3, to.y + 4)
+      await sleep(150)
+      if (!(await page.locator('.w-row-drop').count())) bad('no insertion line while dragging within the list')
+      if ((await page.locator('.w-row.lifted').count()) !== 1) bad('the dragged row is not marked')
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-order-drag.png'), animations: 'disabled', caret: 'hide' })
+      await dragAt('dragend', 3, 0)
+      await sleep(100)
+      if (await page.locator('.w-row-drop, .w-row.lifted').count()) bad('the line or the dimmed row stayed after the drag ended')
+      if ((await names(page)).join('|') !== before.join('|')) bad('a drag that ended without a drop moved a row')
+      // the real drag (the pointer): onto the top of the first row
+      await rows.nth(3).dragTo(rows.nth(0), { targetPosition: { x: 60, y: 4 } })
+      await sleep(400)
+      const after = await names(page)
+      const want = [before[3], ...before.filter((_, i) => i !== 3)]
+      if (after.join('|') !== want.join('|')) bad(`after a drag: ${after.join(', ')}; want ${want.join(', ')}`)
+      if ((await sortOn(page)) !== '직접') bad(`a drag left the header at ${JSON.stringify(await sortOn(page))}, want 직접`)
+      if (await page.locator('.w-row-drop').count()) bad('the insertion line stayed after the drop')
+      if (await page.locator('.w-sess-bar.split .w-pane-head').count()) bad('a drag within the list opened a pane')
+      const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('spawn-list-order') || 'null'))
+      if (!Array.isArray(saved) || saved.length < after.length) bad(`the order was not saved: ${JSON.stringify(saved)}`)
+      // Alt+↓ on the first: one place down
+      await rows.nth(0).focus()
+      await page.keyboard.press('Alt+ArrowDown')
+      await sleep(300)
+      const moved = await names(page)
+      if (moved[1] !== after[0] || moved[0] !== after[1]) bad(`Alt+↓: ${moved.join(', ')}`)
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-order-manual.png'), animations: 'disabled', caret: 'hide' })
+      // 자동 again: the 1.7.0 groups (nothing used differently in a fixed clock: the order from before)
+      await page.locator('.w-list-sort button').first().click()
+      await sleep(300)
+      if ((await sortOn(page)) !== '자동') bad('자동 did not switch back')
+      const auto = await names(page)
+      if (auto.join('|') !== before.join('|')) bad(`자동 again: ${auto.join(', ')}; want ${before.join(', ')}`)
+      // 직접 by its button: the order on screen stays as it is
+      await page.locator('.w-list-sort button').nth(1).click()
+      await sleep(300)
+      if ((await names(page)).join('|') !== auto.join('|')) bad('switching to 직접 moved the rows')
+      await app.ctx.close()
+      // a new start with 직접 and a saved order: that order, and a session not in it on top
+      const ids = await (async () => {
+        const a = await openApp(browser, {})
+        const got = await a.page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => el.getAttribute('data-sid')))
+        await a.ctx.close()
+        return got
+      })()
+      if (ids.some(x => !x)) throw new Error('rows carry no data-sid')
+      const keep = [ids[2], ids[0], ids[3], ...ids.slice(4)] // ids[1] left out: a new one, on top
+      app = await openApp(browser, { settings: { session: { autoSort: false } }, local: { 'spawn-list-order': JSON.stringify(keep) } })
+      const again = await app.page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => el.getAttribute('data-sid')))
+      if (again.join('|') !== [ids[1], ...keep].join('|')) bad(`a new start in 직접: ${again.join(', ')}; want ${[ids[1], ...keep].join(', ')}`)
+      if ((await sortOn(app.page)) !== '직접') bad('a new start in 직접 shows 자동')
+    } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close().catch(() => {}) }
+    return problems
+  },
+
   // the split view (2026-11-19, src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
   'session-tabs': async ({ browser, opts }) => {
     const problems = []

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketOf, nextSince, statusOrder, type OrderInput } from '../src/sessionOrder'
+import { bucketOf, dropSlot, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, ORDER_CAP, USED_KEY, type OrderInput } from '../src/sessionOrder'
 
 const rows = (...r: [string, string, boolean?][]): OrderInput[] => r.map(([id, mood, asking]) => ({ id, mood, asking }))
 const times = (o: Record<string, number>) => new Map(Object.entries(o))
@@ -32,5 +32,75 @@ describe('the left panel by what each session does', () => {
     const third = nextSince(second, rows(['a', 'working'], ['b', 'idle'], ['c', 'working']), 300)
     expect(third.get('b')).toEqual({ b: 2, at: 300 })
     expect(third.get('c')).toEqual({ b: 1, at: 300 })
+  })
+})
+
+describe('the session used last on top of its group (2026-11-19)', () => {
+  it('inside each group the last used first; the groups stay stacked', () => {
+    const r = rows(['a', 'idle'], ['b', 'idle'], ['w1', 'working'], ['w2', 'working'], ['n', 'needs-you'])
+    expect(statusOrder(r, times({}), times({ a: 50, b: 90, w1: 10, w2: 40 }))).toEqual(['n', 'w2', 'w1', 'b', 'a'])
+  })
+  it('a used one before the unused; the unused keep the 1.7.0 rule', () => {
+    // started a, then b, then c; only c used
+    expect(statusOrder(rows(['a', 'working'], ['b', 'working'], ['c', 'working']), times({ a: 10, b: 20, c: 30 }), times({ c: 5 }))).toEqual(['c', 'a', 'b'])
+    expect(statusOrder(rows(['x', 'idle'], ['y', 'idle']), times({ x: 10, y: 30 }), times({}))).toEqual(['y', 'x'])
+  })
+  it('Claude finishing a turn is not use: a newer rest does not pass the one used last', () => {
+    expect(statusOrder(rows(['a', 'idle'], ['b', 'idle']), times({ a: 300 }), times({ a: 100, b: 200 }))).toEqual(['b', 'a'])
+  })
+  it('markUsed: the time set, the newest ORDER_CAP kept', () => {
+    expect(markUsed(new Map([['a', 1]]), 'a', 9).get('a')).toBe(9)
+    let m: ReadonlyMap<string, number> = new Map()
+    for (let i = 0; i < ORDER_CAP + 5; i++) m = markUsed(m, `s${i}`, i)
+    expect(m.size).toBe(ORDER_CAP)
+    expect(m.has('s0')).toBe(false)
+    expect(m.has(`s${ORDER_CAP + 4}`)).toBe(true)
+  })
+  it('readUsed / readManual: odd or missing values are nothing', () => {
+    const store = (v: Record<string, string>) => ({ getItem: (k: string) => v[k] ?? null })
+    expect([...readUsed(store({ [USED_KEY]: '{"a":5,"b":"x"}' }))]).toEqual([['a', 5]])
+    expect(readUsed(store({ [USED_KEY]: '[1]' })).size).toBe(0)
+    expect(readUsed(store({ [USED_KEY]: '{bad' })).size).toBe(0)
+    expect(readUsed(null).size).toBe(0)
+    expect(readManual(store({ [MANUAL_KEY]: '["a",3,"b"]' }))).toEqual(['a', 'b'])
+    expect(readManual(store({}))).toBeNull()
+    expect(readManual({ getItem: () => { throw new Error('blocked') } })).toBeNull()
+  })
+})
+
+describe('직접 정렬: the order the user dragged', () => {
+  it('the saved order; a session not in it goes on top', () => {
+    expect(manualOrder(['a', 'b', 'c', 'n'], ['c', 'a', 'b'])).toEqual(['n', 'c', 'a', 'b'])
+    // nothing saved yet: the list's own order (one who had 자동 정렬 off before keeps it)
+    expect(manualOrder(['a', 'b'], null)).toEqual(['a', 'b'])
+  })
+  it('keepOrder: the shown order, then saved ids not open now (a session still reopening keeps its place)', () => {
+    expect(keepOrder(['b', 'a'], ['x', 'a', 'b', 'y'])).toEqual(['b', 'a', 'x', 'y'])
+    expect(manualOrder(['x', 'b', 'a'], keepOrder(['b', 'a'], ['a', 'x', 'b']))).toEqual(['b', 'a', 'x'])
+    expect(keepOrder(Array.from({ length: 70 }, (_, i) => `s${i}`), null)).toHaveLength(ORDER_CAP)
+  })
+  it('switching 자동 → 직접 starts from the order on screen, so nothing moves', () => {
+    const shownAuto = statusOrder(rows(['a', 'idle'], ['b', 'working'], ['c', 'needs-you']), times({}))
+    expect(manualOrder(['a', 'b', 'c'], keepOrder(shownAuto, ['a', 'b', 'c']))).toEqual(shownAuto)
+  })
+  it('moveTo: before the row at the slot; where it already is, the same array', () => {
+    const o = ['a', 'b', 'c', 'd']
+    expect(moveTo(o, 'a', 3)).toEqual(['b', 'c', 'a', 'd'])
+    expect(moveTo(o, 'a', 4)).toEqual(['b', 'c', 'd', 'a'])
+    expect(moveTo(o, 'd', 0)).toEqual(['d', 'a', 'b', 'c'])
+    expect(moveTo(o, 'c', 1)).toEqual(['a', 'c', 'b', 'd'])
+    expect(moveTo(o, 'b', 1)).toBe(o)
+    expect(moveTo(o, 'b', 2)).toBe(o)
+    expect(moveTo(o, 'zz', 0)).toBe(o)
+    // Alt+↑ on the first, Alt+↓ on the last: out of range, clamped, nothing moves
+    expect(moveTo(o, 'a', -1)).toBe(o)
+    expect(moveTo(o, 'd', 5)).toBe(o)
+  })
+  it('dropSlot: before the first row whose middle is below the pointer', () => {
+    const mids = [10, 30, 50]
+    expect(dropSlot(mids, 0)).toBe(0)
+    expect(dropSlot(mids, 25)).toBe(1)
+    expect(dropSlot(mids, 49)).toBe(2)
+    expect(dropSlot(mids, 99)).toBe(3)
   })
 })

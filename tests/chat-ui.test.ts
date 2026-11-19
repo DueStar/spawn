@@ -287,7 +287,8 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     const all = [...new Set(literals(join(ROOT, 'src')))].sort()
     // release 1.4.0's (cff52ac) keys, and the three of Phase 5
     // (+ spawn-pane-fracs, 2026-11-19: the split view's dragged pane widths, Widget.tsx — not the chat view's)
-    const OLD = ['spawn-box-sort', 'spawn-carry', 'spawn-dex-viewed', 'spawn-list-mode', 'spawn-pane-fracs', 'spawn-rank-npc', 'spawn-seen-version', 'spawn-session-cast', 'spawn-side-hidden', 'spawn-side-w', 'spawn-term-font', 'spawn-text-size']
+    // (+ spawn-list-order / spawn-list-used, 2026-11-19: the left list's 직접 order and last-used times, src/sessionOrder.ts)
+    const OLD = ['spawn-box-sort', 'spawn-carry', 'spawn-dex-viewed', 'spawn-list-mode', 'spawn-list-order', 'spawn-list-used', 'spawn-pane-fracs', 'spawn-rank-npc', 'spawn-seen-version', 'spawn-session-cast', 'spawn-side-hidden', 'spawn-side-w', 'spawn-term-font', 'spawn-text-size']
     const NEW = ['spawn-changes-open', 'spawn-changes-w', 'spawn-chat-density']
     expect(all).toEqual([...OLD, ...NEW].sort())
     // the chat view's files: only the three, each written in one place through its constant (a word or a number)

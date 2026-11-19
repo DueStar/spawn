@@ -14,6 +14,7 @@ Shots of the real built UI (`dist/`) with fixture sessions, to compare each rest
     node tests/visual/shots.mjs --flow narrow [--out <dir>]     # 560 / 640 wide, Windows and Mac, panel open and folded: the top bar fits; a step change re-measures
     node tests/visual/shots.mjs --flow hit-areas [--out <dir>]  # every touched control's size vs main's (0dbb6c9), each its own floor (HIT_BEFORE_RUN=1: measure only)
     node tests/visual/shots.mjs --flow terminal-paste           # one paste writes once: Ctrl+V, Ctrl+Shift+V, Shift+Insert, ⌘V; an empty clipboard sends ^V
+    node tests/visual/shots.mjs --flow session-order [--out <dir>]   # the left list: 자동 / 직접, a row dragged within the list (insertion line), Alt+↑/↓, the saved order at a new start
     node tests/visual/shots.mjs --flow keyboard                 # the list's rows and the text-size menu from the keyboard; the rows' names for a screen reader
     node tests/visual/shots.mjs --flow seg-hover                # a hovered option looks unlike the chosen one (도감, 박스, 랭킹, 설정)
     node tests/visual/shots.mjs --only resume,throw,swap,notes,find --out <dir>   # dialogs opened by a click

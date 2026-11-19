@@ -639,10 +639,8 @@
 .w-rail-account .w-account { width: 26px; height: 26px; pointer-events: none; }
 .w-rail-signin { width: 46px; height: 28px; font-size: var(--t-meta); font-weight: var(--w-name); }
 .w-side-toggle { flex: none; -webkit-app-region: no-drag; }
-/* Left panel rows reorder by dragging (useDragOrder): the row follows the pointer, the others slide */
+/* Left panel rows are dragged (within the list: a new place, the insertion line in widget.css; onto the right: a pane) */
 .w-row { position: relative; user-select: none; touch-action: none; }
-.w-row.sliding { transition: transform 0.15s cubic-bezier(.2, .8, .2, 1); }
-.w-row.dragging { z-index: 3; transition: none; cursor: grabbing; --row-tint: var(--hover); background: linear-gradient(var(--row-tint), var(--row-tint)), var(--row-base); }
 .w-row input, .w-row textarea { user-select: text; }
 /* ---------- 업무 모드 (src/workMode.ts): nothing Pokémon on screen. The pictures, the logo, the
    Pokédex card and the Pokémon in the session list are not drawn at all; this only fills their places ---------- */
