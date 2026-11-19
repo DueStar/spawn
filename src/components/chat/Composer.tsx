@@ -650,6 +650,8 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
           onMode: m => { void changeMode(m) },
           // (a model is a command: typed only on an idle prompt; a mode is a key: not while a card waits on it)
           modelWhy: ended ? '세션이 끝났어요' : status?.state === 'working' ? '일이 끝나면 바꿀 수 있어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : null,
+          // (`/effort` is immediate in Claude Code: typed while Claude works, it applies at once)
+          effortWhy: ended ? '세션이 끝났어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : null,
           modeWhy: ended ? '세션이 끝났어요' : status?.state === 'waiting' || (status?.asks?.length ?? 0) > 0 ? '먼저 아래 카드에 답해 주세요' : !chat.cycleMode ? '이 버전에서는 바꿀 수 없어요' : null,
           unreachable: lacks,
           busy: ctrlBusy || busy,

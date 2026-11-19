@@ -52,6 +52,9 @@ export interface ControlActions {
   onMode(mode: FooterMode): void
   /** why the model cannot change now (Claude works, a card waits); null: it can */
   modelWhy: string | null
+  /** why the effort cannot change now: `/effort` is one of Claude Code's immediate commands, so only a card or an
+   *  ended session stops it, never Claude working (2026-11-19: it looked dead while the session worked) */
+  effortWhy?: string | null
   modeWhy: string | null
   /** modes this session's cycle was seen to lack */
   unreachable: ReadonlySet<FooterMode>
@@ -135,6 +138,7 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
   const modelName = `${t('모델')} ${control.model ?? ''}`
   const modeName = modeKey ? `${t('권한 모드')} ${t(modeKey)}` : ''
   const effortShown = control.effort ? effortLabel(control.effort) : t('생각 정도')
+  const effortWhy = actions ? (actions.effortWhy === undefined ? actions.modelWhy : actions.effortWhy) : null
   const effortName = control.effort ? `${t('생각 정도')} ${effortShown}` : effortShown
   return (
     <div className="chat-ctrl" ref={rowRef} data-level={level}>
@@ -163,16 +167,16 @@ export const ControlRow: React.FC<{ control: ComposerControl; mode: PermissionMo
       {actions?.onEffort ? (
         <span className="chat-ctrl-anchor">
           <button type="button" className={`chat-ctrl-item btn${menu === 'effort' ? ' open' : ''}`} aria-haspopup="menu" aria-expanded={menu === 'effort'}
-            title={`${effortName} · ${actions.modelWhy ? t(actions.modelWhy) : change}`} aria-label={level >= 3 ? effortName : undefined}
+            title={`${effortName} · ${effortWhy ? t(effortWhy) : change}`} aria-label={level >= 3 ? effortName : undefined}
             disabled={actions.busy} onClick={() => setMenu(menu === 'effort' ? null : 'effort')}><EffortIcon />{level < 3 && <b>{effortShown}</b>}</button>
           {menu === 'effort' && (
             <span className="chat-ctrl-menu" role="menu" aria-label={t('생각 정도')}>
-              {actions.modelWhy && <span className="chat-ctrl-menu-note">{t(actions.modelWhy)}</span>}
+              {effortWhy && <span className="chat-ctrl-menu-note">{t(effortWhy)}</span>}
               {EFFORTS.map(e => {
                 const on = !!control.effort && control.effort.toLowerCase() === e.level
                 return (
                   <button key={e.level} type="button" role="menuitemradio" aria-checked={on} className={`chat-ctrl-opt${on ? ' on' : ''}`}
-                    disabled={!!actions.modelWhy} onClick={() => { setMenu(null); if (!on) actions.onEffort!(e.level) }}>
+                    disabled={!!effortWhy} onClick={() => { setMenu(null); if (!on) actions.onEffort!(e.level) }}>
                     <span className="chat-ctrl-check" aria-hidden="true">{on ? '✓' : ''}</span>{t(e.label)}
                   </button>
                 )

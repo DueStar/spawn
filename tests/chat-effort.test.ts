@@ -49,3 +49,15 @@ describe('the update button, downloaded vs one to get (2026-11-19)', () => {
     expect(css).toMatch(/\.w-update\.ready \{ width: auto;/)
   })
 })
+
+describe('the effort menu while Claude works (2026-11-19)', () => {
+  it('stays open to clicks: only a card or an ended session stops it (/effort is immediate)', () => {
+    const working = { ...actions, modelWhy: '일이 끝나면 바꿀 수 있어요', effortWhy: null }
+    const row = React.createElement(ControlRow, { control: control('high'), mode: null, actions: working })
+    const html = renderToStaticMarkup(row)
+    // the model button names the reason; the effort button invites a change
+    expect(html).toContain('생각 정도 높음 · 눌러서 바꾸기')
+    const composer = readFileSync(join(__dirname, '..', 'src', 'components', 'chat', 'Composer.tsx'), 'utf8')
+    expect(composer).toMatch(/effortWhy: ended \? '세션이 끝났어요' : status\?\.state === 'waiting'/)
+  })
+})
