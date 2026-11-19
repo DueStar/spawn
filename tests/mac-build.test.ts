@@ -230,7 +230,14 @@ describe('workflows', () => {
     for (const s of steps) expect(s.env?.ELECTRON_SKIP_BINARY_DOWNLOAD).toBeUndefined()
     // one artifact per arch, uploaded even when a step failed: the smoke folder is inside it
     const uploads = steps.filter(s => String(s.uses ?? '').startsWith('actions/upload-artifact'))
-    expect(uploads).toEqual([expect.objectContaining({ if: 'always()', with: expect.objectContaining({ name: 'mac-${{ matrix.arch }}', path: 'release/upload' }) })])
+    expect(uploads.filter(s => s.with?.name === 'mac-${{ matrix.arch }}')).toEqual([expect.objectContaining({ if: 'always()', with: expect.objectContaining({ name: 'mac-${{ matrix.arch }}', path: 'release/upload' }) })])
+    // and the pictures alone, small, to look at without a Mac: always, and never failing the job
+    const screens = steps.find(s => s.with?.name === 'mac-screens-${{ matrix.arch }}') as { if?: string, 'continue-on-error'?: boolean, with?: Record<string, string> }
+    expect(uploads).toHaveLength(2)
+    expect(screens).toMatchObject({ if: 'always()', 'continue-on-error': true })
+    expect(screens.with?.path).toContain('release/upload/smoke/*.png')
+    expect(screens.with?.['if-no-files-found']).toBe('warn')
+    expect(steps.indexOf(screens as never)).toBeGreaterThan(steps.findIndex(s => String(s.run ?? '').includes('smoke-mac.mjs')))
     const smokeStep = steps.find(s => String(s.run ?? '').includes('smoke-mac.mjs'))
     expect(smokeStep?.env?.SPAWN_SMOKE_DIR).toBe('${{ github.workspace }}/release/upload/smoke')
     // a failed test still fails the job, after the build and the smoke launch

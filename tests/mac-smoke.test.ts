@@ -106,7 +106,7 @@ describe('helpers', () => {
   })
 
   it('the steps, in order', () => {
-    expect(STEPS).toEqual(['start', 'window', 'shell-open', 'shell-echo', 'shell-env', 'capture-window', 'terminal-font', 'capture-widget', 'capture-fullscreen', 'restore-window', 'work-mode', 'quit'])
+    expect(STEPS).toEqual(['start', 'window', 'shell-open', 'shell-echo', 'shell-env', 'capture-window', 'terminal-font', 'capture-widget', 'capture-fullscreen', 'restore-window', 'work-mode', 'capture-views', 'quit'])
   })
 
   it('work mode: ⌘⇧H as a keydown at the focused element, the page read as it is drawn', () => {
@@ -165,7 +165,7 @@ describe('helpers', () => {
 
 // A fake Electron: the app (paths, quit), one window per mode, terminals whose
 // output says spawn-42 once the echo is typed
-function fakeElectron({ shellError = null as string | null, windowShows = true, cellWidth = 8, fullscreenFilled = true, restoreTo = null as null | { x: number, y: number, width: number, height: number }, workModeAtLoad = false, workModeLeaves = 0 } = {}) {
+function fakeElectron({ shellError = null as string | null, windowShows = true, cellWidth = 8, fullscreenFilled = true, restoreTo = null as null | { x: number, y: number, width: number, height: number }, workModeAtLoad = false, workModeLeaves = 0, viewsFail = false } = {}) {
   const app = Object.assign(new EventEmitter(), {
     setPath: vi.fn(),
     getPath: vi.fn(() => '/fake/userData'),
@@ -195,6 +195,7 @@ function fakeElectron({ shellError = null as string | null, windowShows = true, 
       return [{ face: 'Monaspace Neon Var', status: 'loaded', text: 'W0', supplied: true }, { face: 'W Uncut', status: 'loaded', text: 'Pokédex', supplied: true }, { face: 'W Pretendard', status: 'loaded', text: '가', supplied: true }]
     }
     if (js.includes('spawn-smoke:work-mode-key')) { workMode = !workMode; return true }
+    if (js.includes('spawn-smoke:view-key')) { if (viewsFail) throw new Error('no page'); return true }
     if (js.includes('spawn-smoke:work-mode-read')) {
       return { workMode, mac: true, atLoad: workModeAtLoad, pokemonImages: workMode ? workModeLeaves : 3, logo: !workMode, folded: false, headLeft: workMode ? 90 : 120, railTop: null }
     }
@@ -288,7 +289,41 @@ describe('a smoke run (fake app)', () => {
     expect(r.terminalFont).toMatchObject({ ratio: 0.615, measured: 'Monaspace Neon Var', fontSize: 13, cellWidth: 8 })
     expect(r.fonts.map((f: { face: string, status: string }) => `${f.face}:${f.status}`)).toEqual(['Monaspace Neon Var:loaded', 'W Uncut:loaded', 'W Pretendard:loaded'])
     expect(r.steps.find((x: { name: string }) => x.name === 'restore-window').detail).toEqual({ bounds: { x: 100, y: 100, width: 800, height: 600 }, filled: false })
+    // the other views by ⌘2–5, pictured for mac.yml's mac-screens-<arch>, then ⌘1 back
+    const viewKeys = js.filter((c: string) => c.includes('spawn-smoke:view-key'))
+    expect(viewKeys.map((c: string) => /key: "(\d)"/.exec(c)?.[1])).toEqual(['2', '3', '4', '5', '1'])
+    expect(viewKeys.every((c: string) => c.includes('metaKey: true'))).toBe(true)
+    for (const v of ['dex', 'box', 'today', 'rank']) {
+      expect(readFileSync(join(dir, 'out', `view-${v}.png`), 'utf8')).toBe('png-window')
+      expect(r.screenshots[`view-${v}`]).toBe(`view-${v}.png`)
+    }
     expect(typeof r.totalMs).toBe('number')
+    s.stop()
+  })
+
+  it('the view pictures are optional: one that fails is recorded and the run still passes', async () => {
+    const f = fakeElectron({ viewsFail: true })
+    const s = prepare({ app: f.app, dialog: f.dialog, env: envFor(), tmp: dir, log: quiet, timeoutMs: 10_000, settleMs: 0, typeDelayMs: 0 })
+    await s.run(f.hooks)
+    await exited(f.app)
+    expect(f.app.exit).toHaveBeenCalledWith(0)
+    const r = readResult()
+    expect(r.ok).toBe(true)
+    expect(r.passed).not.toContain('capture-views')
+    expect(r.steps.find((x: { name: string }) => x.name === 'capture-views')).toMatchObject({ ok: false, detail: 'no page' })
+    s.stop()
+  })
+
+  it('the view pictures are skipped when the run is short of time, never risking its timeout', async () => {
+    const f = fakeElectron()
+    let t = 0
+    // every reading of the clock moves it 1 s on: by work-mode, far past three quarters of 20 s
+    const s = prepare({ app: f.app, dialog: f.dialog, env: envFor(), tmp: dir, log: quiet, timeoutMs: 20_000, settleMs: 0, typeDelayMs: 0, now: () => (t += 1000) })
+    await s.run(f.hooks)
+    await exited(f.app)
+    const r = readResult()
+    expect(f.exec.mock.calls.some((c: unknown[]) => String(c[0]).includes('spawn-smoke:view-key'))).toBe(false)
+    expect(r.steps.find((x: { name: string }) => x.name === 'capture-views')?.detail).toMatch(/^skipped: /)
     s.stop()
   })
 

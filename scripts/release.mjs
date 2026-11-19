@@ -34,11 +34,20 @@
  *
  * The Macs are off unless asked for: --publish alone is the Windows release,
  * exactly as it was before the Macs (no CI started, nothing waited for). With
- * --with-mac, after the Windows release is out, CI builds the Macs on the
- * release's tag and scripts/release-mac.mjs checks, signs and uploads them
- * (zips, then latest-mac-<arch>.json). A Mac failure leaves the Windows release
- * as it is; the Mac part is retried with --mac-only <version>. A test build (no
- * --publish) is Windows only.
+ * --with-mac, right after the preflight the tag v<version> is pushed (at the
+ * HEAD preflight found on origin/main: a bare tag, no release, so the in-app
+ * updater sees nothing yet) and CI starts building the Macs on it, while
+ * Windows builds here (scripts/release-mac.mjs startMacEarly: CI needs only the
+ * tag, nothing of the Windows build). Then the Windows release is created as
+ * before (all its files and latest.json in one `gh release create`), and only
+ * after it the Mac run is waited for, checked, signed and uploaded (zips, then
+ * latest-mac-<arch>.json). About 6–9 min instead of 10–13: the Mac run (3–4 min,
+ * more when the arm64 runners queue) mostly happens during the Windows build.
+ * A Mac failure leaves the Windows release as it is; the Mac part is retried
+ * with --mac-only <version>. A run that stops after the tag went up and before
+ * the release is made leaves only the tag: run it again and preflight takes
+ * the tag (at HEAD, no release) as this run's. A test build (no --publish) is
+ * Windows only.
  */
 
 import { execFileSync } from 'node:child_process'
@@ -49,7 +58,7 @@ import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { signManifest, signingKeyPath } from './signing.mjs'
 import { writeManifest } from './manifest.mjs'
-import { releaseArgsOrExit, runMacRelease } from './release-mac.mjs'
+import { releaseArgsOrExit, runMacRelease, startMacEarly, macRunUrl } from './release-mac.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'))
@@ -99,8 +108,11 @@ const missingBalls = ballIds.filter(id => !existsSync(join(ballDir, `${id}.png`)
 const balls = ballIds.length - missingBalls.length
 const hasKey = existsSync(signingKeyPath())
 
-if (publish) preflight()
-/** Everything --publish needs, checked before a minute of building: all problems at once, then stop */
+const head = publish ? preflight() : null
+/**
+ * Everything --publish needs, checked before a minute of building: all problems at once, then stop.
+ * Returns HEAD (the commit on origin/main the release is made of)
+ */
 function preflight() {
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim()
   const problems = []
@@ -113,7 +125,17 @@ function preflight() {
   let remote = ''
   try { remote = (git('ls-remote', 'origin', 'refs/heads/main').split(/\s+/)[0] || '') } catch {}
   if (remote !== head) problems.push(`origin/main is ${remote.slice(0, 7) || '?'} but HEAD is ${head.slice(0, 7)}: push first (the release tag goes on GitHub's main)`)
-  try { if (git('ls-remote', '--tags', 'origin', `refs/tags/v${version}`)) problems.push(`tag v${version} already exists: bump the version`) } catch {}
+  // A tag with no release, at HEAD, is the one an earlier --with-mac attempt pushed before it stopped: taken as this run's
+  try {
+    const tagLines = git('ls-remote', 'origin', `refs/tags/v${version}`, `refs/tags/v${version}^{}`).split('\n').filter(Boolean)
+    if (tagLines.length) {
+      const tagSha = (tagLines.find(l => l.endsWith('^{}')) ?? tagLines[0]).split(/\s+/)[0]
+      let hasRelease = true
+      try { execFileSync('gh', ['release', 'view', `v${version}`, '--repo', 'DueStar/spawn', '--json', 'tagName'], { stdio: 'pipe' }) } catch { hasRelease = false }
+      if (hasRelease || tagSha !== head) problems.push(`tag v${version} already exists${hasRelease ? ' with a release' : ` at ${tagSha.slice(0, 7)}, not HEAD`}: bump the version`)
+      else console.log(`Tag v${version} is at HEAD with no release (an earlier attempt stopped): this run takes it`)
+    }
+  } catch {}
   if (!changelogNotes(version)) problems.push(`CHANGELOG.md has no "### ${version}" section (the app shows it as patch notes)`)
   if (missingBalls.length) problems.push(`Poké Ball art missing: ${missingBalls.join(', ')} (node tools/import-balls.mjs <folder>)`)
   if (!hasKey) problems.push(`no signing key at ${signingKeyPath()} (copy it from the PC that has it; make a new one only with scripts/signing-key.mjs, which breaks in-app updates for installed apps)`)
@@ -122,6 +144,21 @@ function preflight() {
     process.exit(1)
   }
   console.log('Preflight: all checks passed')
+  return head
+}
+
+// --with-mac: the tag up and the Mac CI going now, so it builds while Windows builds here
+let macStarted
+let released = false // the Windows release made (below)
+if (publish && cli.mac) {
+  macStarted = await startMacEarly({ root, version, head })
+  // Should the Windows build stop now, the tag and the Mac run are all there is: no release, nothing offered
+  process.on('exit', (code) => {
+    if (code === 0 || released) return
+    console.error(`\nThe Windows build stopped: no release v${version} was made (installed apps are offered nothing).` +
+      ` The tag v${version} is on GitHub at ${String(head).slice(0, 7)}${macStarted?.id ? ` and the Mac run ${macRunUrl(macStarted.id)} may still be going` : ''}.` +
+      ` Run the same command again: preflight takes the tag, a new Mac run replaces the old one.`)
+  })
 }
 
 if (missingBalls.length === 0) console.log(`Poké Ball art: all ${balls} bundled`)
@@ -185,12 +222,15 @@ console.log(`\napp update ${appZip} ${mb(manifest.app.size)} · full ${fullZip} 
 
 if (publish) {
   // DueStar's login was checked in preflight (the gh CLI's active login, never its token)
+  // (with --with-mac the tag is already up, at the HEAD preflight checked, and gh takes it as it is)
   run('gh', ['release', 'create', `v${version}`, '--repo', 'DueStar/spawn', '--title', `spawn ${version}`, '--notes', notes || `spawn ${version}`,
     join(out, 'latest.json'), join(out, appZip), join(out, fullZip), join(out, setupExe)], { shell: false })
-  // Then the Macs, only with --with-mac, with the notes and date latest.json went out with; a failure
-  // there leaves the Windows release as it is
+  released = true
+  // Then the Macs, only with --with-mac: the run started after the preflight, waited for now, and
+  // uploaded with the notes and date latest.json went out with; a failure there leaves the Windows
+  // release as it is
   if (cli.mac) {
-    const macCode = await runMacRelease({ root, version, notes: { notes, notesEn, notesJa, date: builtAt }, windowsOut: true })
+    const macCode = await runMacRelease({ root, version, notes: { notes, notesEn, notesJa, date: builtAt }, windowsOut: true, started: macStarted })
     if (macCode) process.exit(macCode)
   }
 } else {
