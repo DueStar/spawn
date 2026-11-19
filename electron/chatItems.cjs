@@ -24,7 +24,7 @@
  * @typedef {'running' | 'done' | 'failed' | 'rejected' | 'interrupted' | 'unknown'} ToolState
  * @typedef {{ file?: string, command?: string, description?: string, pattern?: string, path?: string, url?: string,
  *   query?: string, question?: string, options?: string[], plan?: string, todos?: { done: number, total: number },
- *   agentType?: string, server?: string, mcpTool?: string }} ToolInput
+ *   agentType?: string, background?: true, server?: string, mcpTool?: string }} ToolInput
  * @typedef {{ text: string, lines: number, truncated: boolean, error: boolean }} ToolOutput
  * @typedef {{ t: '+' | '-' | ' ', old: number | null, new: number | null, text: string }} DiffLine
  * @typedef {{ oldStart: number, newStart: number, lines: DiffLine[] }} DiffHunk
@@ -114,7 +114,7 @@ function toolInput(name, input, cwd, caps = CAPS) {
     case 'WebSearch':
       return clean({ query: f(input.query) })
     case 'Agent': case 'Task':
-      return clean({ description: f(input.description), agentType: f(input.subagent_type) })
+      return clean({ description: f(input.description), agentType: f(input.subagent_type), background: input.run_in_background === true ? true : undefined })
     case 'AskUserQuestion': {
       const q = Array.isArray(input.questions) ? input.questions[0] : null
       if (!isObj(q)) return {}
@@ -376,8 +376,7 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
       const summary = obj.isCompactSummary === true
       const meta = !summary && (obj.isMeta === true || obj.turnCompanion === true)
       if (typeof content === 'string') {
-        if (!meta && !parent) { const it = userText(content, 0, uuid, order, at, summary); if (it) items.push(it) }
-        return items.map(out)
+        if (!meta && !parent) { const it = userText(content, 0, uuid, order, at, summary); if (it) items.push(it) }        return items.map(out)
       }
       if (!Array.isArray(content)) return []
       const texts = []

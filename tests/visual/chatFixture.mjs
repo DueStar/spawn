@@ -430,6 +430,15 @@ const CONVERSATIONS = {
   'chat-diff': () => ({ items: build(workTurn(minutes(6)).slice(0, 3)), status: status() }),
   'chat-failed': () => ({ items: build([...workTurn(minutes(12)).slice(0, 7), ...timed(lineObjs('interrupt.jsonl'), minutes(4))]), status: status() }),
   'chat-agent': () => ({ items: build(timed(lineObjs('agent.jsonl'), minutes(5))), status: status() }),
+  // the sub-agents at work (2026-11-19): agent.jsonl's background sub-agent still working (paired by its meta), and a
+  // second one whose call the view has not paired yet (its chip cannot open the panel)
+  'chat-agents': () => ({
+    items: build(timed(lineObjs('agent.jsonl'), minutes(5))),
+    status: status({ state: 'working', since: minutes(4), agents: [
+      { id: 'afixture01', since: minutes(4) + 12_000, tools: 4, toolId: 'toolu_fixture41', type: 'general-purpose', description: 'Count lines in notes.txt', background: true, last: { tool: 'PowerShell', input: { command: '(Get-Content notes.txt | Measure-Object -Line).Lines', description: 'Count the lines' } } },
+      { id: 'afixture02', since: NOW - 48_000, tools: 2, type: 'Explore', description: 'Find where the notes are read', last: { tool: 'Read', input: { file: 'src/notes/reader.ts' } } },
+    ] }),
+  }),
   'chat-stream': () => ({
     items: [
       ...build([user('README의 설치 순서를 영어로 옮겨 주세요. 표는 그대로 두고요.', minutes(1))]),

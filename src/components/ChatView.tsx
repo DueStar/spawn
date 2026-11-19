@@ -57,6 +57,7 @@ import { AnswerSurface, type AnswerFn } from './chat/AnswerSurface'
 import { DialogCard, useTermDialog } from './chat/DialogCard'
 import { FullButton, FullView, type FullState } from './chat/FullView'
 import { FindBar, useFind } from './chat/FindBar'
+import { AgentPanel, AgentStrip, useAgentChips, useAgentWidth } from './chat/AgentPanel'
 import { cardNote, screenDialogs, shownCard } from '../chat/answer'
 import { noticeText, overlayOpen } from '../chat/find'
 import { appShortcut } from '../keys'
@@ -516,6 +517,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const card = shownCard(status?.asks)
   const cardHere = cardNote(card) === 'here'
   const agentsKey = wait?.agents.join(',') ?? ''
+  // the sub-agents at work (the strip above the composer) and the one the panel shows (its Agent row's id)
+  const chips = useAgentChips(status, state.items)
+  const [agentShown, setAgentShown] = useState<string | null>(null)
+  useEffect(() => { setAgentShown(null) }, [id])
+  const openAgent = useCallback((toolId: string) => setAgentShown(cur => (cur === toolId ? null : toolId)), [])
   const ctx = useMemo<ChatContextValue>(() => ({
     id,
     onTerminal,
@@ -534,7 +540,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     ...(ledger ? { stepsFor: ledger.stepsFor, stepsSubscribe: ledger.subscribe } : {}),
     ...(game ? { wildNew, wildPlayed } : {}),
     previews,
-  }), [id, onTerminal, fixed, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews])
+    openAgent,
+    agentShown,
+  }), [id, onTerminal, fixed, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
   const banner = status?.banner ?? null
   const reload = () => { if (!fixed) chatStore.reload(id) }
   const older = () => (fixed ? undefined : bridge?.chat.older(id))
@@ -571,6 +579,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const [say, announce] = useAnnouncer()
   // find in the conversation (Phase 5, src/chat/find.ts): over the store's items as they are drawn (only what is loaded)
   const rootRef = useRef<HTMLDivElement>(null)
+  const agentFit = useAgentWidth(rootRef, agentShown !== null)
   const listFocus = useCallback(() => listRef.current?.focus(), [])
   const find = useFind({ id, items, rows, density, hasOlder, list: listRef, root: rootRef, listFocus })
   const openFind = find.openBar
@@ -600,7 +609,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   }, [fixed, id])
   return (
     <ChatContext.Provider value={ctx}>
-      <div ref={rootRef} className={`chat${banner ? ' has-banner' : ''}`} data-terminal={id}>
+      <div ref={rootRef} className={`chat${banner ? ' has-banner' : ''}${agentShown ? (agentFit.over ? ' has-ag over' : ' has-ag') : ''}`} data-terminal={id}
+        style={agentShown ? { '--ag-w': `${agentFit.width}px` } as React.CSSProperties : undefined}>
         {/* find (Ctrl/⌘+F): over the conversation's top right, where the terminal's own bar sits */}
         {find.bar && <FindBar {...find.bar} />}
         {status?.note === 'new-version' && <VersionNote version={status.version ?? null} onHelp={onHelp} />}
@@ -629,12 +639,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
                 findNow={find.findNow}
               />
             )}
+        <AgentStrip chips={chips} waiting={status?.state === 'waiting' ? status.waitingAgent ?? null : null} shown={agentShown} onOpen={openAgent} />
         <div className="chat-sr" aria-live="assertive">{say}</div>
         {asks.length > 0 && !(termOnly && dialog) && <AnswerSurface id={id} asks={asks} who={who} answer={fixed ? qaAnswer : bridgeAnswer} onTerminal={onTerminal} announce={announce} />}
         {(!asks.length || termOnly) && dialog && dialogKey && <DialogCard id={id} dialog={dialog} dialogKey={dialogKey} />}
         {footer}
         {shown && <Lightbox url={shown.url} caption={shown.caption} onClose={closeImage} />}
         {full && <FullView state={full} onClose={() => setFull(null)} />}
+        {agentShown && <AgentPanel key={agentShown} toolId={agentShown} items={state.items} status={status} chips={chips} width={agentFit.width} over={agentFit.over} onWidth={agentFit.onWidth} onClose={() => setAgentShown(null)} />}
       </div>
     </ChatContext.Provider>
   )

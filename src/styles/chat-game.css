@@ -41,3 +41,24 @@
   .chat-status.working .chat-pic.head::before { animation: none; }
   .chat-status.working .chat-pic.head > * { animation: none; }
 }
+/* the sub-agents at work (AgentPanel.tsx, 2026-11-19, the owner's ask for smooth, natural micro-interactions): the
+strip unfolds and folds, a chip rises in once and, finished, fades after its 끝남, a running one's dot breathes on the
+working Pokémon's beat, and the panel slides in once; all still for anyone who asks less motion */
+.chat-agents { transition: grid-template-rows .26s cubic-bezier(.2, .7, .2, 1), opacity .2s ease; }
+.chat-agents:not(.on) { opacity: 0; }
+.chat-agent-chip { transition: background-color .15s ease, border-color .15s ease, color .15s ease; animation: chat-chip-in .28s cubic-bezier(.2, .7, .2, 1) both; }
+.chat-agent-chip.gone { animation: chat-chip-out .32s ease 1.25s forwards; }
+.chat-agent-chip:not(.gone):not(.wait) .chat-agent-mark i { animation: chat-halo 1.6s ease-in-out infinite; }
+.chat-ag-state.run i { animation: chat-halo 1.6s ease-in-out infinite; }
+.chat-ag-panel { animation: chat-ag-in .22s cubic-bezier(.2, .7, .2, 1); }
+@keyframes chat-chip-in { from { opacity: 0; transform: translateY(4px); } }
+@keyframes chat-chip-out { to { opacity: 0; transform: scale(.96); } }
+@keyframes chat-ag-in { from { opacity: 0; transform: translateX(12px); } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-agents { transition: none; }
+  .chat-agent-chip { transition: none; animation: none; }
+  .chat-agent-chip.gone { animation: none; }
+  .chat-agent-chip:not(.gone):not(.wait) .chat-agent-mark i { animation: none; }
+  .chat-ag-state.run i { animation: none; }
+  .chat-ag-panel { animation: none; }
+}

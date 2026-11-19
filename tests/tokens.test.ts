@@ -401,10 +401,13 @@ describe('the guards: what the calm look allows', () => {
     const rules = rulesOf(game.file, game.text)
     const moving = rules.filter(r => !r.at?.startsWith('@keyframes') && !r.at?.includes('prefers-reduced-motion') && values(r, 'animation(?:-name)?').some(v => v !== 'none'))
     // (2026-11-17: the working Pokémon's halo and hop, the owner's micro-interaction)
-    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head::before', '.chat-status.working .chat-pic.head > *'])
+    // (2026-11-19: the sub-agents at work — a chip comes in, a finished one goes, a running one's dot breathes on the
+    // working Pokémon's beat, the panel slides in; the owner's ask for smooth, natural micro-interactions)
+    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head::before', '.chat-status.working .chat-pic.head > *',
+      '.chat-agent-chip', '.chat-agent-chip.gone', '.chat-agent-chip:not(.gone):not(.wait) .chat-agent-mark i', '.chat-ag-state.run i', '.chat-ag-panel'])
     // the lab's wildIn (app.css 273–274): 0.5 s, once
     expect(values(moving[0], 'animation')[0]).toMatch(/^chat-wild-in \.5s cubic-bezier\(\.2, \.8, \.2, 1\) both$/)
-    expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in', 'chat-hop', 'chat-halo'])
+    expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in', 'chat-hop', 'chat-halo', 'chat-chip-in', 'chat-chip-out', 'chat-ag-in'])
     const stop = rules.filter(r => r.at?.includes('prefers-reduced-motion') && /animation\s*:\s*none/.test(r.body))
     expect(stop.flatMap(r => parts(r.sel))).toContain('.chat-wild.appear .chat-wild-mon')
     // nothing else of the chat moves

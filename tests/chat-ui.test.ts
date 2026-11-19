@@ -255,7 +255,8 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     const frames = SHEETS.flatMap(f => [...sheet(f).matchAll(/@keyframes\s+([\w-]+)/g)].map(m => `${f}: ${m[1]}`)).sort()
     // release 1.4.0 (cff52ac) had exactly these six; Phase 5 adds chat-game.css's one
     // (2026-11-17: the working Pokémon's hop and halo, the owner's micro-interaction, in chat-game.css too)
-    expect(frames).toEqual(['chat-game.css: chat-halo', 'chat-game.css: chat-hop', 'chat-game.css: chat-wild-in', 'pokedex.css: wMonHop', 'toast.css: toastIn', 'toast.css: toastOut', 'widget.css: wLimitPulse', 'widget.css: wLimitShimmer', 'widget.css: wNoteIn'])
+    // (2026-11-19: the sub-agents at work — a chip comes in and goes, the panel slides in — in chat-game.css too)
+    expect(frames).toEqual(['chat-game.css: chat-ag-in', 'chat-game.css: chat-chip-in', 'chat-game.css: chat-chip-out', 'chat-game.css: chat-halo', 'chat-game.css: chat-hop', 'chat-game.css: chat-wild-in', 'pokedex.css: wMonHop', 'toast.css: toastIn', 'toast.css: toastOut', 'widget.css: wLimitPulse', 'widget.css: wLimitShimmer', 'widget.css: wNoteIn'])
     // no rule of the chat view moves outside chat-game.css
     for (const f of SHEETS.filter(x => x !== 'chat-game.css')) {
       for (const r of rulesIn(sheet(f))) {

@@ -47,6 +47,8 @@ Shots of the real built UI (`dist/`) with fixture sessions, to compare each rest
 
     node tests/visual/shots.mjs --only chat-link,chat-link-work,chat-link-mac --check fit --check work --out <dir>   # link preview cards (phase 5): 링크 미리보기 seeded on, the lab's MDN card
     node tests/visual/shots.mjs --flow chat-preview-off --flow chat-preview   # off: no chat.preview, no card, no request; on: only rows drawn ask, blob: URLs revoked
+    node tests/visual/shots.mjs --only chat-agents,chat-agents-panel,chat-agents-narrow --check fit --out <dir>   # the sub-agents at work: the strip, its panel, the panel over a narrow chat
+    node tests/visual/shots.mjs --flow chat-agents    # a chip opens the panel (rows asked once, again when it moved on), 끝남 then gone, the strip folds, Esc, 열어 보기
 
   The `chat-off` baselines come from release 1.4.0's own build and harness: `git worktree add --detach <tmp> cff52ac`, link its
   `node_modules` to this checkout's, copy `tests/visual/.home/sprites`, `npx vite build` there, then

@@ -5,7 +5,8 @@
  * row asks the lens for them (chat:agent) whenever it has none (also after main let them go:
  * a minute away, 다시 읽기) and again when the sub-agent moved on (its state or tool count
  * changed), one request at a time. They arrive as items with `parent` set to this row
- * (src/chat/rows.ts nests them here). A sub-agent waiting on the user says so on this row.
+ * (src/chat/rows.ts nests them here). A sub-agent waiting on the user says so on this row. 열어 보기 opens the
+ * same rows, live, in the sub-agent panel beside the chat (AgentPanel.tsx).
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -75,7 +76,7 @@ export const AgentGroup: React.FC<{ item: ToolItem; children: (ToolItem | TextIt
     ctx.loadAgent(item.id).catch(() => ({ ok: false })).finally(() => { inFlight.delete(key); setSettled(n => n + 1) })
   }, [open, key, moment, hasRows, settled]) // eslint-disable-line react-hooks/exhaustive-deps
   return (
-    <div className={`chat-tool chat-agent${failed ? ' fail' : ''}${waits ? ' wait' : ''}${open ? ' open' : ''}`}>
+    <div className={`chat-tool chat-agent${failed ? ' fail' : ''}${waits ? ' wait' : ''}${open ? ' open' : ''}`} data-tool={item.id}>
       <div className="chat-tool-head">
         <button type="button" className="chat-tool-toggle" aria-expanded={open} onClick={() => setOpen(!open)}>
           <span className="chat-tool-chev" aria-hidden="true"><ChevIcon /></span>
@@ -85,6 +86,11 @@ export const AgentGroup: React.FC<{ item: ToolItem; children: (ToolItem | TextIt
         </button>
         <Meta meta={meta} extra={tools > 0 ? t('도구 {n}개', { n: tools }) : null} />
         {waits && <ToTerminal />}
+        {/* its whole conversation, live, in the panel beside the chat (src/components/chat/AgentPanel.tsx) */}
+        {ctx.openAgent && (item.agentId || hasRows) && (
+          <button type="button" className={`chat-btn chat-ag-open${ctx.agentShown === item.id ? ' on' : ''}`} aria-pressed={ctx.agentShown === item.id}
+            title={t('이 보조 에이전트의 작업을 옆에서 보기')} onClick={() => ctx.openAgent!(item.id)}>{t('열어 보기')}</button>
+        )}
       </div>
       {open && (
         <div className="chat-tool-body chat-agent-body">
