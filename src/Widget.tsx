@@ -32,7 +32,6 @@ import { restorePicks } from './resting'
 import { autoPartner, hideTitleKey, sessionLabel, sessionRowParts, shouldToast, viewIn, visibleViews, VIEWS, type View } from './workMode'
 import { SwapPicker, ThrowPicker } from './components/PartyPickers'
 import { LensSwitch, SessionHeader } from './components/SessionHeader'
-import { useDragOrder } from './useDragOrder'
 import { clampSideWidth, readSideWidth, sideMin, SIDE_DEFAULT, SIDE_MAX, writeSideWidth } from './sideWidth'
 import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, readChangesWidth, readOpen, writeChangesWidth, writeOpen } from './changesWidth'
 import { modeFromUrl, readCarry, writeCarry } from './carry'
@@ -74,7 +73,7 @@ function preloadViews() {
   else setTimeout(go, 500)
 }
 import { resetTextSize, stepTextSize, useTextStep } from './textSize'
-import { bucketOf, nextSince, statusOrder, type Bucket } from './sessionOrder'
+import { bucketOf, dropSlot, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, USED_KEY, type Bucket } from './sessionOrder'
 import { TextSizeControl } from './components/TextSizeControl'
 import type { SessionInfo } from './types'
 import { t, josa, nameOf, locale, lang } from './i18n'
@@ -497,7 +496,7 @@ const Widget: React.FC = () => {
   // The left panel's order (2026-11-17): with 자동 정렬 (설정 › 세션, on by default) by what each session does —
   // 확인 필요 on top, then working in the order they started, then resting (the latest to rest first), then ended
   // (src/sessionOrder.ts). While the pointer is over the list the order holds still, so a row never moves under
-  // a click; only a session that comes to need the user goes to the top at once. Off: the dragged order, as before.
+  // a click; only a session that comes to need the user goes to the top at once. Off (직접 정렬): the dragged order.
   const autoSort = settings.session.autoSort !== false
   const orderInputs = rows.map(r => ({ id: r.sessionId, mood: r.mood, asking: r.terminal?.status === 'running' && !!r.terminal.asking }))
   const sinceRef = useRef(new Map<string, { b: Bucket; at: number }>())
@@ -505,8 +504,35 @@ const Widget: React.FC = () => {
   const [overList, setOverList] = useState(false)
   const heldOrder = useRef<string[] | null>(null)
   let listIds = rows.map(r => r.sessionId)
+  // (2026-11-19) inside each group the session the user last used (shown, picked, typed in) comes first; the times are
+  // kept per PC (src/sessionOrder.ts readUsed / markUsed), so the order survives a restart
+  const [used, setUsed] = useState<ReadonlyMap<string, number>>(() => { try { return readUsed(localStorage) } catch { return new Map() } })
+  const noteUsed = useCallback((sid: string) => {
+    setUsed(prev => {
+      // (a key a second is plenty: the order only cares which was last)
+      if (Date.now() - (prev.get(sid) ?? 0) < 1000) return prev
+      const next = markUsed(prev, sid, Date.now())
+      try { localStorage.setItem(USED_KEY, JSON.stringify(Object.fromEntries(next))) } catch { /* only a convenience */ }
+      return next
+    })
+  }, [])
+  // 직접 정렬 (자동 정렬 off): the order the user dragged, kept per PC (spawn-list-order); a session not in it goes on
+  // top. Switching to it (the list's 자동 / 직접, 설정 › 세션 or a drag) starts from the order on screen, so nothing jumps
+  const manualRef = useRef<string[] | null>(null)
+  if (manualRef.current === null) { try { manualRef.current = readManual(localStorage) } catch { /* none */ } }
+  const saveManual = (order: string[]) => {
+    manualRef.current = order
+    try { localStorage.setItem(MANUAL_KEY, JSON.stringify(order)) } catch { /* only a convenience */ }
+  }
+  const prevAuto = useRef(autoSort)
+  const draggedOff = useRef(false)
+  if (prevAuto.current !== autoSort) {
+    if (!autoSort && !draggedOff.current && heldOrder.current) saveManual(keepOrder(heldOrder.current, manualRef.current))
+    draggedOff.current = false
+    prevAuto.current = autoSort
+  }
   if (autoSort) {
-    const fresh = statusOrder(orderInputs, new Map([...sinceRef.current].map(([k, v]) => [k, v.at])))
+    const fresh = statusOrder(orderInputs, new Map([...sinceRef.current].map(([k, v]) => [k, v.at])), used)
     const held = heldOrder.current
     if (overList && held) {
       const kept = [...held.filter(id => fresh.includes(id)), ...fresh.filter(id => !held.includes(id))]
@@ -514,13 +540,29 @@ const Widget: React.FC = () => {
       listIds = [...urgent, ...kept.filter(id => !urgent.includes(id))]
     } else listIds = fresh
     heldOrder.current = listIds
+  } else {
+    listIds = manualOrder(listIds, manualRef.current)
+    // (a new session's place, and the first order of one who had 자동 정렬 off before this: saved as shown)
+    if (rows.length && keepOrder(listIds, manualRef.current).join('\n') !== (manualRef.current ?? []).join('\n')) saveManual(keepOrder(listIds, manualRef.current))
   }
-  // The rows reorder by dragging, like the tabs (the same order: terminals.move), while 자동 정렬 is off
   const rowById = new Map(rows.map(r => [r.sessionId, r]))
-  const rowOrder = useDragOrder(listIds, 'y', (id, to) => {
-    const term = rowById.get(id)?.terminal
-    if (term) void bridge?.terminals.move(term.id, to)
-  })
+  // A row dragged within the list (or moved with Alt+↑/↓) goes where it was put, and the list is 직접 정렬 from then
+  // on; dragged onto the right side it opens beside (the drop there: SESSION_MIME)
+  const reorderRow = (sid: string, slot: number) => {
+    const next = moveTo(listIds, sid, slot)
+    if (next === listIds) return
+    saveManual(keepOrder(next, manualRef.current))
+    // (main's tab order follows, the order the sessions reopen in at the next start)
+    const term = rowById.get(sid)?.terminal
+    if (term) void bridge?.terminals.move(term.id, next.filter(id => rowById.get(id)?.terminal).indexOf(sid))
+    if (autoSort) { draggedOff.current = true; void changeSettings({ session: { autoSort: false } }) }
+    else bumpOrder(n => n + 1) // (draw again with the new order)
+  }
+  const [, bumpOrder] = useState(0)
+  const setAutoSort = (on: boolean) => { if (on !== autoSort) void changeSettings({ session: { autoSort: on } }) }
+  const [rowDrop, setRowDrop] = useState<{ slot: number; top: number } | null>(null)
+  const rowDragged = useRef<string | null>(null)
+  const [lifted, setLifted] = useState<string | null>(null)
 
   const sendable = rows.filter(r => r.terminal && r.terminal.status === 'running')
   const isFree = (r: Row) => r.terminal?.status === 'running' && !r.terminal.asking && r.mood !== 'working' && r.mood !== 'needs-you'
@@ -694,6 +736,20 @@ const Widget: React.FC = () => {
   }
   const chosen = sendable.find(r => r.sessionId === target) ?? sendable[0]
   const shown = withTerminal.find(r => r.sessionId === target) ?? chosen ?? withTerminal[0]
+  // "Last used" for the list's order: the session in view (picked in the list, a pane clicked, a tab) and the one
+  // typed in (a key in the terminal or the chat's composer on the right) — never just one Claude worked in
+  const shownSid = shown?.sessionId
+  useEffect(() => { if (shownSid) noteUsed(shownSid) }, [shownSid, noteUsed])
+  const shownSidRef = useRef(shownSid)
+  shownSidRef.current = shownSid
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const sid = shownSidRef.current
+      if (sid && e.target instanceof Element && e.target.closest('.w-term-body')) noteUsed(sid)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => window.removeEventListener('keydown', onKey, true)
+  }, [noteUsed])
   // The chat view (src/chat/lensMode.ts): 채팅 / 터미널, one choice for every session (2026-11-17; per session until
   // then), kept in the carry. Only a session whose terminal carries the chat key (the feature on, Claude Code) offers
   // it, never the widget; the terminal stays mounted either way and only its `active` follows the choice
@@ -1237,9 +1293,14 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </button>}
 
           <section className="w-card w-party">
-            {/* The list's header: how many, 간략 / 상세, a new shell, a new session */}
+            {/* The list's header: how many, 자동 / 직접, 간략 / 상세, a new shell, a new session */}
             <div className="w-list-head">
-              <span className="w-list-count">{t('세션 {n}', { n: rows.length })}</span>
+              <span className="w-list-count" title={t('세션 {n}', { n: rows.length })}><span className="w-list-count-full">{t('세션 {n}', { n: rows.length })}</span><span className="w-list-count-short">{rows.length}</span></span>
+              {/* 자동 / 직접: the same switch as 설정 › 세션 › 왼쪽 목록 자동 정렬 (a drag in the list turns 직접 on) */}
+              <span className="w-list-sort" role="group" aria-label={t('목록 정렬')}>
+                <button className={autoSort ? 'on' : ''} aria-pressed={autoSort} onClick={() => setAutoSort(true)} title={t('상태별로 묶고, 그 안에서 마지막으로 쓴 세션이 위로')}>{t('자동')}</button>
+                <button className={autoSort ? '' : 'on'} aria-pressed={!autoSort} onClick={() => setAutoSort(false)} title={t('끌어서 정한 순서 그대로 (새 세션은 맨 위)')}>{t('직접')}</button>
+              </span>
               <span className="w-list-mode" role="group" aria-label={t('목록 보기')}>
                 <button className={compact ? 'on' : ''} aria-pressed={compact} onClick={() => setListMode('compact')} title={t('한 줄씩 (많이 보기)')}>{t('간략')}</button>
                 <button className={compact ? '' : 'on'} aria-pressed={!compact} onClick={() => setListMode('detail')} title={t('이름·상태·컨텍스트·모델까지')}>{t('상세')}</button>
@@ -1249,10 +1310,40 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
-            <div className={`w-rows${compact ? ' compact' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}>
-            {rowOrder.shown.map((sid, i) => {
+            <div className={`w-rows${compact ? ' compact' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
+              // a row dragged within the list: a line where it would go (none where it already is)
+              onDragOver={e => {
+                const sid = rowDragged.current
+                if (!sid || !e.dataTransfer.types.includes(SESSION_MIME)) return
+                e.preventDefault()
+                e.dataTransfer.dropEffect = 'move'
+                const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
+                if (boxes.some(b => !b)) return
+                const slot = dropSlot(boxes.map(b => b!.top + b!.height / 2), e.clientY)
+                const from = listIds.indexOf(sid)
+                if (slot === from || slot === from + 1) { setRowDrop(null); return }
+                const top0 = e.currentTarget.getBoundingClientRect().top
+                const top = slot < boxes.length
+                  ? (slot ? (boxes[slot - 1]!.bottom + boxes[slot]!.top) / 2 : boxes[0]!.top - 2) - top0
+                  : boxes[boxes.length - 1]!.bottom + 2 - top0
+                setRowDrop(cur => (cur?.slot === slot && cur.top === top ? cur : { slot, top }))
+              }}
+              // (left for good: the pointer outside the list's box; Chromium gives a drag's dragleave no relatedTarget)
+              onDragLeave={e => {
+                const b = e.currentTarget.getBoundingClientRect()
+                if (e.clientX < b.left || e.clientX >= b.right || e.clientY < b.top - 4 || e.clientY >= b.bottom + 4) setRowDrop(null)
+              }}
+              onDrop={e => {
+                const sid = rowDragged.current
+                if (!sid || !e.dataTransfer.types.includes(SESSION_MIME)) return
+                e.preventDefault()
+                setRowDrop(null)
+                const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
+                if (!boxes.some(b => !b)) reorderRow(sid, dropSlot(boxes.map(b => b!.top + b!.height / 2), e.clientY))
+              }}>
+            {rowDrop && <div className="w-row-drop" style={{ top: rowDrop.top }} aria-hidden="true" />}
+            {listIds.map((sid, i) => {
               const r = rowById.get(sid)!
-              const drag = rowOrder.bind(sid, i, !!r.terminal && !autoSort)
               const mon = monOf(r.sessionId)
               const parts = sessionRowParts({ title: r.title, name: r.name, project: r.project, level: mon ? levelOf(mon) : null, helpers: (dex?.helpers?.[r.sessionId] ?? []).length, noPokemon: noPokemon(r), shell: r.shell }, workMode)
               // What is left of the context window (the tick and the tooltip in 간략)
@@ -1310,19 +1401,21 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               return (
               <div
                 key={r.sessionId}
-                ref={el => { drag.ref(el); if (el) rowEls.current.set(sid, el); else rowEls.current.delete(sid) }}
-                style={rowOrder.style(sid, i)}
-                onPointerDown={drag.onPointerDown}
-                onPointerMove={drag.onPointerMove}
-                onPointerUp={drag.onPointerUp}
-                onPointerCancel={drag.onPointerCancel}
-                className={`w-row${rowOrder.stateClass(sid)} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
-                // (2026-11-17) dragged onto the right side, or Ctrl+clicked: the session opens in a tab of its own
-                // (with 자동 정렬 on the rows do not reorder by dragging, so the drag is free for this)
-                draggable={!!r.terminal && autoSort && expanded}
-                onDragStart={e => { if (!r.terminal) return; e.dataTransfer.setData(SESSION_MIME, r.sessionId); e.dataTransfer.effectAllowed = 'copy' }}
-                onDragEnd={() => setDropHint(null)}
-                onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } rowOrder.click(open)() }}
+                ref={el => { if (el) rowEls.current.set(sid, el); else rowEls.current.delete(sid) }}
+                data-sid={sid}
+                className={`w-row${lifted === sid ? ' lifted' : ''} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
+                // (2026-11-17) dragged onto the right side, or Ctrl+clicked: the session opens in a pane of its own;
+                // (2026-11-19) dragged within the list: it goes where it is put (직접 정렬 from then on)
+                draggable={!!r.terminal && renaming?.id !== r.sessionId}
+                onDragStart={e => {
+                  if (!r.terminal) return
+                  e.dataTransfer.setData(SESSION_MIME, r.sessionId)
+                  e.dataTransfer.effectAllowed = 'copyMove'
+                  rowDragged.current = sid
+                  setLifted(sid)
+                }}
+                onDragEnd={() => { setDropHint(null); setRowDrop(null); rowDragged.current = null; setLifted(null) }}
+                onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
                 // The keyboard and screen readers: a row is a button (Tab reaches it, Enter / Space
                 // open it, F2 renames it), the one in view is the current one, and its name says
                 // the session's name and status (간략 shows only the status's dot)
@@ -1332,6 +1425,12 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 aria-label={rowLabel({ title: r.title, mood: MOOD_LABEL[r.mood], left: ctxLeft, barLabel: parts.barLabel }, t)}
                 onKeyDown={e => {
                   if (e.target !== e.currentTarget || !r.terminal) return
+                  // Alt+↑ / Alt+↓: the row up or down one place (as a drag would, 직접 정렬 from then on)
+                  if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+                    e.preventDefault()
+                    reorderRow(sid, e.key === 'ArrowUp' ? i - 1 : i + 2)
+                    return
+                  }
                   const act = rowKeyAction(e.key, e.nativeEvent.isComposing)
                   if (!act) return
                   e.preventDefault()

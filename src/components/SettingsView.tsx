@@ -211,7 +211,7 @@ const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback
             <Choice label={t('모델')} hint={t('기본값은 Claude Code 설정을 따라요')} value={s.session.model} options={[['', t('기본값')], ['opus', 'Opus'], ['sonnet', 'Sonnet'], ['haiku', 'Haiku']]} onChange={v => set('session', { model: v })} />
             <Choice label="Permission mode" hint={t(PERMISSION_HINT[s.session.permissionMode])} value={s.session.permissionMode} options={[['', t('기본값')], ['default', 'Manual'], ['acceptEdits', 'Accept edits'], ['plan', 'Plan'], ['auto', 'Auto']]} onChange={v => set('session', { permissionMode: v })} />
             <Toggle label={t('세션 닫기 전 확인')} hint={t('끄면 × 한 번으로 바로 닫혀요')} on={s.session.confirmClose} onChange={v => set('session', { confirmClose: v })} />
-            <Toggle label={t('왼쪽 목록 자동 정렬')} hint={t('확인 필요가 맨 위, 일하는 세션은 시작한 순서로, 쉬는 세션은 최근에 쉰 순서로 놓여요. 끄면 끌어서 순서를 정해요')} on={s.session.autoSort !== false} onChange={v => set('session', { autoSort: v })} />
+            <Toggle label={t('왼쪽 목록 자동 정렬')} hint={t('확인 필요 → 일하는 중 → 쉬는 중으로 묶고, 묶음마다 마지막으로 쓴 세션이 위로 와요. 끄면(직접) 목록에서 끌어 놓은 순서를 지켜요')} on={s.session.autoSort !== false} onChange={v => set('session', { autoSort: v })} />
             <Toggle label={t('시작할 때 세션 다시 열기')} hint={t('앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요')} on={s.session.restoreOnStart} onChange={v => set('session', { restoreOnStart: v })} />
             {/* The chat view (a preview): only behind the features.json switch (src/features.ts) */}
             {CHAT_VIEW && <Toggle label={t('채팅으로 보기')} hint={t('Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요')} on={s.session.chatView} onChange={v => set('session', { chatView: v })} />}

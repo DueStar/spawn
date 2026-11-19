@@ -92,9 +92,10 @@ describe('rows from the keyboard and for screen readers (final review I2)', () =
     expect(w).toMatch(/aria-label=\{rowLabel\(\{ title: r\.title, mood: MOOD_LABEL\[r\.mood\]/)
     expect(w).toContain('if (e.target !== e.currentTarget || !r.terminal) return')
     expect(w).toContain('rowKeyAction(e.key, e.nativeEvent.isComposing)')
-    // the mouse goes through the same open() (the drag's click guard kept)
-    // (2026-11-17: Ctrl+click opens the session in a tab of its own; a plain click as before)
-    expect(w).toContain('rowOrder.click(open)()')
+    // the mouse goes through the same open()
+    // (2026-11-17: Ctrl+click opens the session in a tab of its own; a plain click as before. 2026-11-19: the rows
+    // reorder by the browser's own drag, which ends without a click, so no click guard)
+    expect(w).toContain('openInTab(r.sessionId); return } open() }}')
   })
 
   it('the focus ring is a quiet hairline (no yellow, none on a click); 간략 shows its × on keyboard focus; an ended 간략 row is dimmed', () => {
