@@ -84,7 +84,8 @@ export function termSize(id: string): { cols: number; rows: number } | null {
 
 export function termMetrics(): TermMetrics[] {
   const out: TermMetrics[] = []
-  for (const read of readers.values()) { try { out.push(read()) } catch { /* a terminal going away */ } }
+  // (a reader's parts may be getters, read when asked: taken here as plain values for the page global)
+  for (const read of readers.values()) { try { out.push({ ...read() }) } catch { /* a terminal going away */ } }
   return out
 }
 
