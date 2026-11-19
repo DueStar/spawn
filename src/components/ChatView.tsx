@@ -37,7 +37,7 @@ import { ITEM_CAP, chatStore, useChat, type ChatState } from '../chat/store'
 import { formatDuration } from '../chat/toolLabel'
 import { openFileFromChat, openUrlFromChat, takeChatFocus, type ChatWho } from '../chat/lensMode'
 import type { AskCard, ChatItem, LensStatus, LiveItem, NoticeItem, TextItem, ToolItem } from '../chat/types'
-import { UNCONFIRMED_MS, outboxFor, pendingItems, type OutboxEntry } from '../chat/outbox'
+import { UNCONFIRMED_MS, hookPromptsShown, outboxFor, pendingItems, type OutboxEntry } from '../chat/outbox'
 import { TerminalIcon } from './Icons'
 import { ChatContext, useChatContext, type ChatContextValue } from './chat/context'
 import { ChatList, scrollKey, type ChatListHandle } from './chat/ChatList'
@@ -432,7 +432,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const entries = useSyncExternalStore(box ? box.subscribe : noSub, () => (box ? box.entries() : NO_ENTRIES), () => NO_ENTRIES)
   const items = useMemo(() => {
     if (!entries.length) return state.items
-    const all = [...state.items, ...pendingItems(entries)]
+    // (a prompt main shows from its hook that one of these bubbles stands for: only the bubble, never both)
+    const shown = hookPromptsShown(entries, state.items)
+    const all = [...(shown.size ? state.items.filter(i => !shown.has(i.id)) : state.items), ...pendingItems(entries)]
     return all.sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
   }, [state.items, entries])
   useEffect(() => {

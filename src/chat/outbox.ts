@@ -56,6 +56,20 @@ export function sentMatches(sent: string, text: string): boolean {
   return (pa.length >= 20 && b.startsWith(pa)) || (pb.length >= 20 && a.startsWith(pb))
 }
 
+/** A row main shows from a prompt's UserPromptSubmit before its line is written (electron/chatLens.cjs showPrompt) */
+export const isHookPrompt = (i: ChatItem): i is UserItem => i.kind === 'user' && !i.parent && !!i.pending && !i.local
+
+/** Claude Code took this entry's text: main shows it from the hook */
+const takenByHook = (e: OutboxEntry, items: readonly ChatItem[]) => items.some(i => isHookPrompt(i) && sentMatches(e.text, i.text))
+
+/** The rows main shows from prompt hooks that an entry here stands for already (the page's own bubble shows instead) */
+export function hookPromptsShown(entries: readonly OutboxEntry[], items: readonly ChatItem[]): Set<string> {
+  const ids = new Set<string>()
+  if (!entries.length) return ids
+  for (const i of items) if (isHookPrompt(i) && entries.some(e => sentMatches(e.text, i.text))) ids.add(i.id)
+  return ids
+}
+
 const record = (items: readonly ChatItem[]) => items.filter((i): i is UserItem => i.kind === 'user' && !i.parent && i.order < PENDING_BASE && !(i as UserItem).pending)
 
 /**
@@ -74,6 +88,9 @@ export function reconcile(entries: readonly OutboxEntry[], items: readonly ChatI
     const line = users.find(u => u.order > e.baseline && u.order < LIVE_BASE && !taken.has(u.id) && sentMatches(e.text, u.text))
     if (line) { taken.add(line.id); matched.push({ local: e.local, itemId: line.id }); continue }
     if (queued.some(q => sentMatches(e.text, q.text))) { matched.push({ local: e.local, itemId: null }); continue }
+    // Claude Code took it (main shows the prompt from its UserPromptSubmit): its line is only late (another
+    // plugin's prompt hook holds it 6–12 s), so the bubble stays as it is, never 'unconfirmed' meanwhile
+    if (takenByHook(e, items)) { out.push(e.state === 'unconfirmed' ? { ...e, state: 'sent' } : e); continue }
     if (e.state === 'sent' && now - (e.sentAt ?? e.at) >= UNCONFIRMED_MS) out.push({ ...e, state: 'unconfirmed' })
     else out.push(e)
   }

@@ -76,7 +76,8 @@ export function itemProblems(item: any): Problem[] {
     const base = ['id', 'order', 'at', 'parent', 'kind']
     switch (item.kind) {
       case 'user':
-        // (pending, local: the page's own provisional bubble, src/chat/outbox.ts; main never sends them)
+        // (pending, local: the page's own provisional bubble, src/chat/outbox.ts; main sends pending 'sent' alone for a
+        // prompt shown from its hook, electron/chatLens.cjs showPrompt)
         only(item, [...base, 'text', 'images', 'truncated', 'pending', 'local'], p, 'user')
         check(item.pending === undefined || ['sending', 'sent', 'unconfirmed'].includes(item.pending), p, 'user.pending')
         check(typeof item.text === 'string' && isNum(item.images), p, 'user fields')
