@@ -31,10 +31,34 @@ export const PatchNotes: React.FC = () => {
   return <NotesModal title={t('spawn {version} 새 소식', { version: show.current })} releases={show.releases} onClose={() => setShow(null)} />
 }
 
+/**
+ * Every release, kept (2026-11-19, the owner: none should go missing): grouped by minor version (1.10, 1.9, …), the
+ * newest group open, the older ones folded under their version range
+ */
 export const PatchNotesHistory: React.FC<{ onClose: () => void }> = ({ onClose }) =>
-  <NotesModal title={t('패치노트')} releases={releasesIn(changelog, lang())} onClose={onClose} />
+  <NotesModal title={t('패치노트')} releases={releasesIn(changelog, lang())} onClose={onClose} grouped />
 
-const NotesModal: React.FC<{ title: string; releases: Release[]; onClose: () => void }> = ({ title, releases, onClose: close }) => {
+/** Releases by minor version, newest first: [{ minor: '1.10', releases }] */
+export function byMinor(releases: Release[]): { minor: string; releases: Release[] }[] {
+  const out: { minor: string; releases: Release[] }[] = []
+  for (const r of releases) {
+    const minor = r.version.split('.').slice(0, 2).join('.')
+    const g = out[out.length - 1]
+    if (g && g.minor === minor) g.releases.push(r); else out.push({ minor, releases: [r] })
+  }
+  return out
+}
+
+const Releases: React.FC<{ releases: Release[] }> = ({ releases }) => <>
+  {releases.map(r => (
+    <section key={r.version}>
+      <h3>{r.version}</h3>
+      <ul>{r.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
+    </section>
+  ))}
+</>
+
+const NotesModal: React.FC<{ title: string; releases: Release[]; onClose: () => void; grouped?: boolean }> = ({ title, releases, onClose: close, grouped }) => {
   return (
     <div className="resume-backdrop" onClick={close}>
       <div className="resume-modal w-notes" onClick={e => e.stopPropagation()} role="dialog" aria-label={title}>
@@ -43,12 +67,15 @@ const NotesModal: React.FC<{ title: string; releases: Release[]; onClose: () => 
           <button onClick={close} aria-label={t('닫기')}>×</button>
         </div>
         <div className="w-notes-body">
-          {releases.map(r => (
-            <section key={r.version}>
-              <h3>{r.version}</h3>
-              <ul>{r.notes.map((n, i) => <li key={i}>{n}</li>)}</ul>
-            </section>
-          ))}
+          {grouped ? byMinor(releases).map((g, i) => (
+            <details key={g.minor} className="w-notes-group" open={i === 0}>
+              <summary>
+                <span className="w-notes-minor">{g.minor}</span>
+                <span className="w-notes-range">{g.releases.length > 1 ? `${g.releases[g.releases.length - 1].version} – ${g.releases[0].version}` : g.releases[0].version} · {t('{n}번', { n: g.releases.length })}</span>
+              </summary>
+              <Releases releases={g.releases} />
+            </details>
+          )) : <Releases releases={releases} />}
         </div>
         <div className="w-notes-foot">
           <button className="w-notes-ok" onClick={close} autoFocus>{t('확인')}</button>

@@ -462,7 +462,16 @@
 .w-textsize-item.on .w-textsize-ck { opacity: 1; }
 
 /* ---------- Patch notes after an update (PatchNotes.tsx) ---------- */
-.w-notes-body { overflow-y: auto; padding: 4px 16px 8px; line-height: 1.55; font-size: var(--t-name); }
+.w-notes-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 16px 8px; line-height: 1.55; font-size: var(--t-name); }
+/* (2026-11-19) min-height 0: without it the body grew past the modal and its older releases were cut off, unreachable */
+.w-notes-group { border-bottom: 1px solid var(--line); padding: 2px 0 6px; }
+.w-notes-group:last-child { border-bottom: 0; }
+.w-notes-group > summary { display: flex; align-items: baseline; gap: 10px; padding: 8px 0 4px; cursor: pointer; list-style: none; }
+.w-notes-group > summary::-webkit-details-marker { display: none; }
+.w-notes-group > summary::before { content: '›'; color: var(--ink-3); width: 10px; transition: transform .15s; display: inline-block; }
+.w-notes-group[open] > summary::before { transform: rotate(90deg); }
+.w-notes-minor { font-weight: var(--w-name); color: var(--ink); }
+.w-notes-range { font-size: var(--t-meta); color: var(--ink-3); }
 .w-notes-body::-webkit-scrollbar { width: 6px; }
 .w-notes-body::-webkit-scrollbar-thumb { background: #2c303b; border-radius: var(--r-xs); }
 .w-notes-body h3 { margin: 12px 0 4px; font-size: var(--t-ui); font-weight: var(--w-head); color: var(--ink-2); }
