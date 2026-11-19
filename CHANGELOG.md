@@ -4,6 +4,13 @@
 
 ### 1.10.5
 - 채팅 보기가 기본이 됐어요. 이전에 꺼져 있던 경우도 한 번 켜지고, 그다음부터는 설정 › 세션 › 채팅으로 보기에서 고른 대로 따라요.
+- 채팅에서 일하는 보조 에이전트가 입력란 위에 칩으로 보이고, 누르면 오른쪽에서 그 에이전트가 하는 일을 실시간으로 볼 수 있어요. 끝난 에이전트도 "열어 보기"로 열려요.
+- 질문 카드 마지막에 "직접 입력" 칸이 생겼어요.
+- 터미널에서 질문을 Esc로 닫았을 때 채팅이 "먼저 답해 주세요"로 계속 막히던 문제를 고쳤어요. 채팅과 터미널을 오간 뒤에도 카드에서 고를 수 있어요.
+- 터미널에 붙여넣으면 두 번 들어가던 문제를 고쳤어요.
+- 왼쪽 목록에서 그룹 안 순서가 마지막으로 쓴 세션부터예요. 줄을 끌어서 직접 순서를 정할 수도 있어요(목록 위 자동 / 직접).
+- 왼쪽 패널을 줄이면 도감 옆 포켓몬이 잘리지 않고, 오래 전에 잡은 것부터 부드럽게 빠져요.
+- 더 가벼워졌어요. 세션 이벤트를 보내려고 매번 작은 프로그램을 띄우던 방식을 바꿔서, 바쁜 PC에서 Enter나 답이 끝날 때 몇 초씩 멈추던 일이 줄어요(새로 연 세션부터). 숨은 터미널 화면도 바뀌었을 때만 읽어요.
 - 채팅에서 만난 야생 포켓몬 줄을 옅은 박스로 묶어서 대화와 구분되게 했어요.
 
 ### 1.10.4
@@ -504,6 +511,13 @@
 
 ### 1.10.5
 - The chat view is now the default. If it was off, it is turned on once; after that, Settings › Sessions › View sessions as chat decides.
+- Working sub-agents show as chips above the chat box; click one to follow its work live in a side panel. Finished ones open with "Open".
+- Question cards end with a field to write your own answer.
+- A question dismissed with Esc in the terminal no longer keeps the chat blocked, and cards can still be answered after flipping between chat and terminal.
+- A paste into the terminal no longer goes in twice.
+- In the left list, each group shows the session you used last first. Drag rows to set your own order (Auto / Manual above the list).
+- When the left panel narrows, the Pokémon beside the Pokédex are no longer cut: the oldest catches fold away smoothly.
+- Lighter: session events no longer start a small program each time, so a busy PC stalls far less on Enter or when an answer ends (sessions opened from now on). Hidden terminals are read only when they change.
 - A wild Pokémon met in the chat sits in a quiet box, apart from the conversation.
 
 ### 1.10.4
@@ -864,6 +878,13 @@
 
 ### 1.10.5
 - チャット表示が既定になりました。オフだった場合も一度オンになり、その後は 設定 › セッション › セッションをチャットで表示 の選択に従います。
+- 作業中のサブエージェントが入力欄の上にチップで表示され、押すと右側でその作業をリアルタイムで見られます。終わったものも「開く」で開けます。
+- 質問カードの最後に、自分で答えを書ける欄ができました。
+- ターミナルで質問を Esc で閉じたとき、チャットが「先に答えてください」で止まったままになる問題を直しました。チャットとターミナルを行き来してもカードで選べます。
+- ターミナルへの貼り付けが二重になる問題を直しました。
+- 左のリストで、グループ内は最後に使ったセッションが上に来ます。行をドラッグして自分で並べることもできます(リスト上の 自動 / 手動)。
+- 左パネルを狭めても図鑑横のポケモンが切れず、古く捕まえたものから滑らかに消えます。
+- 軽くなりました。セッションのイベントのたびに小さなプログラムを起動しなくなり、忙しい PC で Enter や返答の終わりに数秒止まることが減ります(これから開くセッションから)。隠れたターミナルも変化があったときだけ読みます。
 - チャットで出会った野生のポケモンの行を薄い枠で囲み、会話と見分けやすくしました。
 
 ### 1.10.4
