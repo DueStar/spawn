@@ -4,7 +4,7 @@
 
 [한국어](README.md) · **English** · [日本語](README.ja.md)
 
-A Windows desktop app for running Claude Code sessions with Pokémon. Each session is worked by one of your Pokémon, and while Claude works you meet wild Pokémon and fill your Pokédex. There is no battling: it is about **collecting**.
+A Windows and macOS desktop app for running Claude Code sessions with Pokémon. Each session is worked by one of your Pokémon, and while Claude works you meet wild Pokémon and fill your Pokédex. There is no battling: it is about **collecting**.
 
 [![Latest release](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)

@@ -4,7 +4,7 @@
 
 [한국어](README.md) · [English](README.en.md) · **日本語**
 
-Claude Code のセッションをポケモンと一緒に使う Windows デスクトップアプリです。セッションごとに自分のポケモンが1匹ずつ出て働き、Claude が作業している間に野生のポケモンと出会って図鑑を埋めていきます。バトルはなく、**収集**が中心です。
+Claude Code のセッションをポケモンと一緒に使う Windows · macOS デスクトップアプリです。セッションごとに自分のポケモンが1匹ずつ出て働き、Claude が作業している間に野生のポケモンと出会って図鑑を埋めていきます。バトルはなく、**収集**が中心です。
 
 [![最新リリース](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
 [![ダウンロード](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)

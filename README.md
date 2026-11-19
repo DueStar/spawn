@@ -4,7 +4,7 @@
 
 **한국어** · [English](README.en.md) · [日本語](README.ja.md)
 
-Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에요. 세션마다 내 포켓몬이 하나씩 나가서 일하고, Claude가 일하는 동안 야생 포켓몬을 만나 도감을 채워요. 싸움은 없고 **수집**이 중심이에요.
+Claude Code 세션을 포켓몬과 함께 쓰는 Windows · macOS 데스크톱 앱이에요. 세션마다 내 포켓몬이 하나씩 나가서 일하고, Claude가 일하는 동안 야생 포켓몬을 만나 도감을 채워요. 싸움은 없고 **수집**이 중심이에요.
 
 [![최신 릴리스](https://img.shields.io/github/v/release/DueStar/spawn?style=flat-square&label=release)](https://github.com/DueStar/spawn/releases/latest)
 [![다운로드](https://img.shields.io/github/downloads/DueStar/spawn/total?style=flat-square)](https://github.com/DueStar/spawn/releases)
