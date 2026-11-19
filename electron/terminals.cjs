@@ -74,16 +74,8 @@ function killTreeNow(pid, { platform = process.platform, kill = (p, sig) => proc
   })
 }
 
-/**
- * The Claude Code events the hook forwards (hooks/spawn-hook.cjs). No
- * matchers: every tool call is a step for the session's Pokémon, and the
- * other events either have no matcher support or are wanted every time.
- */
-const HOOK_EVENTS = [
-  'PreToolUse', 'PostToolUse', 'PostToolUseFailure', 'SubagentStop', 'SessionStart', 'SessionEnd',
-  'UserPromptSubmit', 'Stop', 'PermissionRequest', 'Notification', 'StopFailure', 'PreCompact',
-  'PostCompact', 'PostToolBatch', 'CwdChanged', 'PostModelSwitch',
-]
+// The Claude Code events the game listens to, and the one that must stay a command (hooks/hook-event.cjs)
+const { HOOK_EVENTS, COMMAND_ONLY_EVENTS } = require('../hooks/hook-event.cjs')
 
 /**
  * Hooks Claude Code runs in the background instead of waiting for (`async`):
@@ -91,6 +83,7 @@ const HOOK_EVENTS = [
  * Node mode (~0.2 s). They only report; the server tells a late one by the
  * time it carries (`at`). The ones that change what the session is doing
  * (a prompt, the turn's end, a permission, start and end) stay in order.
+ * (The 1.4.0 file only: with the server known, every event but SessionStart is an http hook.)
  */
 const ASYNC_HOOKS = new Set(['PreToolUse', 'PostToolUse', 'PostToolBatch'])
 
@@ -106,16 +99,46 @@ function nodeCommand(runtime, script) {
 }
 
 /**
+ * The game's hooks as Claude Code http hooks (one matcher group per event, all
+ * but COMMAND_ONLY_EVENTS): Claude Code POSTs each hook's JSON input itself to
+ * the server's /hook/<key>/<terminal id>/<Event> (server/index.js hookRoute),
+ * so no process starts per event. A command hook launched the app in Node mode
+ * for every one (0.1 s of work, but 0.1–22 s wall-clock on a busy PC), and
+ * Claude Code waited for the synchronous ones: Enter or a turn's end stalled.
+ *
+ * The terminal id in the path stands for the command hook's SPAWN_SESSION_ID
+ * (an http hook gets no environment), the key for its request signature
+ * (hookUrlKey: derived from the server token, never the token itself). No
+ * `async`: Claude Code waits for an http hook, and the server answers before it
+ * does anything else. `timeout` (s): a server that is down refuses at once; one
+ * that hangs costs at most this, and a failed http hook never blocks or
+ * changes what the session does (a non-blocking error to Claude Code). The
+ * empty 200 the server answers is "no decision" on PermissionRequest and
+ * nothing added on UserPromptSubmit, like the command hook's empty stdout.
+ */
+const GAME_HOOK_TIMEOUT_S = 3
+function gameHookEntries({ port, key, id }) {
+  if (typeof id !== 'string' || !UUID.test(id)) throw new Error('gameHookEntries: a terminal id is needed')
+  if (!Number.isInteger(port) || port < 1 || port > 65535 || typeof key !== 'string' || !/^[0-9a-f]{32}$/.test(key)) throw new Error('gameHookEntries: a port and key are needed')
+  return Object.fromEntries(HOOK_EVENTS.filter(e => !COMMAND_ONLY_EVENTS.includes(e))
+    .map(e => [e, { hooks: [{ type: 'http', url: `http://127.0.0.1:${port}/hook/${key}/${id}/${e}`, timeout: GAME_HOOK_TIMEOUT_S }] }]))
+}
+
+/**
  * The session settings file's text: the hooks + status line for app sessions.
  * `chat` (chatHooks.cjs chatHookEntries, the chat view switched on): each
  * chat entry is its own matcher group appended after the game's (an event
  * the game does not use, like MessageDisplay, gets the chat group alone, after
  * the game's events). With `chat` null the text is release 1.4.0's, byte for
  * byte (tests/terminals.test.ts pins it).
+ * `game` ({ port, key, id }: gameHookEntries) makes the game's hooks http
+ * hooks to the server for that terminal, all but SessionStart's; null (the
+ * server token not known yet) keeps release 1.4.0's command hooks.
  */
-function sessionSettingsJson(repoRoot, runtime = process.execPath, chat = null) {
+function sessionSettingsJson(repoRoot, runtime = process.execPath, chat = null, game = null) {
   const hook = nodeCommand(runtime, path.join(repoRoot, 'hooks', 'spawn-hook.cjs'))
-  const hooks = Object.fromEntries(HOOK_EVENTS.map(e => [e, [{ hooks: [{ type: 'command', command: hook, ...(ASYNC_HOOKS.has(e) ? { async: true } : {}) }] }]]))
+  const http = game ? gameHookEntries(game) : {}
+  const hooks = Object.fromEntries(HOOK_EVENTS.map(e => [e, [http[e] ?? { hooks: [{ type: 'command', command: hook, ...(ASYNC_HOOKS.has(e) ? { async: true } : {}) }] }]]))
   if (chat) {
     // (a chat value is one group, or a list of groups: Phase 4's matcher group for AskUserQuestion)
     for (const [event, group] of Object.entries(chat)) hooks[event] = [...(hooks[event] ?? []), ...[].concat(group)]
@@ -254,8 +277,11 @@ function linkedConversation(userDataDir, sessionId) {
  * `chat.onInput` hears input to an armed session while the chat is on; `chat.busy(id)`
  * says a chat send is between its text and its Enter there (the side box then waits).
  * Off, nothing changes: no chat entries, no `chat` key on a terminal.
+ * `gameHooks()`: the server's `{ port, key }` (hookUrlKey of its token) for the game's
+ * http hooks (gameHookEntries), or null while the token is not known: then a new session
+ * gets release 1.4.0's command hooks.
  */
-function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd, extraArgs = () => [], titles = { get: () => null, set: () => {} }, tools = () => [], emit = () => {}, postStatus = () => {}, pty: ptyModule = null, killTree = killTreeNow, codexWatch = createCodexWatch, exitGraceMs = 5000, otherTools = OTHER_TOOLS, chat = { state: () => ({ on: false }) } }) {
+function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd, extraArgs = () => [], titles = { get: () => null, set: () => {} }, tools = () => [], emit = () => {}, postStatus = () => {}, pty: ptyModule = null, killTree = killTreeNow, codexWatch = createCodexWatch, exitGraceMs = 5000, otherTools = OTHER_TOOLS, chat = { state: () => ({ on: false }) }, gameHooks = () => null }) {
   const terms = new Map() // id -> { id, sessionId, cwd, pty, buffer, status, createdAt, exitCode }
   const closed = new Map() // conversation id -> when its tab was closed while it ran (recentlyClosed)
   let settingsFile = null
@@ -272,8 +298,8 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
 
   try { fs.mkdirSync(path.join(userDataDir, 'session-links'), { recursive: true }) } catch {}
 
-  // The chat view's variants of the file: one per set of chat hooks (one endpoint, one token), by name
-  const chatFiles = new Map()
+  // The sessions' files of their own (the game's http hooks and/or the chat hooks name the terminal), by name
+  const sessionFiles = new Map()
   const chatState = () => { try { return chat.state() ?? { on: false } } catch { return { on: false } } }
 
   /** The 1.4.0 file: session-settings.json, written once per start exactly as release 1.4.0 writes it */
@@ -282,26 +308,30 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return settingsFile
   }
 
-  let chatWriteLogged = false
+  let settingsWriteLogged = false
   /**
    * The settings file a Claude Code session is launched with, and whether it holds the chat
-   * hooks (`armed`). Without chat hooks it is the 1.4.0 file. With them it is a file of its own
-   * (session-settings-chat-<hash>.json), written once, through a temporary file and a rename. No
-   * file a session was launched with is ever written again. When that file cannot be written
-   * (a full or read-only folder, a rename refused while something holds the temporary file), the
-   * session still opens, with the 1.4.0 file and unarmed: a chat file never keeps a session shut.
+   * hooks (`armed`). A file of its own for the session when it holds anything naming its
+   * terminal: the game's http hooks (`gameHooks()` gives the server's port and key) or the
+   * chat hooks (session-settings-game-<hash>.json, session-settings-chat-<hash>.json with the
+   * chat hooks), written once, through a temporary file and rename. No file a session was
+   * launched with is ever written again. Neither (the server token not known yet, nothing to
+   * name), or a file that cannot be written (a full or read-only folder, a rename refused while
+   * something holds the temporary file): the 1.4.0 file, unarmed — a session always opens.
    */
   function settings(state = chatState(), id = null) {
     // (the chat entries name the terminal a hook is about: a function of its id gives them)
     let hooks = state.on ? state.hooks ?? null : null
     if (typeof hooks === 'function') { try { hooks = id ? hooks(id) : null } catch { hooks = null } }
-    if (!hooks) return { file: plainSettings(), armed: false }
-    const text = sessionSettingsJson(repoRoot, process.execPath, hooks)
-    const name = `session-settings-chat-${crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)}.json`
-    if (!chatFiles.has(name)) {
+    let game = null
+    if (id) { try { const at = gameHooks(); if (at) { gameHookEntries({ ...at, id }); game = { ...at, id } } } catch { game = null } }
+    if (!hooks && !game) return { file: plainSettings(), armed: false }
+    const text = sessionSettingsJson(repoRoot, process.execPath, hooks, game)
+    const name = `session-settings-${hooks ? 'chat' : 'game'}-${crypto.createHash('sha1').update(text).digest('hex').slice(0, 12)}.json`
+    if (!sessionFiles.has(name)) {
       // the first of this run: what an earlier run left goes (none of its sessions is alive now)
-      if (!chatFiles.size) {
-        try { for (const n of fs.readdirSync(userDataDir)) if (/^session-settings-chat-[0-9a-f]{12}\.json(\.\d+\.tmp)?$/.test(n) && n !== name) fs.rmSync(path.join(userDataDir, n), { force: true }) } catch {}
+      if (!sessionFiles.size) {
+        try { for (const n of fs.readdirSync(userDataDir)) if (/^session-settings-(chat|game)-[0-9a-f]{12}\.json(\.\d+\.tmp)?$/.test(n) && n !== name) fs.rmSync(path.join(userDataDir, n), { force: true }) } catch {}
       }
       const file = path.join(userDataDir, name)
       try {
@@ -320,12 +350,12 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
         }
       } catch (err) {
         // once a run, with the error's code only (never a path)
-        if (!chatWriteLogged) { chatWriteLogged = true; console.log(`[terminals] the chat view's settings file could not be written (${typeof err?.code === 'string' ? err.code : 'error'}): sessions open without the chat view`) }
+        if (!settingsWriteLogged) { settingsWriteLogged = true; console.log(`[terminals] a session's own settings file could not be written (${typeof err?.code === 'string' ? err.code : 'error'}): sessions open with the 1.4.0 file (command hooks, no chat view)`) }
         return { file: plainSettings(), armed: false }
       }
-      chatFiles.set(name, file)
+      sessionFiles.set(name, file)
     }
-    return { file: chatFiles.get(name), armed: true }
+    return { file: sessionFiles.get(name), armed: !!hooks }
   }
 
   function info(t) {
@@ -436,7 +466,9 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     const t = { id: sessionId, sessionId, cwd: dir, pty, chunks: [], size: 0, pending: '', flushTimer: null, seq: 0, status: 'running', createdAt: Date.now(), adapter }
     closed.delete(sessionId) // (open again: not closing any more)
     if (conversation) closed.delete(conversation)
-    if (launchSettings?.armed) { t.chatArmed = true; t.chatFile = launchSettings.file }
+    if (launchSettings?.armed) t.chatArmed = true
+    // (a file of its own: the chat hooks or the game's http hooks name this terminal)
+    if (launchSettings && launchSettings.file !== settingsFile) t.ownSettings = launchSettings.file
     t.exited = new Promise((resolve) => { t.markExited = resolve })
     terms.set(t.id, t)
     t.scan = ''
@@ -699,10 +731,10 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       if (conversation) closed.set(conversation, at)
     }
     terms.delete(id)
-    // the chat settings file this session was launched with (one per session: its hooks name it) goes with it
-    if (t.chatFile && ![...terms.values()].some(o => o.chatFile === t.chatFile)) {
-      for (const [name, file] of chatFiles) if (file === t.chatFile) chatFiles.delete(name)
-      try { fs.rmSync(t.chatFile, { force: true }) } catch {}
+    // the settings file of its own the session was launched with (its hooks name it) goes with it
+    if (t.ownSettings && ![...terms.values()].some(o => o.ownSettings === t.ownSettings)) {
+      for (const [name, file] of sessionFiles) if (file === t.ownSettings) sessionFiles.delete(name)
+      try { fs.rmSync(t.ownSettings, { force: true }) } catch {}
     }
     broadcastList()
   }
@@ -778,4 +810,4 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
   return { create, write, sendInstruction, typeForChat, clearAsking, resize, redrawForChat, buffer, list, rename, close, move, shutdown, freeze, takeRestorable, refreshSettings, armedCount, recentlyClosed, openConversations }
 }
 
-module.exports = { GOODBYE, createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
+module.exports = { GOODBYE, createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, gameHookEntries, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
