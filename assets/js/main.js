@@ -141,34 +141,75 @@
     if (zip) zip.textContent = versionText(zip);
     var note = document.querySelector('[data-mac-note]');
     if (note) { note.hidden = !mac; note.textContent = mac ? t('start.s2.note.mac') : ''; }
-    // the quiet second line: on Windows the Mac downloads (once out); on a Mac the Intel one, or Windows while the
-    // Mac build is not out
-    document.querySelectorAll('[data-dl-alt]').forEach(function (p) {
-      var links = mac
-        ? (state === 'mac-soon' ? [['dl.short.win', winHref()]] : [['dl.short.win', winHref()]].concat(PLATFORM.intel ? [['dl.short.intel', macUrl('x64')]] : []))
-        : (PLATFORM.arm ? [['dl.short.arm', macUrl('arm64')]].concat(PLATFORM.intel ? [['dl.short.intel', macUrl('x64')]] : []) : []);
-      p.hidden = !links.length;
-      p.innerHTML = '<span class="dl-alt-label">' + esc(t('dl.other')) + '</span>' + links.map(function (l) {
-        return '<a class="btn btn-ghost btn-small dl-alt-btn" href="' + esc(l[1]) + '" rel="noopener">' + DL_ICON + '<span>' + esc(t(l[0])) + '</span></a>';
-      }).join('');
-    });
-    if (!mac) return;
-    document.querySelectorAll('[data-dl]').forEach(function (a) {
-      var kind = a.getAttribute('data-dl'), label = a.querySelector('[data-i18n]');
-      if (state === 'mac-ready') {
-        a.href = macUrl('arm64');
-        if (kind === 'cta' && label) label.textContent = t('cta.download.mac');
-        return;
+    // (the other systems' line is folded into the download menu below)
+    document.querySelectorAll('[data-dl-alt]').forEach(function (p) { p.hidden = true; p.innerHTML = ''; });
+    // The getting-started row downloads this system's file straight away; the header and the big buttons say only
+    // 다운로드 and open a menu of every system, this one first, no badge (2026-11-19, the owner: fewer buttons)
+    document.querySelectorAll('[data-dl="row"]').forEach(function (a) {
+      if (mac) {
+        if (state === 'mac-ready') a.href = macUrl('arm64');
+        else { a.removeAttribute('href'); a.setAttribute('aria-disabled', 'true'); a.classList.add('is-soon'); }
       }
-      // coming soon: a calm ghost button that goes nowhere
-      a.removeAttribute('href');
-      a.setAttribute('aria-disabled', 'true');
-      a.classList.add('is-soon');
-      if (a.classList.contains('btn-primary')) { a.classList.remove('btn-primary'); a.classList.add('btn-ghost'); a.setAttribute('data-was-primary', ''); }
-      var ico = a.querySelector('.ext-ico'); if (ico) ico.remove();
-      if (label) label.textContent = t(kind === 'nav' ? 'nav.soon' : 'cta.soon');
+    });
+    document.querySelectorAll('[data-dl="cta"], [data-dl="nav"]').forEach(dlMenu);
+  }
+
+  /* The download menu: one 다운로드 button; a click opens the systems under it, this visitor's first, then the closest
+     (on a Mac: Apple silicon, Intel, Windows; elsewhere: Windows, then the two Macs) */
+  var DL_CARET = '<svg class="ico dl-caret" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4"/></svg>';
+  function dlItems() {
+    var mac = PLATFORM.os === 'mac';
+    var win = { os: 'win', name: t('dl.short.win'), sub: PLATFORM.setup ? t('dl.sub.setup') : t('dl.sub.zip'), href: winHref() };
+    var arm = { os: 'mac', name: t('dl.short.arm'), sub: t('dl.sub.arm'), href: PLATFORM.arm ? macUrl('arm64') : null };
+    var intel = { os: 'mac', name: t('dl.short.intel'), sub: t('dl.sub.intel'), href: PLATFORM.intel ? macUrl('x64') : null };
+    var list = mac ? [arm, intel, win] : [win, arm, intel];
+    return list;
+  }
+  function closeDlMenus(except) {
+    document.querySelectorAll('.dl-wrap.open').forEach(function (w) {
+      if (w === except) return;
+      w.classList.remove('open');
+      var b = w.querySelector('[data-dl]'); if (b) b.setAttribute('aria-expanded', 'false');
     });
   }
+  function dlMenu(a) {
+    var wrap = a.parentNode;
+    if (!wrap.classList || !wrap.classList.contains('dl-wrap')) {
+      wrap = document.createElement('span');
+      wrap.className = 'dl-wrap' + (a.getAttribute('data-dl') === 'nav' ? ' dl-wrap-nav' : '');
+      a.parentNode.insertBefore(wrap, a);
+      wrap.appendChild(a);
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        var open = !wrap.classList.contains('open');
+        closeDlMenus(wrap);
+        wrap.classList.toggle('open', open);
+        a.setAttribute('aria-expanded', open ? 'true' : 'false');
+      });
+    }
+    a.setAttribute('role', 'button');
+    a.setAttribute('aria-haspopup', 'menu');
+    if (!a.hasAttribute('aria-expanded')) a.setAttribute('aria-expanded', 'false');
+    a.removeAttribute('aria-disabled');
+    a.classList.remove('is-soon', 'btn-ghost');
+    a.classList.add('btn-primary');
+    a.href = SITE_LINKS.repo; // (the menu opens on a click; without the script it is the project page)
+    var label = a.querySelector('[data-i18n]');
+    if (label) label.textContent = t('nav.download');
+    if (!a.querySelector('.dl-caret')) a.insertAdjacentHTML('beforeend', DL_CARET);
+    var menu = wrap.querySelector('.dl-menu');
+    if (!menu) { menu = document.createElement('div'); menu.className = 'dl-menu'; menu.setAttribute('role', 'menu'); wrap.appendChild(menu); }
+    menu.innerHTML = dlItems().map(function (it) {
+      var inner = '<span class="dl-os">' + esc(it.name) + '</span>' +
+        '<span class="dl-sub">' + esc(it.href ? it.sub : t('nav.soon')) + '</span>';
+      return it.href
+        ? '<a class="dl-item" role="menuitem" href="' + esc(it.href) + '" rel="noopener">' + DL_ICON + '<span class="dl-text">' + inner + '</span></a>'
+        : '<span class="dl-item off" role="menuitem" aria-disabled="true">' + DL_ICON + '<span class="dl-text">' + inner + '</span></span>';
+    }).join('');
+  }
+  document.addEventListener('click', function (e) { if (!e.target.closest || !e.target.closest('.dl-wrap')) closeDlMenus(null); });
+  document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeDlMenus(null); });
+
   // loading.js hands over the release's asset list; lab tools may pin the state (locked) to compare the two
   window.spawnMacAssets = function (assets) {
     if (PLATFORM.locked) return;
@@ -214,7 +255,7 @@
       });
     }
     // Every text link that leaves the site: light grey, with the external-link mark (buttons keep their look)
-    document.querySelectorAll('a[href^="http"]:not(.btn)').forEach(function (a) {
+    document.querySelectorAll('a[href^="http"]:not(.btn):not(.dl-item)').forEach(function (a) {
       a.classList.add('ext-link');
       if (!a.querySelector('.ext-ico')) a.insertAdjacentHTML('beforeend', EXT_ICON);
     });

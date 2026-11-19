@@ -350,3 +350,25 @@ input, textarea { cursor: text; }
 [data-plat="mac-soon"] .rel-row { cursor: default; }
 .nav .btn.is-soon { color: rgba(255, 255, 255, 0.66); }
 .nav .btn.is-soon:hover { color: var(--ink); }
+
+/* The download menu (2026-11-19): one 다운로드 button; the systems open under it, this visitor's first */
+.dl-wrap { position: relative; display: inline-flex; }
+.dl-wrap .dl-caret { margin-left: -2px; transition: transform .15s ease; }
+.dl-wrap.open .dl-caret { transform: rotate(180deg); }
+.dl-menu {
+  position: absolute; top: calc(100% + 8px); left: 50%; z-index: 60; min-width: 260px; padding: 6px;
+  display: none; flex-direction: column; gap: 2px; transform: translateX(-50%);
+  background: var(--card); border: 1px solid var(--line-strong); border-radius: 12px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  text-align: left;
+}
+.dl-wrap-nav .dl-menu { left: auto; right: 0; transform: none; }
+.dl-wrap.open .dl-menu { display: flex; }
+.dl-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; color: var(--ink); text-decoration: none; }
+.dl-item .ico { flex: none; color: var(--ink-3); }
+.dl-item:hover { background: var(--card-2); }
+.dl-item:hover .ico { color: var(--ink); }
+.dl-item.off { opacity: 0.45; cursor: default; }
+.dl-item.off:hover { background: none; }
+.dl-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dl-os { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; white-space: nowrap; }
+.dl-sub { font-size: 12px; color: var(--ink-3); white-space: nowrap; }
