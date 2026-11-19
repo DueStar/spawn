@@ -38,7 +38,7 @@ import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, 
 import { modeFromUrl, readCarry, writeCarry } from './carry'
 import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
-import { panesFor, paneStyle } from './splitPanes'
+import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
@@ -247,6 +247,31 @@ const SideResize: React.FC<{ width: number; min: number; max: number; onWidth: (
       title={t('끌어서 폭 조절 · 두 번 누르면 기본')} aria-label={t('왼쪽 패널 폭')}
       onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel} onLostPointerCapture={onCancel}
       onDoubleClick={() => onWidth(null, true)} onKeyDown={onKey} />
+  )
+}
+
+/**
+ * An edge between two panes of the split view (2026-11-19, as the left panel's edge): drag it to give one pane's width
+ * to the other (neither below MIN_PANE_W), double-click for even widths; the widths are kept per pane count.
+ */
+const PaneEdge: React.FC<{ left: string; onAt: (at: number, done: boolean) => void; onEven: () => void; onDragging: (on: boolean) => void }> = ({ left, onAt, onEven, onDragging }) => {
+  const box = useRef<DOMRect | null>(null)
+  const at = (e: React.PointerEvent) => { const b = box.current!; return (e.clientX - b.left) / Math.max(1, b.width) }
+  return (
+    <div className="w-pane-edge" role="separator" aria-orientation="vertical" style={{ left }}
+      title={t('끌어서 폭 조절 · 두 번 누르면 같게')} aria-label={t('칸 폭')}
+      onPointerDown={e => {
+        if (e.button !== 0) return
+        e.preventDefault(); e.stopPropagation()
+        e.currentTarget.setPointerCapture(e.pointerId)
+        box.current = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+        onDragging(true)
+      }}
+      onPointerMove={e => { if (box.current) onAt(at(e), false) }}
+      onPointerUp={e => { if (!box.current) return; onAt(at(e), true); box.current = null; onDragging(false) }}
+      onPointerCancel={() => { if (!box.current) return; box.current = null; onDragging(false) }}
+      onLostPointerCapture={() => { if (!box.current) return; box.current = null; onDragging(false) }}
+      onDoubleClick={onEven} />
   )
 }
 
@@ -688,9 +713,16 @@ const Widget: React.FC = () => {
   }, [aliveKey]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tabNote, setTabNote] = useState<string | null>(null)
   useEffect(() => { if (!tabNote) return; const timer = setTimeout(() => setTabNote(null), 3000); return () => clearTimeout(timer) }, [tabNote])
+  // (the chat area's width, for openInTab, which is made before it is measured below)
+  const roomRef = useRef(Number.POSITIVE_INFINITY)
   const openInTab = useCallback((sid: string) => {
     const r = openTab(tabs, sid)
     if (!r.ok) { setTabNote(t('{n}개까지 나란히 볼 수 있어요. 칸 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
+    // (2026-11-19) a pane is never narrower than MIN_PANE_W: one more that would not fit the window is not opened, said
+    if (r.tabs.length > tabs.length && r.tabs.length >= 2 && r.tabs.length * MIN_PANE_W > roomRef.current) {
+      setTabNote(t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요'))
+      return
+    }
     setTabs(r.tabs)
     shownTab.current = sid
     setTarget(sid)
@@ -740,12 +772,26 @@ const Widget: React.FC = () => {
   const folded = sideHidden || foldNow
   // (the chat's area: the window less the left panel or the rail and the gaps)
   const chRoom = winW - (folded ? RAIL_W : sideWidth) - 12
+  roomRef.current = chRoom
   const chWidth = clampChangesWidth(chBase, chRoom)
   const chMax = clampChangesWidth(CH_MAX, chRoom)
   // The split view (src/splitPanes.ts, 2026-11-19): two or three open tabs side by side, each with its own header,
   // conversation and composer (or terminal); the 변경 사항 panel only without it
   const paneSids = view === 'terminal' && mode !== 'widget' ? panesFor(tabs.filter(sid => !!rowById.get(sid)?.terminal), shown?.sessionId, chRoom) : []
   const split = paneSids.length >= 2
+  // the panes' widths, kept per pane count (dragged at their edges; even until then)
+  const [paneFracsKept, setPaneFracsKept] = useState<Record<string, number[]>>(() => { try { return JSON.parse(localStorage.getItem('spawn-pane-fracs') || '{}') || {} } catch { return {} } })
+  const fracs = fitFracs(fracsFor(paneFracsKept[paneSids.length], paneSids.length), chRoom)
+  // open tabs that do not fit beside the others now (the window made narrower after they were opened)
+  const hiddenPanes = split ? tabs.filter(sid => !!rowById.get(sid)?.terminal && !paneSids.includes(sid)) : []
+  const setFracs = (next: number[] | null, save: boolean) => {
+    setPaneFracsKept(cur => {
+      const all = { ...cur }
+      if (next) all[paneSids.length] = next; else delete all[paneSids.length]
+      if (save) { try { localStorage.setItem('spawn-pane-fracs', JSON.stringify(all)) } catch { /* only a convenience */ } }
+      return all
+    })
+  }
   const chPanel = panelOn && !split
   // each pane's composer handle (멈추기, focus); the session in view uses composerRef (the side panel's pointer uses it)
   const paneRefs = useRef(new Map<string, React.MutableRefObject<ComposerHandle | null>>())
@@ -1435,6 +1481,11 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 headers keep their names readable) */}
             {split && lens.show && (
               <div className="w-split-tools">
+                {hiddenPanes.length > 0 && (
+                  <button type="button" className="w-pane-more" onClick={() => focusPane(hiddenPanes[0])}
+                    title={[t('창이 좁아서 {n}개는 나란히 못 보여요. 누르면 다음 세션을 보여 줘요 (창을 넓히면 다시 나란히)', { n: hiddenPanes.length }), ...hiddenPanes.map(sid => rowById.get(sid)?.title || rowById.get(sid)?.name || '')].join(' · ')}
+                    aria-label={t('숨은 칸 {n}개', { n: hiddenPanes.length })}>+{hiddenPanes.length}</button>
+                )}
                 {lensMode === 'chat' && <Suspense fallback={null}><DensityMenu /></Suspense>}
                 <LensSwitch lens={{ mode: lensMode, enabled: lens.enabled, reason: lens.reason, onMode: setLens }} />
               </div>
@@ -1463,7 +1514,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 const r = rowById.get(sid)!
                 const on = sid === shown?.sessionId
                 return (
-                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} onPointerDown={() => focusPane(sid)}>
+                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%` }} onPointerDown={() => focusPane(sid)}>
                     <SessionHeader
                       parts={sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode)}
                       sprite={r.sprite}
@@ -1530,7 +1581,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               if (!e.dataTransfer.types.includes(SESSION_MIME)) return
               e.preventDefault()
               e.dataTransfer.dropEffect = 'copy'
-              const hint = tabs.length < MAX_TABS ? t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS }) : t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS })
+              const narrow = tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom
+              const hint = tabs.length >= MAX_TABS ? t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS }) : narrow ? t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요') : t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS })
               if (hint !== dropHint) setDropHint(hint)
             }}
             onPointerDownCapture={split ? e => {
@@ -1547,7 +1599,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               setDropHint(null)
               openInTab(sid)
             }}>
-            {dropHint && <div className={`w-tab-drop${tabs.length >= MAX_TABS ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
+            {dropHint && <div className={`w-tab-drop${tabs.length >= MAX_TABS || (tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom) ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
             {tabNote && <div className="w-tab-note" role="status">{tabNote}</div>}
             {withTerminal.length === 0 && (
               <div className="w-term-empty">
@@ -1569,7 +1621,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 // (first render only: whether its xterm fits before the replay arrives; only where this terminal
                 // offers the chat, so with the chat off nothing of termWarm runs)
                 if (lensAvailability(r.terminal, mode).show) noteMount(r.terminal.id, { active, visible: document.visibilityState === 'visible' })
-                return <TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length) : undefined} />
+                return <TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length, fracs) : undefined} />
               })}
             </Suspense>
             {split && paneSids.map((sid, i) => {
@@ -1579,7 +1631,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               const paneWho = sid === shown?.sessionId ? who : chatWho({ name: r.name ?? '', sprite: r.sprite ?? '', art: sessionArt(sid), noPokemon: noPokemon(r) }, workMode)
               const onTerm = () => { focusPane(sid); toTerminal() }
               return (
-                <div key={sid} className={`w-chat-pane split${sid === shown?.sessionId ? ' on' : ''}`} style={{ ...paneStyle(i, paneSids.length), right: 'auto' }} onPointerDownCapture={() => focusPane(sid)}>
+                <div key={sid} className={`w-chat-pane split${sid === shown?.sessionId ? ' on' : ''}`} style={{ ...paneStyle(i, paneSids.length, fracs), right: 'auto' }} onPointerDownCapture={() => focusPane(sid)}>
                   <ChatBoundary key={r.terminal.id} onTerminal={onTerm}>
                     <Suspense fallback={null}>
                       <ChatView
@@ -1599,7 +1651,10 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 </div>
               )
             })}
-            {split && <div className="w-pane-lines" aria-hidden="true">{paneSids.slice(1).map((sid, i) => <i key={sid} style={{ left: paneStyle(i + 1, paneSids.length).left }} />)}</div>}
+            {split && paneSids.slice(1).map((sid, i) => (
+              <PaneEdge key={sid} left={paneStyle(i + 1, paneSids.length, fracs).left} onDragging={setSideDragging} onEven={() => setFracs(null, true)}
+                onAt={(at, done) => setFracs(moveEdge(fracs, i, at, MIN_PANE_W / Math.max(1, chRoom)), done)} />
+            ))}
             {!split && lensMode === 'chat' && view === 'terminal' && shown?.terminal && (
               <div className="w-chat-pane">
                 <ChatBoundary key={shown.terminal.id} onTerminal={toTerminal}>

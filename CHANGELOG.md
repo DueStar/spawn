@@ -2,6 +2,13 @@
 
 ## spawn
 
+### 1.10.2
+- 터미널 입력란에 쓰던 글이 남아 있어도 채팅에서 바로 보내요. 입력란은 알아서 비우고 채팅에 쓴 글을 보내요(더 이상 "가져와서 이어 쓰기 / 지우고 보내기"를 묻지 않아요).
+- 나란히 본 칸 사이 경계를 끌어서 너비를 바꿀 수 있어요. 두 번 누르면 같은 너비로 돌아가고, 바꾼 너비는 기억해요.
+- 칸은 360px보다 좁아지지 않아요. 창이 좁아서 칸을 더 놓을 수 없으면 열지 않고 알려 줘요. 연 뒤 창을 줄이면 들어가는 만큼만 보이고, 위쪽 줄의 +1을 누르면 숨은 세션을 볼 수 있어요.
+- 선택된 칸 아래 흰 줄을 없앴어요.
+- 채팅 스크롤바를 얇게 하고 오른쪽 끝에서 살짝 띄웠어요.
+
 ### 1.10.1
 - 보낸 메시지가 채팅에 바로 떠요. 터미널에서 친 메시지도 Claude Code가 받는 순간 보여요(다른 플러그인 훅이 오래 걸리면 6~12초 늦게 뜨던 문제).
 - 채팅에서 보낸 메시지가 "기록에서 아직 보이지 않아요"로 잘못 바뀌던 문제를 고쳤어요.
@@ -481,6 +488,13 @@
 
 ## spawn (English)
 
+### 1.10.2
+- Words left in the terminal's input no longer stop a send from the chat: the input is cleared and your chat message is sent (no more "bring them here / clear them and send").
+- Drag the edge between side-by-side panes to resize them; a double-click makes them even again, and the widths are kept.
+- A pane is never narrower than 360px. When the window has no room for another, it is not opened and you are told why. Narrow the window after opening and the panes that fit stay; +1 in the top bar shows the hidden one.
+- The white line under the chosen pane is gone.
+- The chat's scrollbar is thinner and sits a little off the right edge.
+
 ### 1.10.1
 - A message you send shows in the chat at once, also one typed in the terminal, the moment Claude Code takes it (it came 6–12 s late when another plugin's hook was slow).
 - A message sent from the chat no longer turns "not in the record yet" by mistake.
@@ -819,6 +833,13 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.2
+- ターミナルの入力欄に書きかけの文が残っていても、チャットからそのまま送れます。入力欄は自動で空にして、チャットに書いた文を送ります(「取り込む / 消して送る」を聞かなくなりました)。
+- 並べた枠の境目をドラッグして幅を変えられます。ダブルクリックで均等に戻り、変えた幅は覚えておきます。
+- 枠は360pxより狭くなりません。ウィンドウが狭くて枠を増やせないときは開かずにお知らせします。開いたあと狭めると入る分だけ表示し、上のバーの +1 で隠れたセッションを表示します。
+- 選択中の枠の下の白い線をなくしました。
+- チャットのスクロールバーを細くし、右端から少し離しました。
 
 ### 1.10.1
 - 送ったメッセージがすぐチャットに表示されます。ターミナルで入力したものも Claude Code が受け取った瞬間に表示されます(ほかのプラグインのフックが遅いと6〜12秒遅れていた問題)。

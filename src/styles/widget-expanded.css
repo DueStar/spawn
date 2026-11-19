@@ -681,9 +681,14 @@
 .w-sess-bar.split { gap: 0; padding: 0; }
 .w-pane-head { flex: 1 1 0; min-width: 0; display: flex; align-items: center; align-self: stretch; padding: 0 6px 0 10px; border-left: 1px solid var(--line); }
 .w-pane-head:first-child { border-left: 0; }
-.w-pane-head.on { background: var(--hover); box-shadow: inset 0 -2px 0 var(--ink-2); }
+.w-pane-head.on { background: var(--hover); }
 .w-pane-head .w-sess-head { min-width: 0; }
-.w-pane-lines { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-.w-pane-lines > i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.w-pane-head { box-sizing: border-box; }
+/* the edges between panes: a 1px line, a 7px strip to drag (as the left panel's edge), brighter on hover and while dragged */
+.w-pane-edge { position: absolute; top: 0; bottom: 0; width: 7px; margin-left: -3px; z-index: 3; cursor: col-resize; touch-action: none; -webkit-app-region: no-drag; }
+.w-pane-edge::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: var(--line); }
+.w-pane-edge:hover::after, .widget.resizing .w-pane-edge::after { background: rgba(255, 255, 255, 0.3); }
 .w-split-tools { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; -webkit-app-region: no-drag; }
 .w-split-tools .w-lens { margin-right: 0; }
+.w-pane-more { flex: none; align-self: center; margin: 0 6px; min-width: 26px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); cursor: pointer; -webkit-app-region: no-drag; }
+.w-pane-more:hover { background: var(--hover); color: var(--ink); }

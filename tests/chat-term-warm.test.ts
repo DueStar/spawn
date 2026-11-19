@@ -116,7 +116,7 @@ describe('Widget.tsx: warm only for the main TerminalView of the shown chat sess
     // (2026-11-19, the split view: outside it the expression is today's; in it each pane's terminal in its own box)
     expect(src).toContain(`: (${TODAY}) || warm`)
     expect(src.match(/const active = /g)).toHaveLength(1)
-    expect(main).toBe('<TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length) : undefined} />')
+    expect(main).toBe('<TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length, fracs) : undefined} />')
     expect(src).toContain("noteMount(r.terminal.id, { active, visible: document.visibilityState === 'visible' })")
     expect(src.indexOf('noteMount(r.terminal.id')).toBeLessThan(src.indexOf('<TerminalView key={r.terminal.id}'))
   })
