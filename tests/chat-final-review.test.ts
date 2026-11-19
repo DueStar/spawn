@@ -489,8 +489,19 @@ describe('M3: SPAWN_CHAT_VIEW turns the chat view on only in an unpackaged build
   })
   it('packaged(): false in plain Node (the tests), where require(\'electron\') is the npm package\'s path', () => {
     const { packaged } = require('../electron/features.cjs')
-    expect(typeof require('electron')).toBe('string')
-    expect(packaged()).toBe(false)
+    // CI installs without the Electron binary (ci.yml: ELECTRON_SKIP_BINARY_DOWNLOAD), so the package has
+    // no path.txt and its index.js throws "Electron failed to install correctly" (CI red since 1.10.1).
+    // ELECTRON_OVERRIDE_DIST_PATH is the package's own way to name the binary's folder: with it the real
+    // package still answers with a path, binary or not. A failed load is not cached, so it is read afresh
+    const before = process.env.ELECTRON_OVERRIDE_DIST_PATH
+    process.env.ELECTRON_OVERRIDE_DIST_PATH = tmpdir()
+    try {
+      expect(typeof require('electron')).toBe('string')
+      expect(packaged()).toBe(false)
+    } finally {
+      if (before === undefined) delete process.env.ELECTRON_OVERRIDE_DIST_PATH
+      else process.env.ELECTRON_OVERRIDE_DIST_PATH = before
+    }
   })
 })
 
