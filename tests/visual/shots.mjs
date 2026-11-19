@@ -4176,6 +4176,94 @@ const FLOWS = {
   },
 
   /**
+   * Many busy sessions (2026-11-19, "the terminal stutters"): twelve sessions, three chat panes side by side, every
+   * terminal streaming Claude Code-like output (a spinner line redrawn and a line of text) 20 times a second for
+   * TERM_LOAD_S seconds (default 20). Prints the main thread's long tasks (PerformanceObserver 'longtask': count, total
+   * ms, longest) and the renderer's script and task time (CDP Performance.getMetrics ScriptDuration / TaskDuration),
+   * per second of wall time. A measurement, not a budget: it fails only when the page stops answering.
+   */
+  'term-load': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      // (the dialog card's key, as main offers it: its screen reading runs as in the app; smoke: the readers as page globals)
+      const withDialog = () => { if (window.spawn) window.spawn.chat.dialogKey = () => Promise.resolve({ ok: true }) }
+      // TERM_LOAD_VIEW=terminal: the terminal view instead (one terminal drawn, streaming)
+      const termView = process.env.TERM_LOAD_VIEW === 'terminal'
+      app = await openApp(browser, { chat: 'chat', twelve: true, smoke: true, init: withDialog, chatMode: !termView })
+      const { page } = app
+      await page.waitForSelector(termView ? '.term-view .xterm' : '.chat .chat-row', { timeout: 15_000 })
+      const rows = page.locator('.w-party .w-row')
+      if (!termView) {
+        await rows.nth(1).click({ modifiers: ['Control'] })
+        await sleep(400)
+        await rows.nth(2).click({ modifiers: ['Control'] })
+      }
+      await sleep(800)
+      const panes = await page.locator('.w-chat-pane.split').count()
+      const composers = await page.locator('.chat-composer textarea.chat-input:not(.chat-input-twin)').count()
+      // each terminal's screen: Claude Code's footer at the bottom (what the composer reads once a second)
+      const ids = await page.evaluate(() => window.__SHOT__.terminals.map(t => t.id))
+      for (const id of ids) await page.evaluate(i => { try { window.__SCREEN__(i, 'idle-placeholder') } catch { /* no such screen */ } }, id)
+      // idle sessions: the composer reads the prompt row's suggestion too
+      for (const id of ids) await page.evaluate(i => window.__CHAT_PUSH__(i, [{ op: 'status', status: { state: 'idle', since: null, label: null, banner: null, note: null, version: '2.1.323', hasOlder: false, empty: false } }]), id)
+      await sleep(500)
+      // what reading every terminal once costs (the readers the chat's screen polls use: src/termMetrics.ts)
+      const read = await page.evaluate(() => {
+        const n = window.spawnTermMetrics().length
+        const t0 = performance.now()
+        for (let k = 0; k < 20; k++) window.spawnTermMetrics()
+        return { n, ms: (performance.now() - t0) / (20 * n) }
+      })
+      console.log(`      one full terminal read (text, dim marks, faces): ${read.ms.toFixed(2)} ms × ${read.n} terminals`)
+      const cdp = await page.context().newCDPSession(page)
+      await cdp.send('Performance.enable')
+      const metrics = async () => Object.fromEntries((await cdp.send('Performance.getMetrics')).metrics.map(m => [m.name, m.value]))
+      const SECS = Number(process.env.TERM_LOAD_S) || 20
+      await page.evaluate(() => {
+        window.__LT__ = []
+        new PerformanceObserver(l => { for (const e of l.getEntries()) window.__LT__.push(e.duration) }).observe({ entryTypes: ['longtask'] })
+      })
+      const m0 = await metrics()
+      const t0 = Date.now()
+      await page.evaluate(([list, secs]) => new Promise(done => {
+        const spin = ['✻', '✽', '✶', '✳', '✢', '·']
+        let k = 0
+        const timer = setInterval(() => {
+          k++
+          for (const id of list) {
+            window.__TERM_PUSH__(id, `\x1b[2K\r\x1b[38;5;174m${spin[k % spin.length]}\x1b[0m Thinking… (${k} s · ↓ ${k * 13} tokens · esc to interrupt)\r\n` +
+              `\x1b[2m  ⎿  Read src/components/file${k % 97}.tsx (${(k * 7) % 400} lines)\x1b[0m\x1b[1A`)
+          }
+        }, 50)
+        setTimeout(() => { clearInterval(timer); done() }, secs * 1000)
+      }), [ids, SECS])
+      const wall = (Date.now() - t0) / 1000
+      const m1 = await metrics()
+      const lt = await page.evaluate(() => window.__LT__)
+      const sum = lt.reduce((a, b) => a + b, 0)
+      const per = (k) => (((m1[k] - m0[k]) * 1000) / wall).toFixed(0)
+      console.log(`      ${ids.length} terminals streaming 20/s, ${panes} panes, ${composers} composers, ${wall.toFixed(1)} s`)
+      console.log(`      long tasks: ${lt.length} (${(lt.length / wall).toFixed(2)}/s), ${Math.round(sum)} ms total (${(sum / wall).toFixed(0)} ms/s), longest ${Math.round(Math.max(0, ...lt))} ms`)
+      console.log(`      renderer main thread: script ${per('ScriptDuration')} ms/s, tasks ${per('TaskDuration')} ms/s, layout ${per('LayoutDuration')} ms/s; JS heap ${(m1.JSHeapUsedSize / 1048576).toFixed(1)} MB`)
+      // switching sessions: each row clicked in turn (the terminal or chat shown, fitted, drawn); the long tasks then
+      await page.evaluate(() => { window.__LT__ = [] })
+      const s0 = Date.now()
+      for (let i = 3; i < 9; i++) { await rows.nth(i).click(); await sleep(250) }
+      const sw = await page.evaluate(() => window.__LT__)
+      console.log(`      6 session switches in ${((Date.now() - s0) / 1000).toFixed(1)} s: long tasks ${sw.length}, ${Math.round(sw.reduce((a, b) => a + b, 0))} ms total, longest ${Math.round(Math.max(0, ...sw))} ms`)
+      const alive = await Promise.race([page.evaluate(() => 1), sleep(5000).then(() => 0)])
+      if (!alive) bad('the page stopped answering')
+    } catch (err) {
+      bad(String(err.message).split('\n')[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
+
+  /**
    * An hour of streaming in the page (phase 6, Task 6.1): 20,000 pushes into the shown chat (answers with links and
    * their cards, tool rows running then done, live bubbles that come and go, turn ends, wild meetings), in batches as
    * main sends them. The page's JS heap after a forced gc grows ≤ 40 MB, its DOM nodes stay ≤ 1.2× where they were,

@@ -90,30 +90,52 @@ export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus
     xterm.open(hostRef.current)
     xtermRef.current = xterm
     // Its font and cell size, for the Mac CI's smoke launch to check (src/termMetrics.ts)
-    const offMetrics = trackTermMetrics(term.id, () => {
-      const dims = (xterm as unknown as { _core?: { _renderService?: { dimensions?: { css?: { cell?: { width?: number; height?: number } } } } } })._core?._renderService?.dimensions?.css?.cell
-      const fontFamily = String(xterm.options.fontFamily ?? '')
-      const fontSize = Number(xterm.options.fontSize)
+    // The last 80 lines as text and their dim marks, read again only after the buffer changed (a write parsed, a
+    // resize's reflow): the chat polls them several times a second per pane (the footer, the prompt row's suggestion,
+    // a dialog), and an unchanged screen is the common case
+    let gen = 0
+    const offParsed = xterm.onWriteParsed(() => { gen++ })
+    const offResized = xterm.onResize(() => { gen++ })
+    let screen: { key: string; text: string; dim: string | null } | null = null
+    const screenKey = () => { const b = xterm.buffer.active; return `${gen}:${b.type}:${b.length}:${xterm.cols}` }
+    const screenNow = () => {
+      const key = screenKey()
+      if (screen && screen.key === key) return screen
       const buf = xterm.buffer.active
       const lines: string[] = []
+      for (let y = Math.max(0, buf.length - 80); y < buf.length; y++) lines.push(buf.getLine(y)?.translateToString(true) ?? '')
+      screen = { key, text: lines.join('\n').trimEnd(), dim: null }
+      return screen
+    }
+    const dimNow = () => {
+      const s = screenNow()
+      if (s.dim !== null) return s.dim
       // (1.6.2) each line's dim marks beside its text: the chat tells a greyed suggestion from typed text by them
+      const buf = xterm.buffer.active
       const marks: string[] = []
       const cell = buf.getNullCell()
       for (let y = Math.max(0, buf.length - 80); y < buf.length; y++) {
         const line = buf.getLine(y)
         const text = line?.translateToString(true) ?? ''
-        lines.push(text)
         marks.push(line ? dimMask({ length: line.length, getCell: (x) => line.getCell(x, cell) }, text.length) : '')
       }
-      const text = lines.join('\n').trimEnd()
+      // (one mark per character of the joined lines, so cut where `text` was trimmed: the two stay the same shape)
+      s.dim = marks.join('\n').slice(0, s.text.length)
+      return s.dim
+    }
+    // Its font and cell size, for the Mac CI's smoke launch to check (src/termMetrics.ts). Each part is read only when
+    // asked for: the faces measure text on a canvas, which only the smoke launch wants
+    const offMetrics = trackTermMetrics(term.id, () => {
+      const dims = (xterm as unknown as { _core?: { _renderService?: { dimensions?: { css?: { cell?: { width?: number; height?: number } } } } } })._core?._renderService?.dimensions?.css?.cell
+      const fontFamily = String(xterm.options.fontFamily ?? '')
+      const fontSize = Number(xterm.options.fontSize)
       return {
         id: term.id, fontFamily, fontSize,
         cellWidth: dims?.width ?? null, cellHeight: dims?.height ?? null,
         cols: xterm.cols, rows: xterm.rows,
-        faces: stackFaces(fontFamily).map(face => ({ face, check: document.fonts.check(`${fontSize}px "${face}"`), present: facePresent(face), status: faceStatus(face) })),
-        text,
-        // (one mark per character of the joined lines, so cut where `text` was trimmed: the two stay the same shape)
-        dim: marks.join('\n').slice(0, text.length),
+        get faces() { return stackFaces(fontFamily).map(face => ({ face, check: document.fonts.check(`${fontSize}px "${face}"`), present: facePresent(face), status: faceStatus(face) })) },
+        get text() { return screenNow().text },
+        get dim() { return dimNow() },
       }
     })
     fitRef.current = fit
@@ -327,6 +349,8 @@ export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus
       offResults.dispose()
       offPaths.dispose()
       offMetrics()
+      offParsed.dispose()
+      offResized.dispose()
       offFont()
       document.fonts.removeEventListener('loadingdone', refont)
       document.removeEventListener('visibilitychange', fitNow)
