@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.10.4
+- 도감의 오류를 정리해요. 예전에 처음 시작할 때 고른 스타팅이 지금 게임에 없는데도 도감에 "잡음"으로 남아 있던 기록을 지우고, 볼이 비어 있던 기록에 볼을 채워요. 앱을 켤 때와 동기화할 때마다 확인해요.
+- 패치노트에서 예전 버전이 잘려 보이지 않던 문제를 고쳤어요. 이제 스크롤되고, 마이너 버전(1.10, 1.9 …)별로 묶여요.
+
 ### 1.10.3
 - /exit(또는 /quit)를 하면 왼쪽 패널에서 세션을 끈 것처럼 탭이 닫혀요. 오류로 꺼지거나 윈도우가 끌 때 꺼진 세션은 지금처럼 남아요.
 - 이어하기 목록에 같은 이름의 세션이 나란히 보이지 않아요. /clear 전 대화는 "이전 대화" 아래로 접히고, 이름이 같으면 날짜로 구분해요. 열린 탭끼리 이름이 같으면 "(2)"를 붙여요.
@@ -494,6 +498,10 @@
 
 ## spawn (English)
 
+### 1.10.4
+- The Pokédex mends its own errors: a starter chosen at an earlier start of the game, not in this game, no longer counts as caught, and a record without a ball gets one. Checked at every start and sync.
+- The patch notes cut off their older releases. They scroll now and are grouped by minor version (1.10, 1.9 …).
+
 ### 1.10.3
 - /exit (or /quit) closes the tab as closing the session from the left panel does. A session that crashed or was ended by Windows stays as before.
 - The resume list no longer shows twin sessions with the same name: conversations before a /clear fold under "earlier conversations", and same names are told apart by date. Open tabs with the same name get "(2)".
@@ -845,6 +853,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.4
+- 図鑑の誤りを直します。以前はじめに選んだスターターが今のゲームにいないのに「捕まえた」と残っていた記録を消し、ボールが空の記録にボールを入れます。起動と同期のたびに確認します。
+- パッチノートで古いバージョンが切れて見えなかった問題を直しました。スクロールでき、マイナーバージョン(1.10、1.9 …)ごとにまとまります。
 
 ### 1.10.3
 - /exit(または /quit)で、左のパネルからセッションを閉じたときと同じようにタブが閉じます。エラーで終わったセッションや Windows が終了させたセッションはこれまでどおり残ります。
