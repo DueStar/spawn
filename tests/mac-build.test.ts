@@ -156,11 +156,32 @@ describe('package.json build', () => {
   })
 
   it('Windows is as it was: its block, the shared files list, the output folder', () => {
-    expect(pkg.build.win).toEqual({ icon: 'build/icon.ico', target: ['dir'] })
+    expect(pkg.build.win).toEqual({ icon: 'build/icon.ico', target: ['dir', 'nsis'] })
     expect(pkg.build.files).toEqual(['dist/**', 'electron/**', 'server/**', 'hooks/**', '!dist/sprites/pokemon/**'])
     expect(pkg.build.directories).toEqual({ output: 'release', buildResources: 'build' })
     expect(pkg.build.asar).toBe(false)
     expect(pkg.build.npmRebuild).toBe(false)
+  })
+
+  it('Windows installer: one click, per user, into %LOCALAPPDATA%\\spawn, the Poké Ball icon, spawn started after', () => {
+    expect(pkg.build.nsis).toMatchObject({
+      artifactName: 'spawn-Setup-${version}.${ext}',
+      oneClick: true,
+      perMachine: false,
+      runAfterFinish: true,
+      installerIcon: 'build/icon.ico',
+      uninstallerIcon: 'build/icon.ico',
+      deleteAppDataOnUninstall: false,
+      include: 'build/installer.nsh',
+    })
+    const nsh = readFileSync(join(ROOT, 'build', 'installer.nsh'), 'utf8')
+    expect(nsh).toContain('StrCpy $INSTDIR "$LOCALAPPDATA\\spawn"')
+    expect(nsh).toMatch(/taskkill \/f \/im spawn\.exe/)
+    expect(nsh).toMatch(/taskkill \/f \/im Claudex\.exe/)
+    expect(nsh).toContain('CreateShortCut "$DESKTOP\\spawn.lnk"')
+    expect(nsh).toContain('CreateShortCut "$SMPROGRAMS\\spawn.lnk"')
+    // NSIS reads the include in the system code page: keep it ASCII
+    expect(/[^\x00-\x7f]/.test(nsh)).toBe(false)
   })
 })
 

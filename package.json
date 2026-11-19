@@ -78,8 +78,24 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "dir"
+        "dir",
+        "nsis"
       ]
+    },
+    "nsis": {
+      "artifactName": "spawn-Setup-${version}.${ext}",
+      "oneClick": true,
+      "perMachine": false,
+      "allowElevation": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": false,
+      "shortcutName": "spawn",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "uninstallDisplayName": "spawn",
+      "deleteAppDataOnUninstall": false,
+      "include": "build/installer.nsh"
     },
     "mac": {
       "target": [

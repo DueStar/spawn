@@ -71,7 +71,10 @@ A Windows desktop app for running Claude Code sessions with Pokémon. Each sessi
 
 ## Install
 
-1. Download `spawn-<version>-win-x64.zip` from [Releases](https://github.com/DueStar/spawn/releases/latest) and unzip it anywhere.
+Download `spawn-Setup-<version>.exe` from [Releases](https://github.com/DueStar/spawn/releases/latest) and run it. It installs right away, opens spawn, and adds shortcuts to the Desktop and Start menu.
+
+To install from the zip instead:
+1. Download `spawn-<version>-win-x64.zip` and unzip it anywhere.
 2. Run `win-unpacked\spawn.exe`.
 
 If something it needs is missing, the app shows where to install it.

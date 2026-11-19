@@ -71,7 +71,10 @@ Claude Code のセッションをポケモンと一緒に使う Windows デス�
 
 ## インストール
 
-1. [Releases](https://github.com/DueStar/spawn/releases/latest) から `spawn-<バージョン>-win-x64.zip` をダウンロードし、好きな場所に展開します。
+[Releases](https://github.com/DueStar/spawn/releases/latest) から `spawn-Setup-<バージョン>.exe` をダウンロードして実行します。すぐにインストールされて spawn が起動し、デスクトップとスタートメニューにショートカットができます。
+
+zip でインストールする場合:
+1. `spawn-<バージョン>-win-x64.zip` をダウンロードし、好きな場所に展開します。
 2. `win-unpacked\spawn.exe` を実行します。
 
 必要なプログラムがないときは、アプリがインストール先を案内します。
