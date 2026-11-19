@@ -38,6 +38,11 @@
  *                       Pokémon or ball picture (/sprites/) and no logo is drawn, and
  *                       the header's first item sits right of the traffic lights (78px
  *                       room); work-mode.png; ⌘⇧H again switches it off
+ *   capture-views       optional: the 도감 / 박스 / 기록 / 랭킹 views by ⌘2–5 as
+ *                       view-dex.png, view-box.png, view-today.png, view-rank.png (for
+ *                       looking at the Mac build without a Mac: mac.yml uploads them as
+ *                       mac-screens-<arch>), then ⌘1 back; skipped when less than 15 s
+ *                       of the run's time is left, and a failure does not fail the run
  *   quit                the app's own quit sequence, to the end
  *
  * smoke.json in SPAWN_SMOKE_DIR is written after every step, so a run killed
@@ -52,12 +57,22 @@ const os = require('os')
 const path = require('path')
 
 const SMOKE_FLAG = '--smoke-test'
-const STEPS = Object.freeze(['start', 'window', 'shell-open', 'shell-echo', 'shell-env', 'capture-window', 'terminal-font', 'capture-widget', 'capture-fullscreen', 'restore-window', 'work-mode', 'quit'])
+const STEPS = Object.freeze(['start', 'window', 'shell-open', 'shell-echo', 'shell-env', 'capture-window', 'terminal-font', 'capture-widget', 'capture-fullscreen', 'restore-window', 'work-mode', 'capture-views', 'quit'])
 /** Monaspace Neon's cell is about 0.615 em (Menlo's measured 0.538 on the runner): outside this it is not the face drawing */
 const CELL_RATIO = Object.freeze({ min: 0.55, max: 0.68 })
 /** The terminal's face, shipped with the app */
 const TERMINAL_FACE = 'Monaspace Neon Var'
-const OPTIONAL = new Set(['shell-env'])
+const OPTIONAL = new Set(['shell-env', 'capture-views'])
+/** The window's other views by ⌘2–5 (src/keys.ts view2–5, src/workMode.ts VIEWS), pictured as view-<name>.png */
+const VIEW_KEYS = Object.freeze([['2', 'dex'], ['3', 'box'], ['4', 'today'], ['5', 'rank']])
+/** capture-views is skipped when less than this (or a quarter of the run's time, if less) is left: a picture never costs the run */
+const VIEWS_BUDGET_MS = 15_000
+/** ⌘<digit> handed to the page as the keyboard would (the same capture-phase handler as ⌘⇧H) */
+const viewKeyJs = (digit) => `/* spawn-smoke:view-key */ (() => {
+  const target = document.activeElement || document.body
+  target.dispatchEvent(new KeyboardEvent('keydown', { key: ${JSON.stringify(String(digit))}, code: ${JSON.stringify(`Digit${digit}`)}, metaKey: true, bubbles: true, cancelable: true }))
+  return true
+})()`
 /** [step, mode, picture] */
 const CAPTURES = Object.freeze([['capture-window', 'window', 'window.png'], ['capture-widget', 'widget', 'widget.png'], ['capture-fullscreen', 'fullscreen', 'fullscreen.png']])
 // The typed line never holds what the output is checked for: the shell has to work it out
@@ -490,6 +505,32 @@ function prepare({ app, dialog, env = process.env, tmp = os.tmpdir(), log = cons
         return { file: 'work-mode.png', size: image.getSize(), on, off }
       })
 
+      // The other views, pictured: optional, and skipped rather than risk the run's timeout
+      try {
+        const used = now() - t0
+        if (used > timeoutMs - Math.min(VIEWS_BUDGET_MS, timeoutMs / 4)) throw new Error(`skipped: ${used} ms of the run's ${timeoutMs} used`)
+        await step('capture-views', async () => {
+          const shots = {}
+          for (const [digit, view] of VIEW_KEYS) {
+            await win().webContents.executeJavaScript(viewKeyJs(digit), true)
+            await sleep(settleMs)
+            const image = await win().webContents.capturePage()
+            if (!image || image.isEmpty()) throw new Error(`the ${view} capture came back empty`)
+            const file = `view-${view}.png`
+            fs.writeFileSync(path.join(dirs.out, file), image.toPNG())
+            result.screenshots[`view-${view}`] = file
+            shots[view] = file
+          }
+          await win().webContents.executeJavaScript(viewKeyJs('1'), true)
+          return shots
+        })
+      } catch (err) {
+        if (ended) throw err
+        recordStep(result, 'capture-views', false, { detail: err.message })
+        log.log(`[smoke] capture-views: not taken (${err.message}), going on`)
+        save()
+      }
+
       current = 'quit'
       log.log('[smoke] quit …')
       save()
@@ -510,4 +551,4 @@ function prepare({ app, dialog, env = process.env, tmp = os.tmpdir(), log = cons
   return { dirs, result, run, fail, stop }
 }
 
-module.exports = { WORK_MODE_KEY_JS, WORK_MODE_READ_JS, TRAFFIC_LIGHTS_ROOM, TRAFFIC_LIGHTS_DROP, workModeVerdict, SMOKE_FLAG, DEFAULT_TIMEOUT_MS, QUIT_TIMEOUT_MS, smokeTimeoutMs, CELL_RATIO, TERMINAL_FACE, fontVerdict, sameRect, STEPS, CAPTURES, ECHO, ECHO_SEEN, ENV_ECHO, isSmokeRun, smokeDirs, sawEcho, shellEnvFrom, newResult, recordStep, verdict, readyWindow, prepare }
+module.exports = { VIEW_KEYS, VIEWS_BUDGET_MS, viewKeyJs, WORK_MODE_KEY_JS, WORK_MODE_READ_JS, TRAFFIC_LIGHTS_ROOM, TRAFFIC_LIGHTS_DROP, workModeVerdict, SMOKE_FLAG, DEFAULT_TIMEOUT_MS, QUIT_TIMEOUT_MS, smokeTimeoutMs, CELL_RATIO, TERMINAL_FACE, fontVerdict, sameRect, STEPS, CAPTURES, ECHO, ECHO_SEEN, ENV_ECHO, isSmokeRun, smokeDirs, sawEcho, shellEnvFrom, newResult, recordStep, verdict, readyWindow, prepare }

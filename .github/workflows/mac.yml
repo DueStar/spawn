@@ -3,8 +3,12 @@ name: Mac build
 # spawn.app for Apple Silicon (arm64) and Intel (x64): tests, the build, an ad-hoc
 # signature (no Apple Developer ID yet), one launch of the built app with
 # --smoke-test (scripts/smoke-mac.mjs: a shell session must print spawn-42, then a
-# picture of the window, widget and full-screen modes, then work mode on and off),
-# and the zips as artifacts (scripts/mac-build.mjs). Nothing is published here.
+# picture of the window, widget and full-screen modes, then work mode on and off,
+# then the 도감 / 박스 / 기록 / 랭킹 views), and the zips as artifacts
+# (scripts/mac-build.mjs). The pictures alone are a small artifact of their own,
+# mac-screens-<arch>, to look at the Mac build without a Mac:
+#   gh run download <run id> -R DueStar/spawn -n mac-screens-arm64
+# Nothing is published here.
 #
 # A push runs it only when it touches what the Mac build is made of (main; mac-port
 # until it is merged); a release runs it by hand on its tag (scripts/release-mac.mjs).
@@ -151,6 +155,20 @@ jobs:
         env:
           SPAWN_SMOKE_DIR: ${{ github.workspace }}/release/upload/smoke
         run: node scripts/smoke-mac.mjs ${{ matrix.arch }}
+
+      # The smoke run's pictures on their own (a few hundred KB, not the zips' 100+ MB), to look at
+      # without a Mac; always, and never failing the job: a missing picture only warns
+      - name: Screens
+        if: always()
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: mac-screens-${{ matrix.arch }}
+          path: |
+            release/upload/smoke/*.png
+            release/upload/smoke/smoke.json
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: Zip
         run: node scripts/mac-build.mjs pack ${{ matrix.arch }}
