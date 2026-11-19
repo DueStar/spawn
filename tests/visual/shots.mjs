@@ -4225,6 +4225,11 @@ const FLOWS = {
         window.__LT__ = []
         new PerformanceObserver(l => { for (const e of l.getEntries()) window.__LT__.push(e.duration) }).observe({ entryTypes: ['longtask'] })
       })
+      // idle first: nothing written, only what runs by itself (the chat's polls of each pane's screen)
+      const i0 = await metrics()
+      await sleep(10_000)
+      const i1 = await metrics()
+      console.log(`      idle 10 s: script ${((i1.ScriptDuration - i0.ScriptDuration) * 100).toFixed(1)} ms/s, tasks ${((i1.TaskDuration - i0.TaskDuration) * 100).toFixed(1)} ms/s`)
       const m0 = await metrics()
       const t0 = Date.now()
       await page.evaluate(([list, secs]) => new Promise(done => {
@@ -4241,12 +4246,14 @@ const FLOWS = {
       }), [ids, SECS])
       const wall = (Date.now() - t0) / 1000
       const m1 = await metrics()
+      await cdp.send('HeapProfiler.collectGarbage')
+      const heap = (await cdp.send('Runtime.getHeapUsage')).usedSize / 1048576
       const lt = await page.evaluate(() => window.__LT__)
       const sum = lt.reduce((a, b) => a + b, 0)
       const per = (k) => (((m1[k] - m0[k]) * 1000) / wall).toFixed(0)
       console.log(`      ${ids.length} terminals streaming 20/s, ${panes} panes, ${composers} composers, ${wall.toFixed(1)} s`)
       console.log(`      long tasks: ${lt.length} (${(lt.length / wall).toFixed(2)}/s), ${Math.round(sum)} ms total (${(sum / wall).toFixed(0)} ms/s), longest ${Math.round(Math.max(0, ...lt))} ms`)
-      console.log(`      renderer main thread: script ${per('ScriptDuration')} ms/s, tasks ${per('TaskDuration')} ms/s, layout ${per('LayoutDuration')} ms/s; JS heap ${(m1.JSHeapUsedSize / 1048576).toFixed(1)} MB`)
+      console.log(`      renderer main thread: script ${per('ScriptDuration')} ms/s, tasks ${per('TaskDuration')} ms/s, layout ${per('LayoutDuration')} ms/s; JS heap after gc ${heap.toFixed(1)} MB`)
       // switching sessions: each row clicked in turn (the terminal or chat shown, fitted, drawn); the long tasks then
       await page.evaluate(() => { window.__LT__ = [] })
       const s0 = Date.now()
