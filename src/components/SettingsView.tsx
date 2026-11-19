@@ -214,7 +214,7 @@ const SettingsView: React.FC<{ onClose: () => void; version?: string; onFeedback
             <Toggle label={t('왼쪽 목록 자동 정렬')} hint={t('확인 필요가 맨 위, 일하는 세션은 시작한 순서로, 쉬는 세션은 최근에 쉰 순서로 놓여요. 끄면 끌어서 순서를 정해요')} on={s.session.autoSort !== false} onChange={v => set('session', { autoSort: v })} />
             <Toggle label={t('시작할 때 세션 다시 열기')} hint={t('앱을 닫을 때 열려 있던 세션을 다음에 켤 때 이어서 열어요')} on={s.session.restoreOnStart} onChange={v => set('session', { restoreOnStart: v })} />
             {/* The chat view (a preview): only behind the features.json switch (src/features.ts) */}
-            {CHAT_VIEW && <Toggle label={t('채팅으로 보기 (미리보기)')} hint={t('Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요')} on={s.session.chatView} onChange={v => set('session', { chatView: v })} />}
+            {CHAT_VIEW && <Toggle label={t('채팅으로 보기')} hint={t('Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요')} on={s.session.chatView} onChange={v => set('session', { chatView: v })} />}
             {CHAT_VIEW && <Toggle label={t('링크 미리보기 (채팅)')} hint={t('채팅에 나온 링크의 제목과 그림을 가져와 보여 줘요. 가져올 때 링크 주소 전체가 그 사이트로 가서, 누군가 그 링크를 열었다는 것도 알려져요. 물음표나 긴 값이 붙은 주소, 내 PC나 사내망 주소는 가져오지 않아요')} on={s.session.linkPreviews} disabled={!s.session.chatView} onChange={v => set('session', { linkPreviews: v })} />}
             {CHAT_VIEW && <ChatHelp open={help} onToggle={() => setHelp(h => !h)} />}
           </>}

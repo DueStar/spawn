@@ -251,7 +251,7 @@ export type Lang = 'ko' | 'en' | 'ja'
 export interface AppSettings {
   notify: { catch: boolean; flee: boolean; evolve: boolean; levelup: boolean; rareOnly: boolean; duration: 'short' | 'normal' | 'long'; quiet: boolean; quietFrom: string; quietTo: string; sound: boolean; sessions: boolean }
   privacy: { hidePrompts: boolean }
-  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string; chatView: boolean; linkPreviews: boolean; autoSort: boolean }
+  session: { defaultCwd: string; model: '' | 'opus' | 'sonnet' | 'haiku'; permissionMode: '' | 'default' | 'acceptEdits' | 'plan' | 'auto'; confirmClose: boolean; restoreOnStart: boolean; tools: AiTool[]; defaultTool: string; chatView: boolean; chatViewOn?: boolean; linkPreviews: boolean; autoSort: boolean }
   /** workMode: 업무 모드 (src/workMode.ts) */
   app: { openAtLogin: boolean; startHidden: boolean; widgetOnTop: boolean; language: 'auto' | Lang; workMode: boolean }
   terminal: { scrollback: 1000 | 5000 | 10000; font: TerminalFont }

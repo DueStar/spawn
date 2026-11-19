@@ -43,7 +43,7 @@ describe('the 채팅 보기 help (설정 › 세션)', () => {
     const src = read('src', 'components', 'SettingsView.tsx')
     for (const k of HELP.slice(1)) expect(src).toContain(`'${k}'`)
     expect(src).toMatch(/\{CHAT_VIEW && <ChatHelp /)
-    expect(src.indexOf('<ChatHelp')).toBeGreaterThan(src.indexOf("t('채팅으로 보기 (미리보기)')"))
+    expect(src.indexOf('<ChatHelp')).toBeGreaterThan(src.indexOf("t('채팅으로 보기')"))
     expect(src).toMatch(/useState\(at\?\.help === true\)/)
     expect(src).toMatch(/aria-expanded=\{open\}/)
   })

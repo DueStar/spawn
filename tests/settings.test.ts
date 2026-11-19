@@ -78,12 +78,14 @@ describe('settings', () => {
     const dir = mkdtempSync(join(tmpdir(), 'spawn-settings-'))
     const file = join(dir, 'settings.json')
     const store = createSettingsStore(file)
-    expect(store.get()).toEqual(DEFAULTS)
+    // (a first start gives the chat view's default once: 1.10.5)
+    const FIRST = { ...DEFAULTS, session: { ...DEFAULTS.session, chatViewOn: true } }
+    expect(store.get()).toEqual(FIRST)
     store.set({ app: { startHidden: true } })
     expect(JSON.parse(readFileSync(file, 'utf8')).app.startHidden).toBe(true)
     expect(createSettingsStore(file).get().app.startHidden).toBe(true)
     writeFileSync(file, '{ broken')
-    expect(createSettingsStore(file).get()).toEqual(DEFAULTS)
+    expect(createSettingsStore(file).get()).toEqual(FIRST)
   })
 })
 
@@ -177,10 +179,12 @@ describe('UI fonts on a Mac (.is-mac rules)', () => {
 // features.json switch (electron/features.cjs CHAT_VIEW / src/features.ts)
 describe('the chat view setting', () => {
   it('is off by default; only a real boolean is kept', () => {
-    expect(sanitize(null).session.chatView).toBe(false)
-    expect(DEFAULTS.session.chatView).toBe(false)
-    expect(sanitize({ session: { chatView: 'yes' } }).session.chatView).toBe(false)
-    expect(sanitize({ session: { chatView: 1 } }).session.chatView).toBe(false)
+    // (on by default since 1.10.5)
+    expect(sanitize(null).session.chatView).toBe(true)
+    expect(DEFAULTS.session.chatView).toBe(true)
+    expect(sanitize({ session: { chatView: 'yes' } }).session.chatView).toBe(true)
+    expect(sanitize({ session: { chatView: 1 } }).session.chatView).toBe(true)
+    expect(sanitize({ session: { chatView: false } }).session.chatView).toBe(false)
     expect(sanitize({ session: { chatView: true } }).session.chatView).toBe(true)
   })
 
@@ -193,18 +197,18 @@ describe('the chat view setting', () => {
 
   it('the page has the same default', async () => {
     const { DEFAULT_SETTINGS } = await import('../src/settingsStore')
-    expect(DEFAULT_SETTINGS.session.chatView).toBe(false)
+    expect(DEFAULT_SETTINGS.session.chatView).toBe(true)
     expect(DEFAULT_SETTINGS.session).toEqual(DEFAULTS.session)
   })
 
   it('설정 shows the switch only while the features.json switch is on', () => {
     const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
-    const at = view.indexOf("t('채팅으로 보기 (미리보기)')")
+    const at = view.indexOf("t('채팅으로 보기')")
     expect(at).toBeGreaterThan(0)
-    expect(view.indexOf("t('채팅으로 보기 (미리보기)')", at + 1)).toBe(-1)
+    expect(view.indexOf("t('채팅으로 보기')", at + 1)).toBe(-1)
     // the row is one expression on one line: {CHAT_VIEW && <Toggle … />}
     const line = view.slice(view.lastIndexOf('\n', at) + 1, view.indexOf('\n', at))
-    expect(line.trim()).toMatch(/^\{CHAT_VIEW && <Toggle label=\{t\('채팅으로 보기 \(미리보기\)'\)\}.*\/>\}$/)
+    expect(line.trim()).toMatch(/^\{CHAT_VIEW && <Toggle label=\{t\('채팅으로 보기'\)\}.*\/>\}$/)
   })
 
   it('link previews (Phase 5): off by default, only a real boolean kept, the page has the same default', async () => {
@@ -213,7 +217,7 @@ describe('the chat view setting', () => {
     for (const v of ['yes', 1, 'true', null, {}]) expect(sanitize({ session: { linkPreviews: v } }).session.linkPreviews).toBe(false)
     expect(sanitize({ session: { linkPreviews: true } }).session.linkPreviews).toBe(true)
     const on = applyPatch(sanitize(null), { session: { linkPreviews: true } })
-    expect(on.session).toMatchObject({ linkPreviews: true, chatView: false })
+    expect(on.session).toMatchObject({ linkPreviews: true, chatView: true })
     expect(applyPatch(on, { session: { linkPreviews: false } }).session.linkPreviews).toBe(false)
     const { DEFAULT_SETTINGS } = await import('../src/settingsStore')
     expect(DEFAULT_SETTINGS.session.linkPreviews).toBe(false)
@@ -223,7 +227,7 @@ describe('the chat view setting', () => {
 
   it('설정 shows 링크 미리보기 only with the features.json switch, right under 채팅으로 보기, disabled while that is off', async () => {
     const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
-    const chat = view.indexOf("t('채팅으로 보기 (미리보기)')")
+    const chat = view.indexOf("t('채팅으로 보기')")
     const at = view.indexOf("t('링크 미리보기 (채팅)')")
     expect(at).toBeGreaterThan(chat)
     expect(view.indexOf("t('링크 미리보기 (채팅)')", at + 1)).toBe(-1)
@@ -247,11 +251,23 @@ describe('the chat view setting', () => {
   it('the label and the hint are in English and Japanese', async () => {
     const { default: settingsLocale } = await import('../src/locales/settings')
     const hint = 'Claude Code 세션을 대화처럼 볼 수 있어요. 터미널은 그대로 돌아가고, 세션 머리의 채팅 · 터미널로 바꿔 봐요. 켠 뒤에 여는 세션부터 돼요'
-    for (const key of ['채팅으로 보기 (미리보기)', hint]) {
+    for (const key of ['채팅으로 보기', hint]) {
       expect(settingsLocale.en[key], key).toBeTruthy()
       expect(settingsLocale.ja[key], key).toBeTruthy()
     }
     const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
     expect(view).toContain(`t('${hint}')`)
+  })
+})
+
+describe('the chat view default given once (1.10.5)', () => {
+  it('turns on a file saved with the old default off, once; a later off holds', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'spawn-settings-'))
+    const file = join(dir, 'settings.json')
+    writeFileSync(file, JSON.stringify({ session: { chatView: false } }))
+    const a = createSettingsStore(file)
+    expect(a.get().session).toMatchObject({ chatView: true, chatViewOn: true })
+    a.set({ session: { chatView: false } })
+    expect(createSettingsStore(file).get().session.chatView).toBe(false)
   })
 })

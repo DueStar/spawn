@@ -10,7 +10,9 @@
 .chat-steps svg { flex: none; }
 
 /* a wild Pokémon, in passing: the picture, the meeting, → the ball and the result; a hairline tag, no fill */
-.chat-wild { display: flex; align-items: center; min-height: 34px; padding: 0 4px; margin: 2px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; }
+/* (2026-11-19, the owner: told apart from the conversation, never stressed) a quiet box: a hairline, a faint fill,
+   everything a step dimmer than the talk around it */
+.chat-wild { display: flex; align-items: center; width: fit-content; max-width: 100%; box-sizing: border-box; min-height: 34px; padding: 3px 12px 3px 8px; margin: 4px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.015); opacity: 0.72; }
 .chat-wild-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
 .chat-wild-mon { width: 34px; height: 34px; margin: -4px -2px -4px -6px; flex: none; object-fit: contain; }
 .chat-wild b { color: var(--ink-2); font-weight: var(--w-name); }

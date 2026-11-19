@@ -30,9 +30,10 @@ const DEFAULTS = Object.freeze({
   privacy: { hidePrompts: false }, // the catch story without the request text
   // restoreOnStart: reopen the sessions open at the last close. tools: other AI tools a session can run
   // ({ id, name, command }, Claude Code is always there), defaultTool: the one + opens with.
-  // chatView: 채팅으로 보기 (미리보기), shown only behind features.json chatView (features.cjs);
+  // chatView: 채팅으로 보기, on by default since 1.10.5 (chatViewOn: that default given once to a settings file saved
+  // before, whose off was only the old default); shown only behind features.json chatView (features.cjs);
   // linkPreviews: 링크 미리보기 (채팅), off by default, effective only with chatView on (main.cjs previewsOn)
-  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false, autoSort: true },
+  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: true, chatViewOn: false, linkPreviews: false, autoSort: true },
   // language auto: the system's. workMode: 업무 모드, nothing Pokémon on screen (src/workMode.ts); the game goes on
   app: { openAtLogin: false, startHidden: false, widgetOnTop: true, language: 'auto', workMode: false },
   // the terminals' look, applied to open terminals at once (the text size stays per PC: src/termFont.ts)
@@ -115,6 +116,12 @@ function claudeArgs(session) {
 function createSettingsStore(file) {
   let current = sanitize(null)
   try { current = sanitize(JSON.parse(fs.readFileSync(file, 'utf8'))) } catch { /* first run, or a broken file: the defaults */ }
+  // 1.10.5: the chat view is the default; a file saved before it carries the old default's off: turned on once
+  // (after that the trainer's own choice holds, chatViewOn marks it)
+  if (!current.session.chatViewOn) {
+    current = applyPatch(current, { session: { chatView: true, chatViewOn: true } })
+    try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(current, null, 2)) } catch { /* once more next start */ }
+  }
   return {
     get: () => current,
     set(patch) {
