@@ -1014,7 +1014,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
     >
       {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's. A downloaded update
           (ready) is told apart from one to get (2026-11-19, the owner: the two looked the same): a restart arrow and 재시작 */}
-      {update.status === 'ready' ? <><RestartIcon size={14} /><span className="w-update-word">{t('재시작')}</span></> : <UpdateIcon size={14} />}
+      {update.status === 'ready' ? <><RestartIcon size={12} /><span className="w-update-word">{t('재시작')}</span></> : <UpdateIcon size={12} />}
     </button>
   ) : null
 

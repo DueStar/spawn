@@ -2471,6 +2471,30 @@ const FLOWS = {
   /** Claude Code's own queue: 대기 중 2 and the first text; no button in the strip; none → no strip */
   // 2026-11-17: the session tabs — a row dragged onto the right side opens a tab (the drop says where), Ctrl+click
   // too, at most three (the fourth is refused, said so), a tab's × closes only the tab, a tab click shows it
+  // the update button (2026-11-19): one to get (an icon) and one downloaded (재시작); both no taller than the bar's icons
+  'update-button': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    for (const status of ['available', 'ready']) {
+      let app
+      try {
+        app = await openApp(browser, { update: { status, latest: '9.9.9' } })
+        const { page } = app
+        const btn = page.locator('.w-term-tabs .w-update')
+        await btn.waitFor({ timeout: 10_000 })
+        const b = await btn.boundingBox()
+        const icon = await page.locator('.w-term-tabs .w-widget-toggle').boundingBox()
+        if (b && icon && b.height > icon.height + 1) bad(`${status}: the button is ${b.height}px tall, the bar's icons ${icon.height}px`)
+        if (opts?.out) {
+          const bar = await page.locator('.w-term-tabs').boundingBox()
+          await page.screenshot({ path: join(opts.out, `flow-update-${status}.png`), clip: { x: bar.x + bar.width - 420, y: bar.y, width: 420, height: bar.height }, animations: 'disabled' })
+        }
+        console.log(`   ${status}: ${b ? `${Math.round(b.width)}×${Math.round(b.height)}` : 'none'} (icons ${icon ? `${Math.round(icon.width)}×${Math.round(icon.height)}` : '?'})`)
+      } catch (err) { bad(`${status}: ${String(err.message).split('\n')[0]}`) } finally { if (app) await app.ctx.close() }
+    }
+    return problems
+  },
+
   // the split view (2026-11-19, src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
   'session-tabs': async ({ browser, opts }) => {
     const problems = []

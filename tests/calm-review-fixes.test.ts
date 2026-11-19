@@ -24,7 +24,7 @@ describe('C1: hit areas not smaller than on main', () => {
   // 1.6.1: an icon button the header's size (26 × 26, its words in the tooltip), so the profile beside it never shrinks;
   // filled with the primary colour since 2026-11-17 (no border: the fill is its edge)
   it('the update button: a 26 × 26 icon in the primary colour, never shrinking', () => {
-    expect(decls(css('widget.css'), '.w-update')).toMatch(/flex: none; width: 26px; height: 26px;[^}]*background: var\(--accent\)/)
+    expect(decls(css('widget.css'), '.w-update')).toMatch(/flex: none; width: 22px; height: 22px;[^}]*background: var\(--accent\)/)
   })
   it("상세's 확인 필요 button: 1px above and below (16px tall, as on main)", () => {
     expect(decls(css('widget-expanded.css'), '.w-pill.as-button')).toMatch(/padding: 1px 0/)
