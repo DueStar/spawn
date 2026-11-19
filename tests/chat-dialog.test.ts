@@ -113,3 +113,95 @@ describe('answerDialog', () => {
     expect(await answerDialog(0, { ...stuck, read: () => screen('idle-empty') })).toEqual({ ok: false, reason: 'gone' })
   })
 })
+
+/**
+ * A panel's plain rows (2026-11-19, the owner's /rc): the /remote-control panel as the 2.1.328 binary draws it —
+ * RECONSTRUCTED from the binary's strings and layout (title, the sentence with the session's link, the rows
+ * Disconnect · Show QR code (its dim line) · Continue, the last one focused, no key hints), not a captured screen.
+ */
+describe('parseDialog: plain rows', () => {
+  it('the /remote-control panel: its title, its link whole (wrapped on the screen), three rows, Continue marked, no Esc hint', () => {
+    const d = parseDialog(screen('reconstructed-rc-panel'))!
+    expect(d).not.toBeNull()
+    expect(d.numbered).toBe(false)
+    expect(d.title).toBe('Remote Control')
+    expect(d.body[0]).toMatch(/^This session is available in the Claude mobile app/)
+    expect(d.links).toEqual(['https://claude.ai/code/session_01AbCdEfGhIjKlMnOpQrStUv'])
+    expect(d.options.map(o => [o.n, o.label, o.desc])).toEqual([
+      [1, 'Disconnect this session', []],
+      [2, 'Show QR code', ['Scan with your phone to open this session']],
+      [3, 'Continue', []],
+    ])
+    expect(d.selected).toBe(2)
+    expect(d.esc).toBe(false)
+    expect(d.options.every(o => !o.free)).toBe(true)
+  })
+  it('a panel with a hint line under its rows: Esc offered', () => {
+    const d = parseDialog([
+      '────────────────────────────────────────',
+      ' Manage MCP servers',
+      '',
+      ' ❯ figma · ✔ connected',
+      '   memory · ✔ connected',
+      '',
+      ' ↑↓ to navigate · Enter to select · Esc to close',
+    ].join('\n'))!
+    expect(d.title).toBe('Manage MCP servers')
+    expect(d.options.map(o => o.label)).toEqual(['figma · ✔ connected', 'memory · ✔ connected'])
+    expect(d.selected).toBe(0)
+    expect(d.esc).toBe(true)
+  })
+  it('the numbered dialogs read as before (numbered, their links)', () => {
+    expect(parseDialog(screen('dialog-bash'))!.numbered).toBe(true)
+    expect(parseDialog(screen('dialog-trust'))!.links).toEqual([])
+  })
+  it('no dialog: the prompt box, a typed prompt, a reply, a list in prose, a quote', () => {
+    for (const name of ['idle-empty', 'idle-placeholder', 'typed', 'typed-multiline', 'working-empty', 'real-named-session', 'real-agents-panel', 'real-ascii-mark', 'after-turn-suggestion', 'narrow-wrap', 'real-history-recall', 'echo-plain', 'echo-korean']) {
+      expect(parseDialog(screen(name)), name).toBeNull()
+    }
+    // a multi-line prompt echoed above Claude's reply (its lines sit where rows would)
+    expect(parseDialog(['● Earlier answer.', '', '❯ fix the login page', '  and the signup page', '  then run the tests', '', '● On it.'].join('\n'))).toBeNull()
+    // the same as the last thing on the screen, with no rule over it
+    expect(parseDialog(['● Earlier answer.', '', '❯ fix the login page', '  and the signup page', '  then run the tests'].join('\n'))).toBeNull()
+    // Claude's prose: a bulleted list, a quote, with a rule (a table's) over it
+    expect(parseDialog(['──────────────────────', '  Options:', '', '  - first', '  > second', '  - third'].join('\n'))).toBeNull()
+    expect(parseDialog(['────────────────────────', ' Pick one', '', ' > Alpha', '   Beta', '', ' That is all I have for now.'].join('\n'))).toBeNull()
+    // one row only
+    expect(parseDialog(['────────────────────────', ' Remote Control', '', ' ❯ Continue'].join('\n'))).toBeNull()
+  })
+})
+
+/** A panel of plain rows that moves its ❯ with ↑ / ↓ (rows: one space, then the mark or two spaces, then a capital) */
+function rowsTerm(text: string) {
+  let lines = text.replace(/\r/g, '').split('\n')
+  const keys: string[] = []
+  const rows = () => lines.map((l, i) => (/^ (?:❯ | {2})[A-Z]/.test(l) ? i : -1)).filter(i => i >= 0)
+  const move = (dir: 1 | -1) => {
+    const r = rows()
+    const at = r.findIndex(i => lines[i].startsWith(' ❯ '))
+    const to = r[Math.max(0, Math.min(r.length - 1, at + dir))]
+    lines = lines.map((l, i) => (i === r[at] ? `   ${l.slice(3)}` : i === to ? ` ❯ ${l.slice(3)}` : l))
+  }
+  return {
+    keys,
+    deps: {
+      read: () => lines.join('\n'),
+      key: async (k: string) => { keys.push(k); if (k === 'down') move(1); if (k === 'up') move(-1); return true },
+      paste: async () => true,
+      sleep: async () => {},
+    },
+  }
+}
+
+describe('answerDialog: plain rows', () => {
+  it('moves up from Continue to Disconnect one step at a time, then Enter', async () => {
+    const t = rowsTerm(screen('reconstructed-rc-panel'))
+    expect(await answerDialog(0, t.deps)).toEqual({ ok: true })
+    expect(t.keys).toEqual(['up', 'up', 'enter'])
+  })
+  it('the marked row: Enter only', async () => {
+    const t = rowsTerm(screen('reconstructed-rc-panel'))
+    expect(await answerDialog(2, t.deps)).toEqual({ ok: true })
+    expect(t.keys).toEqual(['enter'])
+  })
+})

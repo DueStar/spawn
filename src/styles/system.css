@@ -38,3 +38,5 @@
 .sys-bar { position: static; width: auto; }
 .sys-composer { display: flex; flex-direction: column; }
 .sys-box { min-height: 40px; color: var(--ink-3); }
+.sys-slash { position: relative; padding-top: 290px; }
+.sys-slash .chat-menu { width: 100%; }

@@ -10,8 +10,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { t } from '../../i18n'
 import { termText } from '../../termMetrics'
-import { answerDialog, parseDialog, sameDialog, type Dialog, type DialogKey } from '../../chat/dialog'
+import { answerDialog, dialogSig, parseDialog, type Dialog, type DialogKey } from '../../chat/dialog'
+import { commandRecent } from '../../chat/slash'
 import { CardShell, Exact } from './AnswerSurface'
+import { copyText } from './CodeBlock'
 
 const POLL_MS = 400
 
@@ -22,9 +24,11 @@ export function useTermDialog(id: string, on: boolean, read: (id: string) => str
   const [dialog, setDialog] = useState<Dialog | null>(null)
   useEffect(() => {
     if (!on) { setDialog(null); return }
+    // (the same reading kept; any change — another dialog with the same options and a new body, two permissions in a
+    // row — is a new one, so the card never shows the last dialog's words over the next)
     const look = () => {
       const d = parseDialog(read(id))
-      setDialog(cur => (d && cur && sameDialog(cur, d) && cur.selected === d.selected && cur.title === d.title ? cur : d))
+      setDialog(cur => (d && cur && dialogSig(cur) === dialogSig(d) ? cur : d))
     }
     look()
     const timer = setInterval(look, POLL_MS)
@@ -40,7 +44,13 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
   const field = useRef<HTMLInputElement>(null)
   useEffect(() => { if (words) field.current?.focus() }, [words?.index]) // eslint-disable-line react-hooks/exhaustive-deps
   // another dialog on the screen: a fresh card
-  useEffect(() => { setWords(null); setNote(null) }, [dialog.options.map(o => o.label).join('\n')]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setWords(null); setNote(null); setCopied(null) }, [`${dialog.title}\n${dialog.options.map(o => o.label).join('\n')}`]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [copied, setCopied] = useState<string | null>(null)
+  // a panel with no Esc line (/remote-control's) that opened right after the composer sent a command: Esc closes it,
+  // so 취소 is offered (decided once per panel, by its title: its rows may change while it is open)
+  const panelEsc = useRef<{ title: string; ok: boolean } | null>(null)
+  if (!panelEsc.current || panelEsc.current.title !== dialog.title) panelEsc.current = { title: dialog.title, ok: !dialog.numbered && commandRecent(id, Date.now()) }
+  const esc = dialog.esc || panelEsc.current.ok
 
   const deps = {
     read: () => read(id),
@@ -74,6 +84,19 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
               {dialog.body.map((l, i) => (l ? <p key={i}><Exact text={l} /></p> : <span key={i} className="chat-card-dgap" />))}
             </div>
           )}
+          {/* the panel's links, whole (the terminal may have wrapped them), to select or copy */}
+          {dialog.links.length > 0 && (
+            <div className="chat-card-dlinks">
+              {dialog.links.map(u => (
+                <div key={u} className="chat-card-dlink">
+                  <code><Exact text={u} /></code>
+                  <button type="button" className="chat-btn chat-card-btn" onClick={() => { void copyText(u).then(ok => setCopied(ok ? u : '')) }}>
+                    {copied === u ? t('복사했어요') : copied === '' ? t('복사하지 못했어요') : t('링크 복사')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="chat-card-opts">
             {dialog.options.map((o, i) => (
               <button key={o.n} type="button" className={`chat-btn chat-card-opt${i === dialog.selected ? ' marked' : ''}${words?.index === i ? ' on' : ''}`}
@@ -92,7 +115,7 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
             </form>
           )}
           <div className="chat-card-acts">
-            {dialog.esc && <button type="button" className="chat-btn chat-card-btn" disabled={busy} onClick={() => { void cancel() }}>{t('취소')}</button>}
+            {esc && <button type="button" className="chat-btn chat-card-btn" disabled={busy} onClick={() => { void cancel() }}>{t('취소')}</button>}
             <span className="chat-card-hint" role="status">{busy ? t('보내는 중…') : note ? t(note) : ''}</span>
           </div>
         </CardShell>

@@ -1,0 +1,16 @@
+● Done. The notes are in README.md.
+
+✻ Cooked for 4s
+
+❯ /rc
+
+────────────────────────────────────────────────────────────────────────────────────────────────────
+ Remote Control
+
+ This session is available in the Claude mobile app and at https://claude.ai/code/session_01AbCdEfGh
+ IjKlMnOpQrStUv.
+
+   Disconnect this session
+   Show QR code
+     Scan with your phone to open this session
+ ❯ Continue

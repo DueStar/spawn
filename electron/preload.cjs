@@ -76,6 +76,8 @@ contextBridge.exposeInMainWorld('spawn', {
     dropImage: (p) => ipcRenderer.send('chat:image-drop', { id: String(p?.id ?? ''), token: String(p?.token ?? '') }),
     // the @ mention: names from the session's own folder (main picks the folder)
     files: (p) => ipcRenderer.invoke('chat:files', { id: String(p?.id ?? ''), query: String(p?.query ?? '').slice(0, 200) }),
+    // the / menu: the session's own commands and skills (main picks the folders)
+    commands: (p) => ipcRenderer.invoke('chat:commands', { id: String(p?.id ?? '') }),
     // a send whose page went away before its Enter (asked once as the composer opens)
     stranded: (id) => ipcRenderer.invoke('chat:stranded', String(id)),
     // the buttons (Phase 4): which session's chat is shown (or none), and an answer — its choice only

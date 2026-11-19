@@ -318,6 +318,14 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-mi.sel, .chat-mi:hover { background: rgba(255, 255, 255, 0.06); }
 .chat-mi code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink); }
 .chat-menu-empty { padding: 6px 8px; font-size: var(--t-meta); color: var(--ink-3); }
+/* the / menu (2026-11-19): the same menu, wider, its rows on one line (name, aliases, description cut), scrolling */
+.chat-menu.slash { width: 460px; max-height: 268px; overflow-y: auto; overscroll-behavior: contain; }
+.chat-menu.slash .chat-menu-title { position: sticky; top: -4px; background: var(--card); }
+.chat-mi-cmd { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
+.chat-mi-cmd code { flex: 0 0 auto; max-width: 60%; }
+.chat-mi-alias, .chat-mi-kind { flex: 0 0 auto; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-mi-kind { padding: 0 5px; border: 1px solid var(--line); border-radius: var(--r-s); }
+.chat-mi-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--t-meta); color: var(--ink-3); }
 
 /* ---------------------------------------------------------------- the answer surface (Phase 4; the lab's .card.ask, app.css 296–309)
    Between the conversation and the composer, in the reading column. Amber only for "needs you" (the edge, the bar,
@@ -544,6 +552,10 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 /* the dialog card (a terminal dialog read from the screen): its body, the marked option, a field for words */
 .chat-card-dbody { margin: 0 0 8px; font-size: var(--t-ui); line-height: 1.55; color: var(--ink-2); }
 .chat-card-dbody p { margin: 0; overflow-wrap: anywhere; }
+/* a panel's link (2026-11-19, /remote-control): whole, selectable, with a copy button */
+.chat-card-dlinks { display: grid; gap: 6px; margin: 0 0 8px; }
+.chat-card-dlink { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.chat-card-dlink code { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; user-select: text; cursor: text; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink); }
 .chat-card-dgap { display: block; height: 6px; }
 .chat-card-opt.marked { border-color: var(--line-hover); }
 .chat-card-words { display: flex; gap: 6px; margin-top: 8px; }

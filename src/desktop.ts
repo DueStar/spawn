@@ -115,6 +115,8 @@ interface spawnBridge {
     dropImage(p: { id: string; token: string }): void
     /** The @ mention: file names from the session's own folder that match (names only) */
     files(p: { id: string; query: string }): Promise<{ ok: true; files: string[] } | { ok: false }>
+    /** The / menu: the session's commands and skills besides Claude Code's own (front matter only; main picks the folders) */
+    commands?(p: { id: string }): Promise<{ ok: true; commands: unknown[] } | { ok: false }>
     /** Whether a send of this session ended without Enter because its page went away (asked once, as the composer opens) */
     stranded(id: string): Promise<{ stranded: boolean }>
     /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */

@@ -33,7 +33,9 @@ import { DialogCard } from './components/chat/DialogCard'
 import { DocToggle, MdDoc } from './components/chat/Markdown'
 import { FileChips } from './components/chat/FileChips'
 import { ControlRow } from './components/chat/ControlRow'
+import { SlashMenu } from './components/chat/SlashMenu'
 import { parseDialog, type Dialog } from './chat/dialog'
+import { BUILTIN_COMMANDS, filterCommands } from './chat/slash'
 import type { AskCard, LensStatus } from './chat/types'
 import type { ChatWho } from './chat/lensMode'
 
@@ -188,6 +190,19 @@ const DialogDemo: React.FC = () => {
   return <DialogCard id="demo" dialog={dialog} dialogKey={key} read={() => MODEL_SCREEN(marked.current)} />
 }
 
+/** /remote-control's panel as 2.1.328 draws it (reconstructed: tests/fixtures/chat/screens/reconstructed-rc-panel.txt) */
+const RC_SCREEN = [
+  '────────────────────────────────────────',
+  ' Remote Control',
+  '',
+  ' This session is available in the Claude mobile app and at https://claude.ai/code/session_01AbCdEfGh',
+  '',
+  '   Disconnect this session',
+  '   Show QR code',
+  '     Scan with your phone to open this session',
+  ' ❯ Continue',
+].join('\n')
+
 const card = (extra: Partial<AskCard>): AskCard => ({
   key: 'h', holdId: 'h', kind: 'question', toolId: null, agent: false, tool: 'AskUserQuestion', input: {}, always: null, state: 'open', since: Date.now(), ...extra,
 })
@@ -195,6 +210,7 @@ const local = { busy: null, refused: false }
 
 const Chat: React.FC = () => {
   const [answered, setAnswered] = useState('')
+  const [slashSel, setSlashSel] = useState(0)
   const answer = (c: string, o?: number, p?: number[][]) => setAnswered(`${c} ${o ?? ''} ${p ? JSON.stringify(p) : ''}`)
   const queue: LensStatus = { state: 'working', since: Date.now(), label: null, banner: null, note: null, version: null, hasOlder: false, empty: false, queued: [{ text: '끝나면 테스트도 돌려 주세요', truncated: false }, { text: '그리고 README 정리', truncated: false }, { text: '마지막으로 커밋', truncated: false }], queuedCount: 4 } as LensStatus
   return (
@@ -225,6 +241,15 @@ const Chat: React.FC = () => {
       </Spec>
       <Spec name="선택 창 카드" file="src/components/chat/DialogCard.tsx · src/chat/dialog.ts" note="훅이 못 잡은 터미널 선택 창을 화면에서 읽어 카드로. 여기선 가짜 터미널에 답해요.">
         <DialogDemo />
+      </Spec>
+      <Spec name="패널 카드" file="src/components/chat/DialogCard.tsx · src/chat/dialog.ts" note="번호 없는 줄 목록(/rc 같은 패널)도 카드로. 링크는 통째로 보여 주고 복사돼요.">
+        <DialogCard id="sys-rc" dialog={parseDialog(RC_SCREEN)!} dialogKey={async () => ({ ok: true })} read={() => RC_SCREEN} />
+      </Spec>
+      <Spec name="명령 메뉴" file="src/components/chat/SlashMenu.tsx · src/chat/slash.ts" note="입력란에 /를 치면 떠요. ↑↓로 고르고 Enter·Tab이면 /이름 을 채워요(보내지는 않아요).">
+        <div className="sys-composer sys-slash">
+          <SlashMenu listId="sys-slash" commands={filterCommands(BUILTIN_COMMANDS, 're')} sel={slashSel} onPick={i => setAnswered(`/${filterCommands(BUILTIN_COMMANDS, 're')[i].name} `)} onHover={setSlashSel} />
+          <div className="chat-cbox sys-box">/re</div>
+        </div>
       </Spec>
       <Spec name="문서 카드" file="src/components/chat/Markdown.tsx MdDoc" note="마크다운 블록과 새 .md 파일. 문서 · 원문." wide>
         <MdDoc title="markdown" text={'# 1.7.0 노트\n\n## 채팅\n- 선택 창을 카드로\n- 모델·모드 메뉴\n\n| 항목 | 상태 |\n|---|---|\n| 다중 선택 | 확인 대기 |\n| plan 승인 | 확인 대기 |'} onLink={noop} onPath={noop} />
