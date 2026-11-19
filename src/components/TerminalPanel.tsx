@@ -20,6 +20,7 @@ import { t } from '../i18n'
 import { appShortcut, clipboardAction, keptFromPty, wheelFontStep } from '../keys'
 import { isMac } from '../platform'
 import { fileRefPattern } from '../fileRef'
+import { withDates } from '../sameNames'
 
 const THEME = {
   background: '#101218',
@@ -464,12 +465,36 @@ export const ResumePicker: React.FC<{
   const [asking, setAsking] = useState<string | null>(null)
   const [deleted, setDeleted] = useState<PastSession | null>(null)
   const [trashNote, setTrashNote] = useState<string | null>(null)
+  // (2026-11-19) the conversations a /clear left behind, folded under 이전 대화 n개 (they read like the one after them)
+  const [showOld, setShowOld] = useState(false)
+  // a row being deleted while its just-closed Claude Code ends (main waits for it, up to 30 s)
+  const [waiting, setWaiting] = useState<string | null>(null)
   const remove = async (it: PastSession) => {
     setAsking(null)
+    if (it.closing) { setWaiting(it.id); setDeleted(null); setTrashNote(t('방금 닫은 세션이 끝나는 중이에요. 끝나면 지울게요…')) }
     const r = await bridge?.terminals.trash(it.id).catch(() => null)
+    setWaiting(null)
     if (r && r.ok) { setItems(cur => (cur ?? []).filter(x => x.id !== it.id)); setDeleted(it); setTrashNote(null) }
-    else setTrashNote(r && !r.ok && r.reason === 'running' ? t('실행 중인 세션은 지울 수 없어요') : t('지우지 못했어요'))
+    else setTrashNote(r && !r.ok && (r.reason === 'running' || r.reason === 'open') ? t('실행 중인 세션은 지울 수 없어요') : t('지우지 못했어요'))
   }
+  // 실행 중 / 닫는 중 go by themselves: while a row has one, its state is asked again every 2.5 s
+  const watched = (items ?? []).filter(x => x.running || x.closing).map(x => x.id).join(',')
+  useEffect(() => {
+    const b = bridge
+    if (!b || !watched) return
+    let live = true
+    const timer = setInterval(() => {
+      b.terminals.states(watched.split(',')).then(states => {
+        if (!live) return
+        const by = new Map(states.map(s => [s.id, s]))
+        setItems(cur => cur && cur.map(x => {
+          const s = by.get(x.id)
+          return s && (s.running !== x.running || !!s.closing !== !!x.closing || !!s.open !== !!x.open) ? { ...x, running: s.running, closing: s.closing, open: s.open } : x
+        }))
+      }).catch(() => {})
+    }, 2500)
+    return () => { live = false; clearInterval(timer) }
+  }, [watched])
   const undo = async () => {
     const it = deleted
     if (!it) return
@@ -499,44 +524,23 @@ export const ResumePicker: React.FC<{
           <div className="resume-list">
             {items === null && <div className="resume-empty">{t('불러오는 중…')}</div>}
             {items?.length === 0 && <div className="resume-empty">{t('이어할 세션이 없어요.')}</div>}
-            {items?.map(it => {
-              const open = openIds.has(it.id)
-              if (asking === it.id) return (
-                <div key={it.id} className="resume-item resume-ask" role="group">
-                  <span className="resume-title">{t('기록까지 삭제할까요?')} <b>{it.title}</b></span>
-                  <span className="resume-meta">{t('휴지통에 7일 동안 있다가 지워져요')}</span>
-                  <span className="resume-ask-acts">
-                    <button className="danger" onClick={() => { void remove(it) }}>{t('삭제')}</button>
-                    <button onClick={() => setAsking(null)}>{t('취소')}</button>
-                  </span>
-                </div>
-              )
-              return (
-                <div key={it.id} className="resume-row">
-                <button
-                  className={`resume-item${it.running ? ' running' : ''}`}
-                  disabled={open}
-                  onClick={() => (it.running ? setWarn(it) : onPick(it))}
-                  title={it.cwd}
-                >
-                  <span className="resume-title">
-                    {(() => { const m = monFor?.(it.id); return m ? <img className="resume-mon" src={m.src} alt={m.name} title={m.name} /> : null })()}
-                    {it.title}
-                  </span>
-                  <span className="resume-meta">
-                    <span className="resume-project">{it.project}</span>
-                    <span>{ago(it.updatedAt)}</span>
-                    {open ? <span className="resume-badge">{t('앱에서 열림')}</span> : it.running && <span className="resume-badge run">{t('실행 중')}</span>}
-                  </span>
+            {items && (() => {
+              const recent = items.filter(x => !x.superseded)
+              const old = items.filter(x => x.superseded)
+              // two that share a name (two tabs /rename'd alike, a /clear's twin shown): the day, then the time, tells them apart
+              const recentLabels = withDates(recent.map(x => x.title), recent.map(x => x.updatedAt))
+              const allLabels = withDates([...recent, ...old].map(x => x.title), [...recent, ...old].map(x => x.updatedAt))
+              const label = new Map<string, string>()
+              recent.forEach((x, i) => label.set(x.id, recentLabels[i] ?? x.title))
+              old.forEach((x, i) => label.set(x.id, allLabels[recent.length + i] ?? x.title))
+              const rows = [...recent, ...(showOld ? old : [])].map(x => row(x, label.get(x.id) ?? x.title))
+              if (old.length) rows.splice(recent.length, 0, (
+                <button key="old-toggle" className="resume-old-toggle" aria-expanded={showOld} onClick={() => setShowOld(v => !v)}>
+                  {showOld ? t('이전 대화 접기') : t('이전 대화 {n}개', { n: old.length })}
                 </button>
-                {!open && !it.running && (
-                  <button className="resume-trash" onClick={() => setAsking(it.id)} title={t('기록까지 삭제')} aria-label={`${t('기록까지 삭제')}: ${it.title}`}>
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9M6.8 7v4.5M9.2 7v4.5" /></svg>
-                  </button>
-                )}
-                </div>
-              )
-            })}
+              ))
+              return rows
+            })()}
           </div>
         )}
         {(deleted || trashNote) && (
@@ -548,4 +552,46 @@ export const ResumePicker: React.FC<{
       </div>
     </div>
   )
+
+  function row(it: PastSession, title: string) {
+    const open = openIds.has(it.id) || !!it.open
+    if (asking === it.id) return (
+      <div key={it.id} className="resume-item resume-ask" role="group">
+        <span className="resume-title">{t('기록까지 삭제할까요?')} <b>{title}</b></span>
+        <span className="resume-meta">{t('휴지통에 7일 동안 있다가 지워져요')}</span>
+        <span className="resume-ask-acts">
+          <button className="danger" onClick={() => { void remove(it) }}>{t('삭제')}</button>
+          <button onClick={() => setAsking(null)}>{t('취소')}</button>
+        </span>
+      </div>
+    )
+    return (
+      <div key={it.id} className={`resume-row${it.superseded ? ' old' : ''}`}>
+      <button
+        className={`resume-item${it.running ? ' running' : ''}`}
+        disabled={open || waiting === it.id}
+        onClick={() => (it.running ? setWarn(it) : onPick(it))}
+        title={it.cwd}
+      >
+        <span className="resume-title">
+          {(() => { const m = monFor?.(it.id); return m ? <img className="resume-mon" src={m.src} alt={m.name} title={m.name} /> : null })()}
+          {title}
+        </span>
+        <span className="resume-meta">
+          <span className="resume-project">{it.project}</span>
+          <span>{ago(it.updatedAt)}</span>
+          {it.superseded && <span className="resume-badge" title={t('/clear 하기 전의 대화예요. 그 뒤 대화가 같은 이름으로 이어져요')}>{t('/clear 전')}</span>}
+          {open ? <span className="resume-badge">{t('앱에서 열림')}</span>
+            : it.closing ? <span className="resume-badge">{t('닫는 중')}</span>
+            : it.running && <span className="resume-badge run">{t('실행 중')}</span>}
+        </span>
+      </button>
+      {!open && !it.running && waiting !== it.id && (
+        <button className="resume-trash" onClick={() => setAsking(it.id)} title={t('기록까지 삭제')} aria-label={`${t('기록까지 삭제')}: ${title}`}>
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 9h6.6l.7-9M6.8 7v4.5M9.2 7v4.5" /></svg>
+        </button>
+      )}
+      </div>
+    )
+  }
 }

@@ -333,6 +333,10 @@
 .resume-trash { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer; opacity: 0; }
 .resume-row:hover .resume-trash, .resume-trash:focus-visible { opacity: 1; }
 .resume-trash:hover { color: var(--red-text); background: var(--hover); }
+/* (2026-11-19) the conversations a /clear left behind: one quiet line, then rows a little dimmer */
+.resume-old-toggle { display: block; width: 100%; margin: 4px 0; padding: 6px 12px; background: none; border: 0; border-radius: var(--r-s); color: var(--ink-3); font: inherit; font-size: var(--t-meta); text-align: left; cursor: pointer; }
+.resume-old-toggle:hover { color: var(--ink-2); background: var(--hover); }
+.resume-row.old .resume-title { color: var(--ink-2); }
 .resume-ask { cursor: default; border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
 .resume-ask .resume-title b { font-weight: var(--w-name); color: var(--ink-2); }
 .resume-ask-acts { display: flex; gap: 6px; justify-content: flex-end; }

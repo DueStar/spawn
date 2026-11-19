@@ -30,8 +30,8 @@ const {
 const { createTray } = require('./tray.cjs')
 const { createTerminalManager, gitBranch } = require('./terminals.cjs')
 const { claudeCommand } = require('./adapters.cjs')
-const { listHistory, claudeDir, runningSessions } = require('./history.cjs')
-const { trashSession, restoreSession, purgeTrash } = require('./sessionTrash.cjs')
+const { listHistory, claudeDir, runningSessions, runningCheck, readSessionLinks, appTitles } = require('./history.cjs')
+const { trashWhenEnded, restoreSession, purgeTrash } = require('./sessionTrash.cjs')
 const { checkPrereqs, claudeVersion, LINKS: PREREQ_LINKS } = require('./prereqs.cjs')
 const { mergeLoginEnv } = require('./shellEnv.cjs')
 const { createStartGate } = require('./startGate.cjs')
@@ -1222,14 +1222,48 @@ function registerTerminalIpc() {
     const r = await dialog.showOpenDialog(parent, { title, defaultPath: app.getPath('documents'), properties: ['openDirectory'] })
     return r.canceled ? null : r.filePaths[0]
   }))
-  ipcMain.handle('sessions:history', guard(() => {
-    try { return listHistory({ limit: 40 }).map(h => (state.sessionTitles?.[h.id] ? { ...h, title: state.sessionTitles[h.id], named: true } : h)) } catch (err) { console.error('[main] history:', err.message); return [] }
+  // The resume list's states (2026-11-19): `open` (one of the app's tabs has it, also the conversation a /clear gave a
+  // tab), `closing` (its tab was just closed and its Claude Code is still ending), `running` (checked: a pid Windows
+  // reused for another program no longer counts, history.cjs runningCheck)
+  const runningNow = runningCheck()
+  const sessionStates = async (ids) => {
+    const live = await runningNow().catch(() => runningSessions())
+    const open = terminals.openConversations()
+    const closed = terminals.recentlyClosed()
+    return ids.map(id => {
+      const isOpen = open.has(id)
+      const isClosing = !isOpen && live.has(id) && closed.has(id)
+      return { id, open: isOpen, closing: isClosing, running: !isOpen && !isClosing && live.has(id) }
+    })
+  }
+  ipcMain.handle('sessions:history', guard(async () => {
+    try {
+      const live = await runningNow().catch(() => runningSessions())
+      const userData = app.getPath('userData')
+      const list = listHistory({ limit: 40, running: live, userDataDir: userData })
+      const states = new Map((await sessionStates(list.map(h => h.id))).map(s => [s.id, s]))
+      // the app's names go with each tab's current conversation, never on one a /clear superseded
+      const named = appTitles(state.sessionTitles, readSessionLinks(userData), list)
+      return list.map(h => {
+        const s = states.get(h.id)
+        const out = s ? { ...h, running: s.running, ...(s.open ? { open: true } : {}), ...(s.closing ? { closing: true } : {}) } : h
+        return named.has(h.id) ? { ...out, title: named.get(h.id), named: true } : out
+      })
+    } catch (err) { console.error('[main] history:', err.message); return [] }
   }))
+  // The picker asks again every few seconds while a row is 실행 중 or 닫는 중, so the badge goes by itself
+  ipcMain.handle('sessions:states', guard((ids) => sessionStates(Array.isArray(ids) ? ids.map(String).slice(0, 200) : [])))
   // A session deleted from the resume list (2026-11-17): its transcript into ~/.spawn/trash for 7 days, never one
-  // open in this app or running elsewhere; restore puts it back (electron/sessionTrash.cjs)
+  // open in this app or running elsewhere; restore puts it back (electron/sessionTrash.cjs). One whose tab was just
+  // closed is waited for (30 s at most) while its Claude Code ends (2026-11-19)
   ipcMain.handle('sessions:trash', guard((id) => {
-    const open = new Set(terminals.list().filter(x => x.status !== 'exited').map(x => x.sessionId))
-    return trashSession({ claudeDir: claudeDir(), spawnHome: runtimeDirFromEnv(process.env), id: String(id ?? ''), running: (x) => open.has(x) || runningSessions().has(x) })
+    const closed = terminals.recentlyClosed()
+    return trashWhenEnded({
+      claudeDir: claudeDir(), spawnHome: runtimeDirFromEnv(process.env), id: String(id ?? ''),
+      open: (x) => terminals.openConversations().has(x),
+      running: async (x) => (await runningNow().catch(() => runningSessions())).has(x),
+      closing: (x) => closed.has(x),
+    })
   }))
   ipcMain.handle('sessions:restore', guard((id) => restoreSession({ claudeDir: claudeDir(), spawnHome: runtimeDirFromEnv(process.env), id: String(id ?? '') })))
   ipcMain.handle('terminals:buffer', guard((id) => terminals.buffer(String(id))))

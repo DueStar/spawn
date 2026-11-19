@@ -106,7 +106,9 @@ export const SessionHeader: React.FC<{
   onTabClose?(sid: string): void
   /** A pane of the split view (src/splitPanes.ts): its × closes the pane, the session goes on */
   paneClose?: boolean
-}> = ({ parts, sprite, cwd, renaming, onRenameStart, onRenameCommit, onRenameCancel, closing, onClose, onCloseCancel, lens, chatTools, tabs, activeTab, onTab, onTabClose, paneClose }) => {
+  /** What the rename box starts with: the session's own name (parts.name may carry a " (2)" telling twins apart) */
+  renameValue?: string | null
+}> = ({ parts, sprite, cwd, renaming, onRenameStart, onRenameCommit, onRenameCancel, closing, onClose, onCloseCancel, lens, chatTools, tabs, activeTab, onTab, onTabClose, paneClose, renameValue }) => {
   const head = (
     <>
     {pictureOf(parts.picture, sprite)}
@@ -114,7 +116,7 @@ export const SessionHeader: React.FC<{
       <input
         className="w-sess-head-rename"
         autoFocus
-        defaultValue={parts.name ?? ''}
+        defaultValue={(renameValue === undefined ? parts.name : renameValue) ?? ''}
         placeholder={t('새 세션')}
         maxLength={40}
         aria-label={t('세션 이름 바꾸기')}

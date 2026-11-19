@@ -38,6 +38,7 @@ import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, 
 import { modeFromUrl, readCarry, writeCarry } from './carry'
 import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
+import { numbered } from './sameNames'
 import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
@@ -128,9 +129,14 @@ interface Row {
   branch?: string | null
   /** A plain shell tab: no AI, no Pokémon */
   shell?: boolean
-  /** The trainer's name for the session */
+  /** The trainer's name for the session, as shown (a twin's carries " (2)", src/sameNames.ts) */
   title: string | null
+  /** The session's own name when `title` was told apart from a twin's (what renaming starts from) */
+  ownTitle?: string | null
 }
+
+/** A session's own name (never a twin's " (2)"): what renaming starts from and compares with */
+const ownName = (r: Pick<Row, 'title' | 'ownTitle'>) => (r.ownTitle !== undefined ? r.ownTitle : r.title)
 
 /**
  * A session's model, short: the status line's display name ("Opus 5.5"), else the id from its
@@ -453,7 +459,7 @@ const Widget: React.FC = () => {
     const ids = new Set<string>()
     for (const t of terminals) ids.add(t.sessionId)
     // Only the sessions this app runs: one left over from a closed app has no terminal to talk to
-    return [...ids].map((sessionId) => {
+    const list: Row[] = [...ids].map((sessionId) => {
       const terminal = terminals.find(t => t.sessionId === sessionId)
       const session = sessions.find(s => s.id === sessionId)
       const meter = meters.sessions.find(m => m.sessionId === sessionId)
@@ -468,6 +474,9 @@ const Widget: React.FC = () => {
         shell: terminal?.tool === 'shell',
       }
     }).filter(r => r.mood !== 'ended' || r.terminal)
+    // (2026-11-19) two open sessions of one name: the list, the tabs and the pane heads say "Spawn", "Spawn (2)"
+    const labels = numbered(list.map(r => r.title))
+    return list.map((r, i) => (labels[i] === r.title ? r : { ...r, title: labels[i], ownTitle: r.title }))
   }, [terminals, sessions, meters, castVersion, branches])
 
   // A session that finishes its turn or starts waiting on the trainer while the app is behind:
@@ -520,7 +529,7 @@ const Widget: React.FC = () => {
   const commitRename = (r: Row, value: string) => {
     if (!r.terminal) return
     const name = value.trim()
-    if (name === (r.title ?? '')) return
+    if (name === (ownName(r) ?? '')) return
     bridge?.terminals.rename(r.terminal.id, name)
     if (!name || !renames(r)) return
     if (isFree(r)) renameNow(r.terminal.id, name)
@@ -1256,7 +1265,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 <input
                   className="w-row-rename"
                   autoFocus
-                  defaultValue={r.title ?? ''}
+                  defaultValue={ownName(r) ?? ''}
                   placeholder={t('새 세션')}
                   maxLength={40}
                   onClick={e => e.stopPropagation()}
@@ -1517,6 +1526,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%` }} onPointerDown={() => focusPane(sid)}>
                     <SessionHeader
                       parts={sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode)}
+                      renameValue={ownName(r)}
                       sprite={r.sprite}
                       cwd={r.session?.cwd ?? r.terminal?.cwd}
                       renaming={renaming?.id === sid && renaming.at === 'header'}
@@ -1538,6 +1548,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               {shown?.terminal && (
                 <SessionHeader
                   parts={sessionHeaderParts({ ...shown, noPokemon: noPokemon(shown) }, workMode)}
+                  renameValue={ownName(shown)}
                   sprite={shown.sprite}
                   cwd={shown.session?.cwd ?? shown.terminal.cwd}
                   renaming={renaming?.id === shown.sessionId && renaming.at === 'header'}

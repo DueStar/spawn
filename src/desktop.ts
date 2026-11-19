@@ -42,9 +42,20 @@ export interface PastSession {
   title: string
   updatedAt: number
   sizeKb: number
-  /** Its Claude Code process is still running somewhere (another terminal, or this app) */
+  /** Its Claude Code process is still running somewhere else (another terminal): not one of the app's tabs */
   running: boolean
+  /** Open in one of the app's tabs (the tab's own id, or the conversation a /clear gave it) */
+  open?: boolean
+  /** Its tab was just closed and its Claude Code is still ending (deleting it waits for that) */
+  closing?: boolean
+  /** A conversation a /clear in an app tab left behind (the one after it has the same title): folded by default */
+  superseded?: boolean
+  /** The trainer named it in the app */
+  named?: boolean
 }
+
+/** A listed past session's state now (sessions:states) */
+export interface PastSessionState { id: string; open: boolean; closing: boolean; running: boolean }
 
 interface spawnBridge {
   isDesktop: true
@@ -57,8 +68,11 @@ interface spawnBridge {
     /** The git branch of each folder (null: not in a repository) */
     branches(dirs: string[]): Promise<Record<string, string | null>>
     history(): Promise<PastSession[]>
-    /** Deletes a past session (its transcript into the trash for 7 days); never one open or running */
-    trash(id: string): Promise<{ ok: true; moved: number } | { ok: false; reason: 'invalid' | 'running' | 'none' | 'failed' }>
+    /** The state now of sessions listed by history() */
+    states(ids: string[]): Promise<PastSessionState[]>
+    /** Deletes a past session (its transcript into the trash for 7 days); never one open or running. One whose tab was
+     * just closed is waited for while its Claude Code ends (up to 30 s) */
+    trash(id: string): Promise<{ ok: true; moved: number; waited?: number } | { ok: false; reason: 'invalid' | 'open' | 'running' | 'none' | 'failed' }>
     /** Puts a trashed session back */
     restore(id: string): Promise<{ ok: boolean; reason?: string }>
     /** The output so far, and the number of the last batch in it (terminals:data carries each batch's) */

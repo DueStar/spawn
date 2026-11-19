@@ -252,6 +252,7 @@ function linkedConversation(userDataDir, sessionId) {
  */
 function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd, extraArgs = () => [], titles = { get: () => null, set: () => {} }, tools = () => [], emit = () => {}, postStatus = () => {}, pty: ptyModule = null, killTree = killTreeNow, codexWatch = createCodexWatch, exitGraceMs = 5000, otherTools = OTHER_TOOLS, chat = { state: () => ({ on: false }) } }) {
   const terms = new Map() // id -> { id, sessionId, cwd, pty, buffer, status, createdAt, exitCode }
+  const closed = new Map() // conversation id -> when its tab was closed while it ran (recentlyClosed)
   let settingsFile = null
   // The sessions open when the app last closed (open-sessions.json): what the
   // next start may reopen. Read once at start, before this run writes over it.
@@ -428,6 +429,8 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // for a tab opened later as the chunks sent (chunks/size): appending to one 200 KB string
     // copied all of it on every chunk. What a tab replays was sent already, so nothing doubles.
     const t = { id: sessionId, sessionId, cwd: dir, pty, chunks: [], size: 0, pending: '', flushTimer: null, seq: 0, status: 'running', createdAt: Date.now(), adapter }
+    closed.delete(sessionId) // (open again: not closing any more)
+    if (conversation) closed.delete(conversation)
     if (launchSettings?.armed) { t.chatArmed = true; t.chatFile = launchSettings.file }
     t.exited = new Promise((resolve) => { t.markExited = resolve })
     terms.set(t.id, t)
@@ -668,6 +671,14 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // An ended session's pty is closed too: node-pty leaves its pseudo-console and output
     // worker open after a plain exit, and once the tab is gone shutdown() cannot reach it
     try { t.pty.kill() } catch {}
+    // (2026-11-19) Claude Code may take a few seconds more to end (its SessionEnd hooks, Windows' own teardown):
+    // meanwhile the resume list says 닫는 중, not 실행 중, and deleting it waits for the end (main's sessions:trash)
+    if (t.status !== 'exited' && t.adapter.id === 'claude') {
+      const at = Date.now()
+      closed.set(t.sessionId, at)
+      const conversation = linkedConversation(userDataDir, t.sessionId)
+      if (conversation) closed.set(conversation, at)
+    }
     terms.delete(id)
     // the chat settings file this session was launched with (one per session: its hooks name it) goes with it
     if (t.chatFile && ![...terms.values()].some(o => o.chatFile === t.chatFile)) {
@@ -675,6 +686,31 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       try { fs.rmSync(t.chatFile, { force: true }) } catch {}
     }
     broadcastList()
+  }
+
+  /**
+   * The conversations of the tabs closed in the last `withinMs` while their Claude Code still ran (the tab's own id
+   * and the conversation it had after a /clear): the app ended them, so a process of theirs still alive is closing.
+   */
+  function recentlyClosed(withinMs = 120_000) {
+    const now = Date.now()
+    for (const [sid, at] of closed) if (now - at > withinMs) closed.delete(sid)
+    return new Set(closed.keys())
+  }
+
+  /**
+   * The conversations open in the app's running tabs: each tab's own id and the conversation it has now (after a
+   * /clear, another id: what the resume list must call 앱에서 열림, not 실행 중)
+   */
+  function openConversations() {
+    const out = new Set()
+    for (const t of terms.values()) {
+      if (t.status === 'exited') continue
+      out.add(t.sessionId)
+      const conversation = linkedConversation(userDataDir, t.sessionId)
+      if (conversation) out.add(conversation)
+    }
+    return out
   }
 
   /** Put a tab at `index` (the tab bar's order, also the order reopened at the next start) */
@@ -720,7 +756,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return { exited: running.length - stuck, stuck }
   }
 
-  return { create, write, sendInstruction, typeForChat, clearAsking, resize, redrawForChat, buffer, list, rename, close, move, shutdown, freeze, takeRestorable, refreshSettings, armedCount }
+  return { create, write, sendInstruction, typeForChat, clearAsking, resize, redrawForChat, buffer, list, rename, close, move, shutdown, freeze, takeRestorable, refreshSettings, armedCount, recentlyClosed, openConversations }
 }
 
 module.exports = { createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
