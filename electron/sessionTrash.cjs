@@ -56,6 +56,31 @@ function trashSession({ claudeDir, spawnHome, id, running = () => false, now = D
   return moved ? { ok: true, moved } : { ok: false, reason: 'failed' }
 }
 
+/**
+ * Deleting from the resume list (2026-11-19, "right after closing a session it still looks running, so I can't
+ * delete it"). `open(id)`: open in one of the app's tabs (never moved). `running(id)`: its Claude Code process still
+ * runs (async: history.cjs runningCheck). `closing(id)`: the app closed its tab a moment ago, so that process is on
+ * its way out (SessionEnd hooks, Windows' teardown): it is waited for, polling every `pollMs` for at most `waitMs`,
+ * and then moved. Running anywhere else (another terminal's live session): refused, as before.
+ * @returns {Promise<{ ok: true, moved: number, waited?: number } | { ok: false, reason: 'invalid' | 'open' | 'running' | 'none' | 'failed' }>}
+ */
+async function trashWhenEnded({
+  claudeDir, spawnHome, id, open = () => false, running = async () => false, closing = () => false,
+  waitMs = 30_000, pollMs = 1000, sleep = (ms) => new Promise(r => setTimeout(r, ms)), clock = Date.now, now, fs = fsDefault,
+}) {
+  if (!UUID.test(String(id))) return { ok: false, reason: 'invalid' }
+  if (open(id)) return { ok: false, reason: 'open' }
+  const start = clock()
+  let waited = 0
+  while (await running(id)) {
+    if (!closing(id) || clock() - start >= waitMs) return { ok: false, reason: 'running' }
+    await sleep(pollMs)
+    waited = clock() - start
+  }
+  const r = trashSession({ claudeDir, spawnHome, id, now: now ?? clock(), fs })
+  return r.ok && waited ? { ...r, waited } : r
+}
+
 /** Puts a trashed session back where it was (any day folder that has it) */
 function restoreSession({ claudeDir, spawnHome, id, fs = fsDefault }) {
   if (!UUID.test(String(id))) return { ok: false, reason: 'invalid' }
@@ -97,4 +122,4 @@ function purgeTrash({ spawnHome, now = Date.now(), keepDays = KEEP_DAYS, fs = fs
   return gone
 }
 
-module.exports = { KEEP_DAYS, findSession, trashSession, restoreSession, purgeTrash }
+module.exports = { KEEP_DAYS, findSession, trashSession, trashWhenEnded, restoreSession, purgeTrash }

@@ -361,7 +361,18 @@ async function main() {
     // The conversation now going on in this app terminal (another one after /clear): what reopening it resumes
     const link = process.env.SPAWN_LINK_FILE
     if (link && isObj(d) && d.hook_event_name === 'SessionStart' && terminalSessionId() && /^[0-9a-f-]{36}$/i.test(String(d.session_id))) {
-      try { require('fs').writeFileSync(link, String(d.session_id)) } catch { /* not worth failing the hook */ }
+      // (a /clear: the conversation it leaves behind is noted in `<link>.prev`, so the resume list can fold it under
+      // the one that follows, which Claude Code gives the same title; electron/history.cjs supersededIds)
+      try {
+        const fs = require('fs')
+        if (d.source === 'clear') {
+          let before = ''
+          try { before = fs.readFileSync(link, 'utf8').trim() } catch { /* never cleared before: the terminal's own */ }
+          if (!/^[0-9a-f-]{36}$/i.test(before)) before = terminalSessionId()
+          if (before && before !== String(d.session_id) && before !== terminalSessionId()) fs.appendFileSync(`${link}.prev`, `${before}\n`)
+        }
+        fs.writeFileSync(link, String(d.session_id))
+      } catch { /* not worth failing the hook */ }
     }
   }
   if (event) await postJson(serverUrl('event'), JSON.stringify({ ...event, at: startedAt }))
