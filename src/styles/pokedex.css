@@ -387,14 +387,15 @@
 /* Sticky over the rows: the pane's own background, so no lighter strip shows behind it */
 .today-day { position: sticky; top: 0; z-index: 1; margin: 6px 0 0; padding: 8px 0 4px; font-size: var(--t-meta); font-weight: var(--w-name); color: var(--ink-3); background: var(--bg); }
 .today-day:first-child { margin-top: 0; }
-.today-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-radius: 0; }
+.today-row { display: flex; align-items: center; gap: 12px; min-height: 60px; box-sizing: border-box; padding: 12px 0; border-radius: 0; }
+/* (2026-11-19, the owner: a little roomier, and the level-up row as tall as the others: every row at least 60px) */
 /* a very faint line between entries */
 .today-row + .today-row { border-top: 1px solid rgba(255, 255, 255, 0.045); }
 /* one line at every text step ("오후 02:12", "02:12 PM"): the column grows with the text */
 .today-time { width: 5.6em; flex: none; white-space: nowrap; font-size: var(--t-meta); color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .today-row img.today-icon { width: 32px; height: 32px; object-fit: contain; flex: none; }
 /* Level-ups in a row: one small line, no big picture */
-.today-row.kind-levelups { padding: 8px 0; font-size: var(--t-meta); color: var(--ink-3); }
+.today-row.kind-levelups { font-size: var(--t-meta); color: var(--ink-3); }
 .today-lv-label { flex: none; font-weight: var(--w-name); }
 .today-lv-mons { display: flex; flex-wrap: wrap; gap: 4px 10px; min-width: 0; }
 .today-lv-mon { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }

@@ -230,6 +230,11 @@ function gitBranch(dir) {
  * SessionStart; /clear starts another one in the same terminal): what reopening
  * the terminal resumes. Else '' (never cleared, or an older session).
  */
+/** What Claude Code 2.1.32x prints on /exit (one of these at random) */
+const GOODBYE = /(Goodbye!|See ya!|Bye!|Catch you later!)\s*$/
+/** The goodbye stays on screen this long before the tab goes */
+const EXIT_CLOSE_MS = 1200
+
 function linkFile(userDataDir, sessionId) { return path.join(userDataDir, 'session-links', sessionId) }
 function linkedConversation(userDataDir, sessionId) {
   try {
@@ -475,6 +480,13 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       send('terminals:list', list())
       // Claude killed with its terminal never runs SessionEnd: say it ourselves
       if (onExit) { try { onExit(t.sessionId, exitCode) } catch {} }
+      // /exit (2026-11-19, the owner: "it should work as closing the session from the left panel"): Claude Code ended
+      // cleanly and said goodbye as /exit does, so the tab goes as the panel's × makes it go. A crash, a kill or Windows
+      // ending the process at shutdown says no goodbye: that tab stays (and is reopened at the next start)
+      if (userExited(t, exitCode)) {
+        const timer = setTimeout(() => { if (terms.get(t.id) === t) close(t.id) }, EXIT_CLOSE_MS)
+        timer.unref?.()
+      }
     })
     broadcastList()
     return info(t)
@@ -638,6 +650,13 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return true
   }
 
+  /** Whether a Claude session ended by /exit (or /quit): exit code 0 and Claude Code's goodbye in its last output */
+  function userExited(t, exitCode) {
+    if (exitCode !== 0 || t.adapter.id !== 'claude') return false
+    const tail = t.chunks.join('').slice(-2000).replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '')
+    return GOODBYE.test(tail)
+  }
+
   /** Send what a session printed since the last batch, and keep it for a tab opened later */
   function flushOutput(t) {
     if (t.flushTimer) { clearTimeout(t.flushTimer); t.flushTimer = null }
@@ -759,4 +778,4 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
   return { create, write, sendInstruction, typeForChat, clearAsking, resize, redrawForChat, buffer, list, rename, close, move, shutdown, freeze, takeRestorable, refreshSettings, armedCount, recentlyClosed, openConversations }
 }
 
-module.exports = { createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
+module.exports = { GOODBYE, createTerminalManager, killTreeNow, writeSessionSettings, sessionSettingsJson, cleanEnv, readOpenSessions, hasTranscript, linkedConversation, gitBranch, HOOK_EVENTS }
