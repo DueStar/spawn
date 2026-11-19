@@ -2,6 +2,15 @@
 
 ## spawn
 
+### 1.10.0
+- 세션을 2~3개 나란히 볼 수 있어요. 왼쪽 목록에서 세션을 오른쪽으로 끌어다 놓거나 Ctrl+클릭하면 옆에 칸이 생기고, 칸마다 대화와 입력란이 따로 있어요. 터미널로 바꾸면 칸마다 그 세션의 터미널이 보여요. 칸의 ×는 칸만 닫고 세션은 계속 돌아요.
+- 채팅 입력란에서 /를 치면 명령 목록이 떠요. 기본 명령과 내 명령·스킬을 이름으로 찾아 골라요.
+- /rc(원격 제어)처럼 번호 없이 고르는 창도 채팅에 카드로 떠요. 창에 있는 링크는 카드에서 바로 복사할 수 있어요.
+- 여러 번 이어서 골라야 할 때 첫 번째만 카드로 뜨고 그다음은 안 뜨던 문제를 고쳤어요.
+- 터미널이 선으로 그린 표가 특수문자 그대로 보이던 문제를 고쳤어요. 이제 표로 보여요.
+- 생각 정도를 Claude가 일하는 중에도 바꿀 수 있어요.
+- 윈도우용 설치 파일(spawn-Setup)이 생겼어요. 열면 설치되고 바탕화면·시작 메뉴 바로가기가 생기고 바로 켜져요.
+
 ### 1.9.0
 - 채팅 아래 모델 옆에서 생각 정도(자동 · 낮음 · 보통 · 높음 · 매우 높음 · 최대)를 눌러서 바꿀 수 있어요.
 - 업데이트를 다 받아서 재시작만 남으면 버튼이 다시 시작 아이콘과 "재시작" 글자로 바뀌어요. 받을 업데이트가 있을 때와 구분돼요.
@@ -466,6 +475,15 @@
 
 ## spawn (English)
 
+### 1.10.0
+- See two or three sessions side by side: drag a session from the left list onto the right side, or Ctrl+click it, and it opens in a pane of its own with its own conversation and composer. In terminal mode each pane shows its session's terminal. A pane's × closes only the pane; the session keeps running.
+- Type / in the chat box for a list of commands: the built-in ones and your own commands and skills, found by name.
+- Panels you pick from without numbers, such as /rc (Remote Control), now show as cards in the chat too, with their link ready to copy.
+- When you had to choose several times in a row, only the first choice showed as a card. Fixed.
+- Tables the terminal draws with lines showed as raw characters. They show as tables now.
+- The effort can be changed while Claude is working.
+- A Windows installer (spawn-Setup): open it and spawn installs, adds Desktop and Start menu shortcuts and starts.
+
 ### 1.9.0
 - Change the effort (auto · low · medium · high · extra high · max) next to the model under the chat.
 - Once an update is downloaded and only a restart is left, the button turns into a restart arrow with "Restart", so it no longer looks like an update waiting to be fetched.
@@ -789,6 +807,15 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.0
+- セッションを2〜3個並べて見られます。左のリストからセッションを右側にドラッグするか Ctrl+クリックすると横に枠ができ、枠ごとに会話と入力欄があります。ターミナルに切り替えると枠ごとにそのセッションのターミナルが表示されます。枠の × は枠だけを閉じ、セッションは続きます。
+- チャットの入力欄で / を入力するとコマンドの一覧が出ます。標準のコマンドと自分のコマンド・スキルを名前で探して選べます。
+- /rc(リモートコントロール)のように番号なしで選ぶ画面も、チャットにカードで表示されます。画面のリンクはカードからそのままコピーできます。
+- 続けて何度か選ぶとき、最初の1回しかカードが出なかった問題を直しました。
+- ターミナルが線で描いた表が記号のまま表示されていた問題を直しました。表として表示されます。
+- 思考の深さを Claude の作業中にも変えられます。
+- Windows 用インストーラー(spawn-Setup)ができました。開くとインストールされ、デスクトップとスタートメニューにショートカットができ、そのまま起動します。
 
 ### 1.9.0
 - チャット下のモデルの隣で、思考の深さ(自動 · 低 · 普通 · 高 · 非常に高 · 最大)を選べます。
