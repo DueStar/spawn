@@ -12,6 +12,10 @@
  *                              (still the old name: 1.3.35 and older accept only claudex-app-*.zip;
  *                              newer clients accept spawn-app-*.zip too, for a later switch)
  *   spawn-<v>-win-x64.zip      the whole app, for a first install
+ *   spawn-Setup-<v>.exe        the same app as a one-click installer (package.json build.nsis,
+ *                              build/installer.nsh): into %LOCALAPPDATA%\spawn, shortcuts, starts it.
+ *                              Packed from win-unpacked after build-info.json, so it holds exactly
+ *                              what the zips hold, and updates in the app like a zip install
  *   latest.json                  read by electron/updater.cjs
  *
  * The version comes from package.json; bump it first. Pokémon artwork is never
@@ -150,10 +154,14 @@ writeFileSync(join(appDir, 'build-info.json'), JSON.stringify({ version, date: b
 
 const appZip = `claudex-app-${version}.zip` // see the note at the top: old clients need this name
 const fullZip = `spawn-${version}-win-x64.zip`
-for (const f of [appZip, fullZip]) rmSync(join(out, f), { force: true })
+const setupExe = `spawn-Setup-${version}.exe` // package.json build.nsis.artifactName
+for (const f of [appZip, fullZip, setupExe]) rmSync(join(out, f), { force: true })
 // bsdtar (Windows 10+) writes zip when the name ends in .zip and -a is given
 run(TAR, ['-a', '-c', '-f', join(out, appZip), '-C', appDir, '.'], { shell: false })
 run(TAR, ['-a', '-c', '-f', join(out, fullZip), '-C', out, 'win-unpacked'], { shell: false })
+// The installer, packed from the same win-unpacked; electron-builder itself never publishes
+run('npx', ['electron-builder', '--win', 'nsis', '--x64', '--prepackaged', unpacked, '--publish', 'never'])
+if (!existsSync(join(out, setupExe))) throw new Error(`installer missing: ${setupExe}`)
 
 const sha = createHash('sha256').update(readFileSync(join(out, appZip))).digest('hex')
 const electronVersion = JSON.parse(readFileSync(join(root, 'node_modules', 'electron', 'package.json'), 'utf8')).version
@@ -173,12 +181,12 @@ const unsigned = {
 const { manifest } = writeManifest('win32', 'x64', unsigned, { dir: out, sign: hasKey ? signManifest : null })
 if (!hasKey) console.warn('latest.json is NOT signed (no signing key): installed apps would refuse it from GitHub')
 const mb = (n) => `${(n / 1024 / 1024).toFixed(1)} MB`
-console.log(`\napp update ${appZip} ${mb(manifest.app.size)} · full ${fullZip} ${mb(manifest.full.size)} · electron ${electronVersion}`)
+console.log(`\napp update ${appZip} ${mb(manifest.app.size)} · full ${fullZip} ${mb(manifest.full.size)} · installer ${setupExe} ${mb(statSync(join(out, setupExe)).size)} · electron ${electronVersion}`)
 
 if (publish) {
   // DueStar's login was checked in preflight (the gh CLI's active login, never its token)
   run('gh', ['release', 'create', `v${version}`, '--repo', 'DueStar/spawn', '--title', `spawn ${version}`, '--notes', notes || `spawn ${version}`,
-    join(out, 'latest.json'), join(out, appZip), join(out, fullZip)], { shell: false })
+    join(out, 'latest.json'), join(out, appZip), join(out, fullZip), join(out, setupExe)], { shell: false })
   // Then the Macs, only with --with-mac, with the notes and date latest.json went out with; a failure
   // there leaves the Windows release as it is
   if (cli.mac) {

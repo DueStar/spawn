@@ -71,7 +71,10 @@ Claude Code 세션을 포켓몬과 함께 쓰는 Windows 데스크톱 앱이에�
 
 ## 설치
 
-1. [Releases](https://github.com/DueStar/spawn/releases/latest)에서 `spawn-<버전>-win-x64.zip`을 받아 원하는 곳에 풀어요.
+[Releases](https://github.com/DueStar/spawn/releases/latest)에서 `spawn-Setup-<버전>.exe`를 받아 실행해요. 바로 설치되고 spawn이 켜져요. 바탕화면과 시작 메뉴에 바로가기가 생겨요.
+
+zip으로 설치하려면:
+1. `spawn-<버전>-win-x64.zip`을 받아 원하는 곳에 풀어요.
 2. `win-unpacked\spawn.exe`를 실행해요.
 
 필요한 프로그램이 없으면 앱이 설치 링크를 보여줘요.
