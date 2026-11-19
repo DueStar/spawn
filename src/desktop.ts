@@ -114,7 +114,7 @@ interface spawnBridge {
     changeFile(p: { id: string; file: string; before?: number }): Promise<{ ok: true; file: ChangeFile; edits: ChangeEdit[]; more: number } | { ok: false; reason: 'unknown' | 'gone' }>
     onUpdate(fn: (u: ChatUpdate) => void): () => void
     /** The composer, step one: the text typed into the terminal without Enter (src/chat/send.ts) */
-    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean; noDialog?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
     /** Step two: Enter, once, only when the page saw the echo (`echo: 'ok'`) */
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
     /** 멈추기: one Esc while the session works */
@@ -136,7 +136,7 @@ interface spawnBridge {
     /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */
     visible(id: string | null): void
     /** An answer card's choice: main checks it and builds what is sent (never the page) */
-    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
+    answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][]; other?: (string | null)[] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
     /** 7-48: one resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
     redraw(id: string): Promise<{ ok: true } | { ok: false; reason: RedrawRefusal }>
     /** spawn.log only (1.5.3): a send the page refused for its screen, with the screen's masked shape */

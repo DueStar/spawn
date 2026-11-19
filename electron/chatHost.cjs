@@ -107,6 +107,7 @@ function createChatHost({
   const openIds = new Set()   // views the page has open
   const revs = new Map()      // terminal id → the last rev sent
   const statuses = new Map()  // terminal id → the last status sent
+  const waitingAt = new Map() // terminal id → when its status last turned to waiting
   // Phase 4: the held requests (only while armed for a verified Claude Code), what the page shows
   let holds = null
   let holdsOpen = false       // new holds may open (the verified version); off, the open ones stay answerable (M6)
@@ -125,7 +126,11 @@ function createChatHost({
   function forward(update) {
     if (!update || typeof update.id !== 'string' || !Array.isArray(update.ops)) return
     for (const op of update.ops) {
-      if ((op.op === 'reset' || op.op === 'status') && op.status) statuses.set(update.id, op.status)
+      if ((op.op === 'reset' || op.op === 'status') && op.status) {
+        // (when the lens began to say the session waits: a wait the page finds no dialog for, this old, is stale)
+        if (op.status.state === 'waiting' && statuses.get(update.id)?.state !== 'waiting') waitingAt.set(update.id, now())
+        statuses.set(update.id, op.status)
+      }
     }
     const rev = (revs.get(update.id) ?? 0) + 1
     revs.set(update.id, rev)
@@ -164,7 +169,7 @@ function createChatHost({
       // the reader heard UserPromptSubmit for this terminal: what was on its prompt row went
       else if (m.t === 'prompt' && typeof m.id === 'string') draft(m.id, { via: 'prompt' })
       // a question or a plan to approve is open in this terminal (its dialog takes Enter and Esc), or none is
-      else if (m.t === 'asking' && typeof m.id === 'string') { if (m.on === true) inputOf(m.id).asking = true; else if (inputs.has(m.id)) inputs.get(m.id).asking = false }
+      else if (m.t === 'asking' && typeof m.id === 'string') { if (m.on === true) { const c = inputOf(m.id); if (!c.asking) c.askingAt = now(); c.asking = true } else if (inputs.has(m.id)) inputs.get(m.id).asking = false }
       // Phase 4: what a held request is, and when its call settled
       else if (m.t === 'hold-bind') onBind(m)
       else if (m.t === 'hold-pass' && typeof m.holdId === 'string') holds?.pass(m.holdId, typeof m.why === 'string' ? m.why.slice(0, 40) : 'passed')
@@ -311,9 +316,11 @@ function createChatHost({
     const option = Number.isInteger(p?.option) ? p.option : undefined
     // (several questions / a multi-select: each question's picked option indices; plain integers only, bounded)
     const picks = Array.isArray(p?.picks) && p.picks.length <= 4 && p.picks.every(x => Array.isArray(x) && x.length <= 6 && x.every(Number.isInteger)) ? p.picks.map(x => [...x]) : undefined
+    // (2026-11-19: each question's own words, its "Other" row — a string or null per question; the registry checks them)
+    const other = Array.isArray(p?.other) && p.other.length <= 4 && p.other.every(x => x === null || typeof x === 'string') ? [...p.other] : undefined
     // (only the page that shows that chat answers for it)
     const shown = from === undefined || visibleFrom === null || from === visibleFrom ? visibleId : null
-    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, visibleId: shown, windowVisible })
+    const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, other, visibleId: shown, windowVisible })
     // the side panel's 확인 필요 goes, as when the terminal is answered with Enter
     if (r.ok) { try { terminals.clearAsking?.(id) } catch {} }
     return r
@@ -660,6 +667,8 @@ function createChatHost({
   const SEND_IDS_KEPT = 32
   const SIDE_MS = 2000           // the side box's text is typed, its Enter not heard yet: at most this long
   const PERMISSION_MS = 2000     // a permission request this recent: nothing is typed, no Enter
+  const STALE_WAIT_MS = 3000     // a wait said this long ago that the page's screen shows no dialog for: stale
+  const staleLogged = new Set()  // (once per terminal in spawn.log)
   const SUBMITTED_MS = 5000      // an Enter not confirmed by UserPromptSubmit in this time: the row is unknown
   const PRE_MS = 300             // after a PreToolUse with no PostToolUse yet: Enter waits this long at most
   const PRE_POLL_MS = 25
@@ -752,11 +761,26 @@ function createChatHost({
    * a question or a plan is open in it, or the terminal shows a question), or a dialog may be opening
    * (a permission request of this terminal's arrived in the last 2 s)
    */
-  function waitingNow(id, term) {
+  function waitingNow(id, term, noDialog = false) {
     const c = inputs.get(id)
     // (a held request of this terminal: its dialog or its question is open, Enter or Esc would answer it)
     if (holds && holds.openFor(id).length > 0) return true
-    return statuses.get(id)?.state === 'waiting' || term.asking === true || (!!c && (c.asking || now() - c.lastPermissionAt < PERMISSION_MS))
+    if (term.asking === true || (!!c && now() - c.lastPermissionAt < PERMISSION_MS)) return true
+    const lensWaits = statuses.get(id)?.state === 'waiting'
+    const asking = !!c && c.asking
+    if (!lensWaits && !asking) return false
+    // (2026-11-19: a question dismissed with Esc in the terminal sent no hook, and the chat refused every send for
+    // minutes. The page read the screen just now: its prompt box, and no dialog over it. A wait the lens has said
+    // for STALE_WAIT_MS that the screen does not show is stale; a dialog draws within a moment of its hook)
+    if (noDialog !== true) return true
+    const since = Math.max(lensWaits ? (waitingAt.get(id) ?? -Infinity) : -Infinity, asking ? (c.askingAt ?? -Infinity) : -Infinity)
+    if (now() - since < STALE_WAIT_MS) return true
+    if (!staleLogged.has(id)) {
+      staleLogged.add(id)
+      const why = lensWaits && asking ? 'status, asking' : lensWaits ? 'status' : 'asking'
+      log('info', `chat composer: a wait no dialog shows (${why}) let a send through`)
+    }
+    return false
   }
 
   /** A chat send is between its text and its Enter in this terminal (the side box's send waits; terminals.cjs) */
@@ -792,7 +816,9 @@ function createChatHost({
     c.sendIds.push(sendId)
     if (c.sendIds.length > SEND_IDS_KEPT) c.sendIds.shift()
     if (c.inFlight || now() < c.sideUntil) return { ok: false, reason: 'sending' }
-    if (waitingNow(id, term)) return { ok: false, reason: 'waiting' }
+    // (the page's word that its screen, read just now, shows the prompt box and no dialog over it)
+    const noDialog = p.noDialog === true
+    if (waitingNow(id, term, noDialog)) return { ok: false, reason: 'waiting' }
     // (the terminal was nudged less than a second ago: the screen the page read may be mid-repaint)
     const nudged = redrawAt.get(id)
     if (nudged !== undefined && now() - nudged < REDRAW_SETTLE_MS) return { ok: false, reason: 'screen' }
@@ -814,7 +840,7 @@ function createChatHost({
     if (shell && (tokens.length || !text.trim())) return { ok: false, reason: 'empty' }
     const enc = encodeSend({ text, images: paths, shell })
 
-    const f = { sendId, at: now(), lastStepAt: 0, minEnterMs: enc.minEnterMs, permSeq: c.permSeq, touched: false, partial: false, submitting: false, expiry: null }
+    const f = { sendId, at: now(), lastStepAt: 0, minEnterMs: enc.minEnterMs, permSeq: c.permSeq, touched: false, partial: false, submitting: false, expiry: null, noDialog }
     c.inFlight = f
     for (let i = 0; i < enc.steps.length; i++) {
       const step = enc.steps[i]
@@ -822,7 +848,7 @@ function createChatHost({
         await sleep(step.waitMs)
         const t = termOf(id)
         // something changed between two steps (a dialog opening, a key, the session gone, turned off): no more typing
-        if (c.inFlight !== f || !t || t.status === 'exited' || f.touched || f.permSeq !== c.permSeq || waitingNow(id, t)) { f.partial = true; break }
+        if (c.inFlight !== f || !t || t.status === 'exited' || f.touched || f.permSeq !== c.permSeq || waitingNow(id, t, f.noDialog)) { f.partial = true; break }
       }
       if (!terminals.typeForChat(id, step.data)) {
         // nothing typed at all: nothing to enter, said as the session gone
@@ -864,7 +890,7 @@ function createChatHost({
       const t = termOf(id)
       if (!st.on || !t || t.status === 'exited' || t.chat !== 'armed') return 'no-session'
       if (f.touched || f.partial) return 'no-echo'
-      if (f.permSeq !== c.permSeq || waitingNow(id, t)) return 'waiting'
+      if (f.permSeq !== c.permSeq || waitingNow(id, t, f.noDialog)) return 'waiting'
       return null
     }
     const end = (reason) => { abort(c, f); return { ok: false, reason } }

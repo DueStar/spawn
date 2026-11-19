@@ -296,3 +296,47 @@ describe('several questions and a multi-select', () => {
     expect(holds.bind(id, { id: A, key: 'k', data: { sets: [['Yes', 'No']], input } })).toBe(false)
   })
 })
+
+// 2026-11-19: Claude Code's question dialog always ends with its "Other" row (Type something); the chat's 직접 입력
+// sends that question's own words as its answer — alone in a single-select, after the picks in a multi-select (the
+// 2.1.328 binary: a multi-select's answer is its picks, not "__other__", then the typed words)
+describe('a question\'s own words (직접 입력)', () => {
+  const Q2 = { question: 'Which areas?', header: 'Areas', options: [{ label: 'UI' }, { label: 'Server' }, { label: 'Docs' }], multiSelect: true }
+  const open = (input: any, sets: string[][]) => {
+    const sent: (string | null)[] = []
+    const { holds } = setup()
+    const id = holds.open('question', (b: string | null) => { sent.push(b) })
+    expect(holds.bind(id, { id: A, key: 'k', data: { sets, input } })).toBe(true)
+    return { holds, id, sent, answers: () => JSON.parse(sent[0]!).hookSpecificOutput.updatedInput.answers }
+  }
+
+  it('one single-select question: its words alone are the answer, trimmed; the input kept whole', () => {
+    const input = { questions: [Q1], extra: 1 }
+    const h = open(input, [['Yes', 'No']])
+    expect(h.holds.answer(h.id, { id: A, choice: 'options', picks: [[]], other: ['  Only the docs folder  '], ...shown(A) })).toEqual({ ok: true })
+    expect(h.answers()).toEqual({ [Q1.question]: 'Only the docs folder' })
+    expect(JSON.parse(h.sent[0]!).hookSpecificOutput.updatedInput.extra).toBe(1)
+  })
+
+  it('a multi-select: the picks, then the words, joined as the dialog joins them', () => {
+    const h = open({ questions: [Q1, Q2] }, [['Yes', 'No'], ['UI', 'Server', 'Docs']])
+    expect(h.holds.answer(h.id, { id: A, choice: 'options', picks: [[1], [2, 0]], other: [null, 'the CLI'], ...shown(A) })).toEqual({ ok: true })
+    expect(h.answers()).toEqual({ [Q1.question]: 'No', [Q2.question]: 'UI, Docs, the CLI' })
+  })
+
+  it('refused: a pick and words in a single-select, nothing at all, blank words alone, too long, a control character, a wrong length', () => {
+    const h = open({ questions: [Q1, Q2] }, [['Yes', 'No'], ['UI', 'Server', 'Docs']])
+    const bad = (picks: number[][], other: unknown) => expect(h.holds.answer(h.id, { id: A, choice: 'options', picks, other, ...shown(A) })).toEqual({ ok: false, reason: 'invalid' })
+    bad([[0], [0]], ['also this', null])
+    bad([[], [0]], [null, null])
+    bad([[], [0]], ['   ', null])
+    bad([[], [0]], ['x'.repeat(2001), null])
+    bad([[], [0]], ['a\u0007b', null])
+    bad([[], [0]], ['words'])
+    bad([[], [0]], [7, null])
+    expect(h.sent).toEqual([])
+    // a line break is kept (the field is one line; a paste may hold one)
+    expect(h.holds.answer(h.id, { id: A, choice: 'options', picks: [[], [1]], other: ['two\r\nlines', null], ...shown(A) })).toEqual({ ok: true })
+    expect(h.answers()[Q1.question]).toBe('two\nlines')
+  })
+})

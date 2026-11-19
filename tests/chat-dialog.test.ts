@@ -64,6 +64,25 @@ describe('parseDialog', () => {
     expect(parseDialog('1. one\n2. two\n3. three')).toBeNull()
     expect(parseDialog(null)).toBeNull()
   })
+  // 2026-11-19 (the owner's "the card no longer takes a choice after 터미널 → 채팅"): Claude Code 2.1.328 draws a rule
+  // and "N. Chat about this" under a question's options (its binary: a divider, then `${n}. Chat about this`). The rule
+  // broke the run of options, so a question handed back to the terminal never got its card from the screen
+  it('a 2.1.328 question: the rule before "Chat about this" does not break the options; Type something takes words', () => {
+    const q = parseDialog(screen('reconstructed-question-2.1.328'))!
+    expect(q).not.toBeNull()
+    expect(q.title).toBe('Which output format do you want?')
+    expect(q.options.map(o => [o.label, o.desc, o.free])).toEqual([
+      ['JSON', ['Machine-readable, for scripts'], false],
+      ['Markdown', ['Human-readable, for the README'], false],
+      ['Type something.', [], true],
+      ['Chat about this', [], false],
+    ])
+    expect(q.selected).toBe(0)
+    expect(q.esc).toBe(true)
+  })
+  it('a rule between options only once, right before the last: a numbered list under a rule in an answer is no dialog', () => {
+    expect(parseDialog('1. one\n2. two\n──────────────────\n3. three')).toBeNull()
+  })
 })
 
 /** A dialog that moves its mark with ↑ / ↓ and closes on Enter */
@@ -104,6 +123,15 @@ describe('answerDialog', () => {
     expect(await answerDialog(2, t.deps, 'YAML please')).toEqual({ ok: true })
     expect(t.keys).toEqual(['down', 'down', 'enter'])
     expect(t.pasted()).toBe('YAML please')
+  })
+  it('a 2.1.328 question (a rule over Chat about this): its Type something gets the words; its last row is reachable', async () => {
+    const t = term(screen('reconstructed-question-2.1.328'))
+    expect(await answerDialog(2, t.deps, 'YAML please')).toEqual({ ok: true })
+    expect(t.keys).toEqual(['down', 'down', 'enter'])
+    expect(t.pasted()).toBe('YAML please')
+    const u = term(screen('reconstructed-question-2.1.328'))
+    expect(await answerDialog(3, u.deps)).toEqual({ ok: true })
+    expect(u.keys).toEqual(['down', 'down', 'down', 'enter'])
   })
   it('a mark that does not move, or no dialog: nothing more pressed', async () => {
     const keys: string[] = []

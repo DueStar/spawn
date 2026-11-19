@@ -48,6 +48,8 @@ function numbered(lines: string[]): Dialog | null {
       want--
       continue
     }
+    // (2026-11-19: a question of 2.1.328 draws a rule over its last row, "N. Chat about this": one rule, there only)
+    if (idx.length === 1 && i === last - 1 && RULE.test(lines[i])) continue
     // between options only a description (indented deeper) or a blank line
     if (lines[i].trim() && !/^\s{4,}/.test(lines[i])) break
   }
@@ -62,7 +64,7 @@ function numbered(lines: string[]): Dialog | null {
     const desc: string[] = []
     for (let j = idx[k] + 1; j < end; j++) {
       const l = lines[j]
-      if (!l.trim()) continue
+      if (!l.trim() || RULE.test(l)) continue
       if (k + 1 === idx.length && (l.length - l.trimStart().length) <= col) break
       desc.push(l.trim())
     }

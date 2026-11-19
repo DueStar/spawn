@@ -230,6 +230,8 @@ const SCREENS = [
   'real-ascii-mark',
   // the /remote-control panel, reconstructed from what the 2.1.328 binary draws (not a captured screen)
   'reconstructed-rc-panel',
+  // a 2.1.328 question (a rule over its last row, "N. Chat about this"), reconstructed from its binary the same way
+  'reconstructed-question-2.1.328',
 ]
 
 describe('the composer fixtures', () => {
