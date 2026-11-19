@@ -674,6 +674,47 @@ const FLOWS = {
    * and forget it; ← / → move 16px; a window too narrow keeps the terminal 320px; no edge
    * when the panel is folded or in widget mode. The centre line shows only while dragged or hovered.
    */
+  /**
+   * One paste in the terminal writes the text once (Windows and macOS keys): Ctrl+V, Ctrl+Shift+V and
+   * Shift+Insert on Windows, ⌘V on the Mac. Ctrl+V once pasted twice on Windows: the app's own paste and
+   * the browser's native paste event, which xterm also pastes. A clipboard with no text sends Ctrl+V's ^V.
+   */
+  'terminal-paste': async ({ browser }) => {
+    const problems = []
+    const TEXT = 'pasted once'
+    for (const mac of [false, true]) {
+      let app
+      const label = mac ? 'Mac' : 'Windows'
+      const bad = m => problems.push(`${label}: ${m}`)
+      try {
+        app = await openApp(browser, { smoke: true, mac })
+        const { page, ctx, shot } = app
+        await ctx.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: BASE })
+        const id = shot.terminals[0].id
+        const writes = () => page.evaluate(i => window.__CALLS__.filter(c => c.fn === 'write' && c.args[0] === i).map(c => c.args[1]), id)
+        const keysFor = mac ? ['Meta+KeyV'] : ['Control+KeyV', 'Control+Shift+KeyV', 'Shift+Insert']
+        for (const [clip, keys] of [[TEXT, keysFor], ['', mac ? ['Meta+KeyV'] : ['Control+KeyV']]]) {
+          await page.evaluate(t => navigator.clipboard.writeText(t), clip)
+          for (const k of keys) {
+            await page.locator('.w-term-body .xterm-helper-textarea').first().focus()
+            const before = (await writes()).length
+            await page.keyboard.press(k)
+            await sleep(300)
+            const got = (await writes()).slice(before)
+            const want = clip ? got.filter(w => w.includes(TEXT)).length : got.filter(w => w === '\x16').length
+            if (want !== 1 || (!clip && got.length !== 1)) bad(`${k} with ${clip ? 'text' : 'no text'} on the clipboard wrote ${JSON.stringify(got)}`)
+            console.log(`      ${label} ${k} (${clip ? 'text' : 'no text'}): ${got.length} write(s) ${JSON.stringify(got)}`)
+          }
+        }
+      } catch (err) {
+        bad(String(err.message).split('\n')[0])
+      } finally {
+        if (app) await app.ctx.close()
+      }
+    }
+    return problems
+  },
+
   'side-resize': async ({ browser }) => {
     const problems = []
     let app

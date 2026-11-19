@@ -17,8 +17,8 @@ import '@xterm/xterm/css/xterm.css'
 import { bridge, onTerminalData, type PastSession, type TerminalInfo } from '../desktop'
 import { createReplayGate } from '../terminalReplay'
 import { t } from '../i18n'
-import { appShortcut, clipboardAction, keptFromPty, wheelFontStep } from '../keys'
-import { isMac } from '../platform'
+import { appShortcut, keptFromPty, wheelFontStep } from '../keys'
+import { handleClipboardKey } from '../terminalClipboard'
 import { fileRefPattern } from '../fileRef'
 import { withDates } from '../sameNames'
 
@@ -243,22 +243,18 @@ export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus
         case 'fontDown': stepTermFont(-1); return false
         case 'fontReset': resetTermFont(); return false
       }
-      const clip = clipboardAction(e, xterm.hasSelection())
-      // On macOS the Edit menu would paste or copy the same key again: the key is taken here
-      if (clip && isMac()) e.preventDefault()
-      // Ctrl+V: text is pasted here; anything else (a screenshot) goes to Claude Code as the key
-      // itself, and Claude Code reads the image from the clipboard
-      if (clip === 'paste') {
-        navigator.clipboard.readText()
-          .then((t) => { if (t) xterm.paste(t); else bridge!.terminals.write(term.id, '\x16') })
-          .catch(() => bridge!.terminals.write(term.id, '\x16'))
-        return false
-      }
-      if (clip === 'copy') {
-        navigator.clipboard.writeText(xterm.getSelection()).catch(() => {})
-        xterm.clearSelection()
-        return false
-      }
+      // Ctrl+V: text is pasted here, once (the browser's own paste is stopped); anything else
+      // (a screenshot) goes to Claude Code as the key itself, and Claude Code reads the image
+      // from the clipboard. Ctrl+C copies a selection (src/terminalClipboard.ts)
+      if (handleClipboardKey(e, {
+        hasSelection: () => xterm.hasSelection(),
+        getSelection: () => xterm.getSelection(),
+        clearSelection: () => xterm.clearSelection(),
+        readText: () => navigator.clipboard.readText(),
+        writeText: (text) => navigator.clipboard.writeText(text),
+        paste: (text) => xterm.paste(text),
+        send: (data) => bridge!.terminals.write(term.id, data),
+      })) return false
       // ⌘ keys on macOS are the app's and the menu's, never the session's
       if (keptFromPty(e)) return false
       return true
