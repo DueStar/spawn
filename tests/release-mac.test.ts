@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 // @ts-expect-error plain ESM script without types
-import { releaseMac, parseReleaseArgs, releaseArgsOrExit, macFailureMessage, SMOKE_STEP } from '../scripts/release-mac.mjs'
+import { releaseMac, startMacBuild, finishMacRelease, startMacEarly, macScreensHint, parseReleaseArgs, releaseArgsOrExit, macFailureMessage, SMOKE_STEP } from '../scripts/release-mac.mjs'
 // @ts-expect-error plain ESM script without types
 import { signManifest } from '../scripts/signing.mjs'
 
@@ -378,6 +378,19 @@ describe('parseReleaseArgs', () => {
     expect(src).toMatch(/if \(cli\.mac\) \{\n\s+const macCode = await runMacRelease\(/)
   })
 
+  it('release.mjs: the Mac CI starts right after the preflight, before the Windows build; the Windows release is made before any Mac upload', () => {
+    const src = readFileSync(join(__dirname, '..', 'scripts', 'release.mjs'), 'utf8')
+    const at = (needle: string) => { const i = src.indexOf(needle); expect(i, needle).toBeGreaterThan(-1); return i }
+    expect(src).toMatch(/if \(publish && cli\.mac\) \{\n\s+macStarted = await startMacEarly\(\{ root, version, head \}\)/)
+    expect(at('const head = publish ? preflight() : null')).toBeLessThan(at('await startMacEarly('))
+    expect(at('await startMacEarly(')).toBeLessThan(at("run('npx', ['vite', 'build'])"))
+    expect(at("run('npx', ['electron-builder', '--win', 'dir', '--x64'])")).toBeLessThan(at("run('gh', ['release', 'create'"))
+    // the release (with latest.json) is made first, then the run started early is waited for and uploaded
+    expect(at("run('gh', ['release', 'create'")).toBeLessThan(at('started: macStarted'))
+    // every preflight check is still there
+    for (const check of ['gh is not logged in', 'uncommitted changes', 'push first', 'bump the version', 'CHANGELOG.md has no', 'Poké Ball art missing', 'no signing key at']) at(check)
+  })
+
   it('--mac-only needs a version', () => {
     expect(() => parseReleaseArgs(['--mac-only'])).toThrow(/version/)
     expect(() => parseReleaseArgs(['--mac-only', 'v1.3.49'])).toThrow(/version/)
@@ -409,5 +422,104 @@ describe('macFailureMessage', () => {
     expect(msg).toContain('node scripts/release.mjs --mac-only 1.3.49')
     expect(msg).toMatch(/arm64.*sha256 mismatch/)
     expect(msg).toMatch(/x64/)
+  })
+})
+
+/** gh for the early start: the tag there or not, the ref push recorded */
+function earlyRun({ tag = SHA as string | null, refFails = false, base = fakeRun() } = {}) {
+  let pushed = false
+  return async (cmd: string, args: string[], opts?: unknown) => {
+    const a = args.join(' ')
+    if (a.startsWith(`api repos/${REPO}/commits/v${V}`)) {
+      calls.push([cmd, ...args])
+      if (tag === null && !pushed) throw new Error('HTTP 422: No commit found for SHA')
+      return tag ?? SHA
+    }
+    if (a.startsWith(`api repos/${REPO}/git/refs`)) {
+      calls.push([cmd, ...args])
+      if (refFails) throw new Error('HTTP 403')
+      pushed = true
+      return ''
+    }
+    return base(cmd, args, opts as never)
+  }
+}
+
+describe('the early start (release.mjs --publish --with-mac)', () => {
+  const log = { log: (m: string) => logs.push(m), warn: (m: string) => logs.push(`WARN ${m}`), error: (m: string) => logs.push(`ERROR ${m}`) }
+
+  it('pushes the tag at HEAD when it is not there, then starts CI on it: nothing is released', async () => {
+    const started = await startMacEarly({ root, version: V, head: SHA, run: earlyRun({ tag: null }), log, sleep: async () => {} })
+    expect(started).toEqual({ id: '101' })
+    const seq = gh()
+    expect(seq[1]).toEqual(['api', `repos/${REPO}/git/refs`, '-f', `ref=refs/tags/v${V}`, '-f', `sha=${SHA}`, '--silent'])
+    expect(seq.some(c => c[0] === 'workflow' && c.includes(`v${V}`))).toBe(true)
+    // no release made, nothing uploaded, nothing waited for
+    expect(seq.some(c => c[0] === 'release')).toBe(false)
+    expect(seq.some(c => c[1] === 'watch')).toBe(false)
+  })
+
+  it('a tag already at HEAD (an earlier attempt) is used as it is', async () => {
+    const started = await startMacEarly({ root, version: V, head: SHA, run: earlyRun(), log, sleep: async () => {} })
+    expect(started).toEqual({ id: '101' })
+    expect(gh().some(c => c[1] === `repos/${REPO}/git/refs`)).toBe(false)
+  })
+
+  it('a tag at another commit is never built: the reason comes back, CI is not started', async () => {
+    const started = await startMacEarly({ root, version: V, head: 'f'.repeat(40), run: earlyRun(), log, sleep: async () => {} })
+    expect(started.reason).toMatch(/not fffffff/)
+    expect(gh().some(c => c[0] === 'workflow')).toBe(false)
+  })
+
+  it('a tag that cannot be pushed: a reason, no throw (Windows goes on)', async () => {
+    const started = await startMacEarly({ root, version: V, head: SHA, run: earlyRun({ tag: null, refFails: true }), log, sleep: async () => {} })
+    expect(started.reason).toMatch(/could not push the tag/)
+    expect(gh().some(c => c[0] === 'workflow')).toBe(false)
+  })
+
+  it('then finishMacRelease waits for that run and uploads zips, then manifests, as releaseMac does', async () => {
+    const run = fakeRun()
+    const started = await startMacBuild(V, { run, sleep: async () => {}, log })
+    expect(started).toEqual({ id: '101' })
+    const before = gh().length
+    const result = await finishMacRelease(V, started, deps({ run }))
+    expect(result).toMatchObject({ ok: true, released: ['arm64', 'x64'], failed: [], runId: '101' })
+    const rest = gh().slice(before)
+    // no second dispatch: the run started early is the one waited for
+    expect(rest.some(c => c[0] === 'workflow')).toBe(false)
+    expect(rest[0]).toEqual(['run', 'watch', '101', '--repo', REPO, '--exit-status'])
+    const up = uploads()
+    expect(up).toHaveLength(2)
+    expect(up[0].slice(6).every((f: string) => f.endsWith('.zip'))).toBe(true)
+    expect(up[1].slice(6).every((f: string) => f.endsWith('.json'))).toBe(true)
+  })
+
+  it('a start that failed is a failure of both archs at the end, with nothing uploaded', async () => {
+    const result = await finishMacRelease(V, { reason: 'HTTP 403' }, deps())
+    expect(result).toMatchObject({ ok: false, released: [] })
+    expect(result.failed.map((f: { arch: string }) => f.arch)).toEqual(['arm64', 'x64'])
+    expect(result.failed[0].reason).toMatch(/did not start: HTTP 403/)
+    expect(calls).toEqual([])
+    expect(macFailureMessage(V, result, { windowsOut: true })).toContain(`node scripts/release.mjs --mac-only ${V}`)
+  })
+
+  it('startMacBuild without the tag on GitHub starts nothing', async () => {
+    const started = await startMacBuild(V, { run: earlyRun({ tag: null }), sleep: async () => {}, log })
+    expect(started.reason).toMatch(/no v9\.9\.9 on GitHub/)
+    expect(gh().some(c => c[0] === 'workflow')).toBe(false)
+  })
+})
+
+describe('the Mac screenshots', () => {
+  it("say where to see them: the run's page and gh run download of mac-screens-<arch>", () => {
+    const hint = macScreensHint('123')
+    expect(hint).toContain(`https://github.com/${REPO}/actions/runs/123`)
+    expect(hint).toContain(`gh run download 123 -R ${REPO} -n mac-screens-arm64`)
+    expect(hint).toContain(`gh run download 123 -R ${REPO} -n mac-screens-x64`)
+  })
+
+  it('releaseMac reports the run it used, for that hint', async () => {
+    const result = await releaseMac(V, deps())
+    expect(result.runId).toBe('101')
   })
 })
