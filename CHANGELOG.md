@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.10.3
+- /exit(또는 /quit)를 하면 왼쪽 패널에서 세션을 끈 것처럼 탭이 닫혀요. 오류로 꺼지거나 윈도우가 끌 때 꺼진 세션은 지금처럼 남아요.
+- 이어하기 목록에 같은 이름의 세션이 나란히 보이지 않아요. /clear 전 대화는 "이전 대화" 아래로 접히고, 이름이 같으면 날짜로 구분해요. 열린 탭끼리 이름이 같으면 "(2)"를 붙여요.
+- 세션을 닫자마자 이어하기에서 "실행 중"으로 보여 지울 수 없던 문제를 고쳤어요. 방금 닫은 세션은 "닫는 중"으로 보이고, 지우면 꺼질 때까지 기다렸다가 휴지통으로 옮겨요.
+- 기록 화면의 줄을 조금 넓히고, 레벨업 줄도 다른 줄과 같은 높이로 맞췄어요.
+
 ### 1.10.2
 - 터미널 입력란에 쓰던 글이 남아 있어도 채팅에서 바로 보내요. 입력란은 알아서 비우고 채팅에 쓴 글을 보내요(더 이상 "가져와서 이어 쓰기 / 지우고 보내기"를 묻지 않아요).
 - 나란히 본 칸 사이 경계를 끌어서 너비를 바꿀 수 있어요. 두 번 누르면 같은 너비로 돌아가고, 바꾼 너비는 기억해요.
@@ -488,6 +494,12 @@
 
 ## spawn (English)
 
+### 1.10.3
+- /exit (or /quit) closes the tab as closing the session from the left panel does. A session that crashed or was ended by Windows stays as before.
+- The resume list no longer shows twin sessions with the same name: conversations before a /clear fold under "earlier conversations", and same names are told apart by date. Open tabs with the same name get "(2)".
+- Right after closing a session, the resume list showed it as running and it could not be deleted. A just-closed session now shows as closing; deleting it waits for it to end, then moves it to the trash.
+- The log's rows are a little roomier, the level-up row as tall as the others.
+
 ### 1.10.2
 - Words left in the terminal's input no longer stop a send from the chat: the input is cleared and your chat message is sent (no more "bring them here / clear them and send").
 - Drag the edge between side-by-side panes to resize them; a double-click makes them even again, and the widths are kept.
@@ -833,6 +845,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.3
+- /exit(または /quit)で、左のパネルからセッションを閉じたときと同じようにタブが閉じます。エラーで終わったセッションや Windows が終了させたセッションはこれまでどおり残ります。
+- 再開リストに同じ名前のセッションが並ばなくなりました。/clear 前の会話は「以前の会話」の下にまとまり、同じ名前は日付で見分けます。開いているタブ同士で名前が同じときは「(2)」を付けます。
+- セッションを閉じた直後、再開リストで「実行中」と表示されて削除できなかった問題を直しました。閉じたばかりのセッションは「終了中」と表示され、削除すると終わるのを待ってからゴミ箱に移します。
+- 記録画面の行を少し広げ、レベルアップの行もほかの行と同じ高さにしました。
 
 ### 1.10.2
 - ターミナルの入力欄に書きかけの文が残っていても、チャットからそのまま送れます。入力欄は自動で空にして、チャットに書いた文を送ります(「取り込む / 消して送る」を聞かなくなりました)。
