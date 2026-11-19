@@ -114,7 +114,7 @@ interface spawnBridge {
     changeFile(p: { id: string; file: string; before?: number }): Promise<{ ok: true; file: ChangeFile; edits: ChangeEdit[]; more: number } | { ok: false; reason: 'unknown' | 'gone' }>
     onUpdate(fn: (u: ChatUpdate) => void): () => void
     /** The composer, step one: the text typed into the terminal without Enter (src/chat/send.ts) */
-    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean; noDialog?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs: number } | { ok: false; reason: SendRefusal }>
     /** Step two: Enter, once, only when the page saw the echo (`echo: 'ok'`) */
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
     /** 멈추기: one Esc while the session works */

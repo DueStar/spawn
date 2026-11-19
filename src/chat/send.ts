@@ -16,12 +16,13 @@
  */
 
 import { echoState, promptRow, screenShape, type EchoState } from './promptRow'
+import { parseDialog } from './dialog'
 import type { Outbox, OutboxImage } from './outbox'
 import type { EchoVerdict, Expect, LensStatus, ScreenVerdict, SendRefusal, SubmitRefusal } from './types'
 
 export interface SendDeps {
   bridge: {
-    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs?: number } | { ok: false; reason: SendRefusal }>
+    send(p: { id: string; sendId: string; text: string; images: string[]; screen: ScreenVerdict; shell?: boolean; noDialog?: boolean }): Promise<{ ok: true; expect: Expect; command: boolean; minEnterMs?: number } | { ok: false; reason: SendRefusal }>
     submit(p: { id: string; sendId: string; echo: EchoVerdict }): Promise<{ ok: true } | { ok: false; reason: SubmitRefusal }>
     /** spawn.log only (1.5.3): why the page found no prompt box, and the masked shape it read */
     diag?(p: { id: string; why: string; shape: string }): void
@@ -80,12 +81,18 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
   const { id } = draft
   const text = draft.text.replace(/\s+$/, '')
   if (busy.has(id)) return { ok: false, reason: 'sending', leftOnPrompt: false }
-  // (a card open for this session (Phase 4): it is answered first; Enter here never answers it)
-  if (d.status?.state === 'waiting' || (d.status?.asks?.length ?? 0) > 0) return { ok: false, reason: 'waiting', leftOnPrompt: false }
   // (the text and its dim marks read one after the other, in one task: both of one buffer)
   const rowScreen = d.readScreen(id)
   const dim = d.readDim?.(id) ?? null
   const row = promptRow(rowScreen, dim)
+  // (the screen shows the prompt box and no dialog over it: main may let a stale wait go)
+  const noDialog = row.kind !== 'unknown' && parseDialog(rowScreen) === null
+  // (a card open for this session (Phase 4): it is answered first; Enter here never answers it)
+  // (2026-11-19: a wait whose dialog the screen no longer shows — a question dismissed with Esc in the terminal, no
+  // hook after it — never holds the composer: only a card still answerable here, or a dialog on the screen, does)
+  const asks = d.status?.asks ?? []
+  const waits = d.status?.state === 'waiting' || asks.length > 0
+  if (waits && (!noDialog || asks.some(a => a.state === 'open'))) return { ok: false, reason: 'waiting', leftOnPrompt: false }
   if (row.kind === 'unknown') {
     try { d.bridge.diag?.({ id, why: row.why, shape: screenShape(d.readScreen(id)) }) } catch { /* only a log line */ }
     return { ok: false, reason: 'screen', leftOnPrompt: false }
@@ -104,7 +111,7 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
     // (1.6.2) text whose dim marks were read says whether anyone typed it; without marks main's ledger decides
     const screen: ScreenVerdict = row.kind !== 'text' ? row.kind : row.typed === undefined ? 'text' : row.typed ? 'typed' : 'suggestion'
     try {
-      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen, shell: draft.shell || undefined })
+      sent = await d.bridge.send({ id, sendId, text, images: draft.images.map(i => i.token), screen, shell: draft.shell || undefined, ...(noDialog ? { noDialog: true } : {}) })
     } catch {
       sent = { ok: false, reason: 'no-session' }
     }

@@ -66,6 +66,8 @@ contextBridge.exposeInMainWorld('spawn', {
       id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), text: typeof p?.text === 'string' ? p.text : '',
       images: Array.isArray(p?.images) ? p.images.filter(x => typeof x === 'string').slice(0, 64) : [], screen: String(p?.screen ?? ''),
       shell: p?.shell === true,
+      // (the page's screen, read just now, shows the prompt box and no dialog over it: a stale wait may be let go)
+      noDialog: p?.noDialog === true,
     }),
     submit: (p) => ipcRenderer.invoke('chat:submit', { id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), echo: String(p?.echo ?? '') }),
     interrupt: (id) => ipcRenderer.invoke('chat:interrupt', String(id)),

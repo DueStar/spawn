@@ -578,3 +578,34 @@ describe('the review of Phase 3: the send path in main (fixed)', () => {
     expect((await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty' })).ok).toBe(true)
   })
 })
+
+// 2026-11-19, the owner's log: a question dismissed with Esc in the terminal sent no hook; the reader still said a
+// question was open and main refused every chat send for minutes ("chat send refused (waiting)")
+describe('a stale wait the page sees no dialog for', () => {
+  it('asking (or a waiting status) said more than 3 s ago, the page reading the prompt box and no dialog: the send goes', async () => {
+    const s = await setup()
+    s.workers[0].send({ t: 'asking', id: C1, on: true })
+    s.status(C1, 'waiting')
+    // without the page's word, or too soon after: still refused
+    expect(await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty' })).toEqual({ ok: false, reason: 'waiting' })
+    expect(await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty', noDialog: true })).toEqual({ ok: false, reason: 'waiting' })
+    await wait(3100)
+    expect(await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty' })).toEqual({ ok: false, reason: 'waiting' })
+    const id = s.sendId()
+    expect((await s.host.send({ id: C1, sendId: id, text: 'hello', images: [], screen: 'empty', noDialog: true })).ok).toBe(true)
+    await wait(200)
+    expect(await s.host.submit({ id: C1, sendId: id, echo: 'ok' })).toEqual({ ok: true })
+    expect(s.pty.some(w => w.data === '\r')).toBe(true)
+  })
+
+  it('a permission just arrived, or a question the terminal itself shows, still refuse it', async () => {
+    const s = await setup()
+    s.workers[0].send({ t: 'asking', id: C1, on: true })
+    await wait(3100)
+    s.arrive('PermissionRequest')
+    expect(await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty', noDialog: true })).toEqual({ ok: false, reason: 'waiting' })
+    await wait(2100)
+    s.terms[0].asking = true
+    expect(await s.host.send({ id: C1, sendId: s.sendId(), text: 'x', images: [], screen: 'empty', noDialog: true })).toEqual({ ok: false, reason: 'waiting' })
+  })
+})

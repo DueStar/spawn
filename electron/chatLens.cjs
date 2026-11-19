@@ -404,6 +404,8 @@ function createLens({
     t.status.state = state
     // whose wait it was (a sub-agent's) is over with the wait
     if (state !== 'waiting') delete t.status.waitingAgent
+    // (idle or ended: no question or plan is open in the terminal any more, whatever hook did not come)
+    if (state === 'idle' || state === 'ended') askingOff(t)
     if (!busy(state)) t.status.since = null
     else if (!busy(prev) || t.status.since === null) t.status.since = typeof at === 'number' ? at : now()
   }
@@ -620,7 +622,7 @@ function createLens({
     // Esc writes "[Request interrupted by user…" (FINDINGS §1); a partial text alone only marks that text
     if (item.kind === 'notice' && item.notice === 'interrupted') interrupted(t, upserts, removes)
     // a call's result in the transcript (done, failed, rejected …): its cards are over
-    if (item.kind === 'tool' && item.state !== 'running') settle(t, a => a.card.toolId === item.id, 'result')
+    if (item.kind === 'tool' && item.state !== 'running') { settle(t, a => a.card.toolId === item.id, 'result'); askingOff(t, item.id) }
     if (t.canary && item.order < LIVE_BASE) {
       t.canary.fresh.push(item)
       if (canaryHolds(t)) canaryPassed(t, upserts, removes)
@@ -648,6 +650,7 @@ function createLens({
     clearLive(t, removes)
     t.calls.clear()
     settleAll(t, 'interrupted')
+    askingOff(t)
     // (Esc may put queued prompts back into the input: a strip left over goes after the idle wait)
     queueIdle(t)
   }
@@ -1119,7 +1122,10 @@ function createLens({
     let id
     try { id = t.calls.get(callKey(body.tool_name, body.tool_input)) } catch {}
     const item = id && rowsOn(t) ? t.items.get(id) : null
-    if (item && item.kind === 'tool' && item.state === 'running') upsertRow(t, { ...item, waiting: 'permission' }, ops)
+    // (Claude Code asks a PermissionRequest for AskUserQuestion and ExitPlanMode too: their rows stay a question and a
+    // plan, never a permission — the owner's log said "permission: AskUserQuestion")
+    const waiting = body.tool_name === 'AskUserQuestion' ? 'question' : body.tool_name === 'ExitPlanMode' ? 'plan' : 'permission'
+    if (item && item.kind === 'tool' && item.state === 'running' && item.waiting !== waiting) upsertRow(t, { ...item, waiting }, ops)
   }
 
   /** PostToolUse ('done') / PostToolUseFailure ('failed', or 'interrupted' when it says so) */
@@ -1135,7 +1141,7 @@ function createLens({
       if (typeof body.duration_ms === 'number' && Number.isFinite(body.duration_ms) && body.duration_ms >= 0) next.durationMs = body.duration_ms
       if (JSON.stringify(next) !== JSON.stringify(item)) upsertRow(t, next, ops)
     }
-    const stillWaiting = rowsOn(t) && [...t.items.values()].some(i => i.kind === 'tool' && i.waiting === 'permission')
+    const stillWaiting = rowsOn(t) && [...t.items.values()].some(i => i.kind === 'tool' && !!i.waiting && i.state === 'running' && i.order >= t.turnStart)
     if (t.status.state === 'waiting' && !stillWaiting) setState(t, 'working', at)
   }
 
@@ -1197,7 +1203,15 @@ function createLens({
       // a prompt typed while Claude works (queued, or taken in mid-turn) belongs to the turn in progress
       // (one a prompt opened and no Stop, failure, interrupt or turn end has closed yet): the message
       // streaming now, its stream positions, the open calls and the turn's start all stay
-      const midTurn = t.turnOpen && (t.status.state === 'working' || t.status.state === 'waiting') && t.current === body.session_id
+      // (2026-11-19, the owner's log: a question dismissed with Esc in the terminal, no view reading the record, then a
+      // prompt typed there. A prompt can only be typed once no dialog holds the terminal: a wait with no card still
+      // answerable here (no hold pending) is over, and the prompt opens a new turn)
+      const dismissed = t.status.state === 'waiting' && ![...t.asks.values()].some(a => a.card.state === 'open' && a.card.holdId)
+      const midTurn = t.turnOpen && (t.status.state === 'working' || t.status.state === 'waiting') && !dismissed && t.current === body.session_id
+      // no question or plan dialog is open in the terminal: its prompt took a line (a hold still pending is main's)
+      askingOff(t)
+      // (cards the terminal decided — passed, timed out, answered — are over too: their dialog is gone)
+      settle(t, a => a.card.state !== 'open', 'prompt')
       t.turnOpen = true
       setState(t, 'working', at)
       t.current = body.session_id
@@ -1397,6 +1411,18 @@ function createLens({
    * PreToolUse to its PostToolUse (or the turn's end); main hears when the terminal has one open
    * or none (the composer never presses Enter or Esc into it; chatHost.cjs).
    */
+  /** No question or plan open any more (`id`: only that call's): main hears it at once */
+  function askingOff(t, id) {
+    if (!t.asking || !t.asking.size) return
+    if (id === undefined) t.asking.clear()
+    else t.asking.delete(id)
+    const on = t.asking.size > 0
+    if (on !== !!t.askingOn) {
+      t.askingOn = on
+      try { askingSignal(t.id, on) } catch {}
+    }
+  }
+
   function noteAsking(t, event, body) {
     if (!t.asking) t.asking = new Set()
     const id = body.tool_use_id

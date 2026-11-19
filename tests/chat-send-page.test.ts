@@ -49,7 +49,8 @@ describe('sendDraft', () => {
     const r = await sendDraft({ id: T1, text: 'Without tools, name three rivers', images: [] }, t.d)
     expect(r).toEqual({ ok: true, command: false })
     expect(t.calls.map(c => c.fn)).toEqual(['send', 'submit'])
-    expect(t.calls[0].arg).toEqual({ id: T1, sendId: 'send-test-1', text: 'Without tools, name three rivers', images: [], screen: 'empty' })
+    // (noDialog: the screen read showed the prompt box and no dialog over it)
+    expect(t.calls[0].arg).toEqual({ id: T1, sendId: 'send-test-1', text: 'Without tools, name three rivers', images: [], screen: 'empty', noDialog: true })
     expect(t.calls[1].arg).toEqual({ id: T1, sendId: 'send-test-1', echo: 'ok' })
     expect(t.outbox.entries().map(e => [e.state, e.text, e.baseline])).toEqual([['sent', 'Without tools, name three rivers', 100]])
   })
@@ -61,11 +62,28 @@ describe('sendDraft', () => {
     expect(t.outbox.entries()).toEqual([])
   })
 
-  it('the session waits on the user: refused here', async () => {
-    const t = deps([screen('idle-empty')])
+  it('the session waits on the user with its dialog on the screen: refused here', async () => {
+    const t = deps([screen('dialog-question')])
     t.d.status = { ...STATUS, state: 'waiting' }
     expect(await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)).toEqual({ ok: false, reason: 'waiting', leftOnPrompt: false })
     expect(t.calls).toEqual([])
+  })
+
+  it('a card still answerable here: refused here, whatever the screen shows (its hold keeps the dialog off it)', async () => {
+    const t = deps([screen('idle-empty')])
+    t.d.status = { ...STATUS, state: 'waiting', asks: [{ key: 'h1', holdId: 'h1', kind: 'question', toolId: null, agent: false, tool: 'AskUserQuestion', input: {}, always: null, state: 'open', since: 0 }] as any }
+    expect(await sendDraft({ id: T1, text: 'hi', images: [] }, t.d)).toEqual({ ok: false, reason: 'waiting', leftOnPrompt: false })
+    expect(t.calls).toEqual([])
+  })
+
+  // 2026-11-19, the owner's log: a question dismissed with Esc in the terminal left a card handed back to it and the
+  // status waiting; the composer refused every send. The screen shows the prompt box and no dialog: main decides
+  it('a wait whose dialog the screen no longer shows (a card handed to the terminal, the status waiting): sent, main told noDialog', async () => {
+    const t = deps([screen('idle-empty'), screen('idle-empty'), screen('echo-plain')])
+    t.d.status = { ...STATUS, state: 'waiting', asks: [{ key: 'ask:h1', holdId: null, kind: 'question', toolId: null, agent: false, tool: 'AskUserQuestion', input: {}, always: null, state: 'terminal', since: 0 }] as any }
+    const r = await sendDraft({ id: T1, text: 'Without tools, name three rivers', images: [] }, t.d)
+    expect(r).toEqual({ ok: true, command: false })
+    expect(t.calls[0].arg.noDialog).toBe(true)
   })
 
   it('the echo shows something else: submit says mismatch at once, the text is left on the prompt row', async () => {
