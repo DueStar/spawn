@@ -32,6 +32,7 @@ import { restorePicks } from './resting'
 import { autoPartner, hideTitleKey, sessionLabel, sessionRowParts, shouldToast, viewIn, visibleViews, VIEWS, type View } from './workMode'
 import { SwapPicker, ThrowPicker } from './components/PartyPickers'
 import { LensSwitch, SessionHeader } from './components/SessionHeader'
+import { DexRecent } from './components/DexRecent'
 import { useDragOrder } from './useDragOrder'
 import { clampSideWidth, readSideWidth, sideMin, SIDE_DEFAULT, SIDE_MAX, writeSideWidth } from './sideWidth'
 import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, readChangesWidth, readOpen, writeChangesWidth, writeOpen } from './changesWidth'
@@ -1229,11 +1230,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           {!workMode && <button className="w-card w-dex" onClick={() => { setView('dex'); setExpanded(true) }} title={t('도감 열기')}>
             <span className="w-label">{t('도감')}{hasNew && <span className="w-new-dot" aria-label={t('새로 잡은 포켓몬')} />}</span>
             <span className="w-dex-count"><b>{dex ? Object.keys(dex.caught).length : 0}</b><span> / {dex?.total ?? 1025}</span></span>
-            <span className="w-dex-recent">
-              {(dex?.log ?? []).filter(e => e.kind === 'catch').slice(-6).reverse().map((e, i) => (
-                <img key={`${e.at}-${i}`} src={iconUrl(e.id)} alt={nameOf(pokemonById(e.id))} title={`${e.shiny ? '✨ ' : ''}${nameOf(pokemonById(e.id))}`} />
-              ))}
-            </span>
+            <DexRecent mons={(dex?.log ?? []).filter(e => e.kind === 'catch').slice(-6).reverse().map((e, i) => ({ key: `${e.at}-${i}`, src: iconUrl(e.id), name: nameOf(pokemonById(e.id)), shiny: !!e.shiny }))} />
           </button>}
 
           <section className="w-card w-party">

@@ -32,9 +32,12 @@
 .w-dex-count { grid-column: 2; grid-row: 1; font-size: var(--t-meta); color: var(--ink-3); white-space: nowrap; }
 .w-dex-count b { font-size: var(--t-meta); font-weight: var(--w-body); color: var(--num-ink); }
 /* The latest catches share one icon size (--w-icon) */
-.w-dex-recent { grid-column: 3; grid-row: 1; display: flex; gap: 3px; justify-content: flex-end; align-items: center; min-width: 0; overflow: hidden; }
-.w-dex-recent img { width: var(--w-icon); height: var(--w-icon); object-fit: contain; flex: none; }
-.w-dex-recent img:nth-child(n+5) { display: none; }
+.w-dex-recent { grid-column: 3; grid-row: 1; display: flex; justify-content: flex-end; align-items: center; min-width: 0; overflow: hidden; }
+/* as many as fit whole (DexRecent.tsx): the oldest fold away first, never cut at the edge */
+.w-dex-recent img { width: var(--w-icon); height: var(--w-icon); margin-left: 3px; object-fit: contain; flex: none; opacity: 1; transform: none; transition: width .22s ease-out, margin-left .22s ease-out, opacity .18s ease-out, transform .22s ease-out; }
+.w-dex-recent img:first-child { margin-left: 0; }
+.w-dex-recent img.out { width: 0; margin-left: 0; opacity: 0; transform: scale(.6); }
+@media (prefers-reduced-motion: reduce) { .w-dex-recent img { transition: none; } }
 
 /* ---------- Expanded card: the view tabs (calm: no box around them; the selected view is a
    light grey box with primary-ink text; yellow is for the chosen session and 보내기 only) ---------- */
