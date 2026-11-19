@@ -113,9 +113,10 @@ describe('Widget.tsx: warm only for the main TerminalView of the shown chat sess
 
   it("the main TerminalView: active={today's expression || warm} and focus={warm ? false : undefined}; the mount noted with the same active", () => {
     const main = /<TerminalView key=\{r\.terminal\.id\}[^\n]*\/>/.exec(src)?.[0] ?? ''
-    expect(src).toContain(`const active = (${TODAY}) || warm`)
+    // (2026-11-19, the split view: outside it the expression is today's; in it each pane's terminal in its own box)
+    expect(src).toContain(`: (${TODAY}) || warm`)
     expect(src.match(/const active = /g)).toHaveLength(1)
-    expect(main).toBe('<TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm ? false : undefined} />')
+    expect(main).toBe('<TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length) : undefined} />')
     expect(src).toContain("noteMount(r.terminal.id, { active, visible: document.visibilityState === 'visible' })")
     expect(src.indexOf('noteMount(r.terminal.id')).toBeLessThan(src.indexOf('<TerminalView key={r.terminal.id}'))
   })
@@ -142,7 +143,7 @@ describe('Widget.tsx: warm only for the main TerminalView of the shown chat sess
 
   it('the widget\'s question card is untouched: no warm, no focus prop', () => {
     expect(src).toContain('<TerminalView key={`ask-${askRow.terminal.id}`} term={askRow.terminal} active />')
-    expect(src.match(/focus=\{warm \? false : undefined\}/g)).toHaveLength(1)
+    expect(src.match(/focus=\{warm \|\| \(split && r\.sessionId !== shown\?\.sessionId\) \? false : undefined\}/g)).toHaveLength(1)
     expect(src.match(/<TerminalView /g)).toHaveLength(2)
   })
 

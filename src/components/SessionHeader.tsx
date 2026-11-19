@@ -104,7 +104,9 @@ export const SessionHeader: React.FC<{
   activeTab?: string
   onTab?(sid: string): void
   onTabClose?(sid: string): void
-}> = ({ parts, sprite, cwd, renaming, onRenameStart, onRenameCommit, onRenameCancel, closing, onClose, onCloseCancel, lens, chatTools, tabs, activeTab, onTab, onTabClose }) => {
+  /** A pane of the split view (src/splitPanes.ts): its × closes the pane, the session goes on */
+  paneClose?: boolean
+}> = ({ parts, sprite, cwd, renaming, onRenameStart, onRenameCommit, onRenameCancel, closing, onClose, onCloseCancel, lens, chatTools, tabs, activeTab, onTab, onTabClose, paneClose }) => {
   const head = (
     <>
     {pictureOf(parts.picture, sprite)}
@@ -159,8 +161,8 @@ export const SessionHeader: React.FC<{
       className={`w-sess-head-close${closing ? ' confirm' : ''}`}
       onClick={onClose}
       onMouseLeave={() => closing && onCloseCancel()}
-      title={closing ? t('한 번 더 누르면 세션을 닫아요') : t('세션 닫기')}
-      aria-label={t('세션 닫기')}
+      title={paneClose ? t('칸 닫기 (세션은 계속 돌아요)') : closing ? t('한 번 더 누르면 세션을 닫아요') : t('세션 닫기')}
+      aria-label={paneClose ? t('칸 닫기') : t('세션 닫기')}
     >{closing ? t('닫기') : '×'}</button>
   </div>
   )

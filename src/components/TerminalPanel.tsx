@@ -49,7 +49,8 @@ function remeasure(x: Terminal) {
   x.clearTextureAtlas()
 }
 
-export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus?: boolean }> = ({ term, active, focus = true }) => {
+/** slot: the split view's pane (src/splitPanes.ts paneStyle) the terminal is drawn in; absent: the whole area */
+export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus?: boolean; slot?: { left: string; width: string } }> = ({ term, active, focus = true, slot }) => {
   const hostRef = useRef<HTMLDivElement>(null)
   const fitRef = useRef<FitAddon | null>(null)
   const xtermRef = useRef<Terminal | null>(null)
@@ -405,7 +406,7 @@ export const TerminalView: React.FC<{ term: TerminalInfo; active: boolean; focus
 
   return (
     <div className="term-wrap" style={{ display: active ? 'contents' : 'none' }}>
-      <div className="term-view" ref={hostRef} />
+      <div className="term-view" ref={hostRef} style={slot ? { left: `calc(${slot.left} + 12px)`, width: `calc(${slot.width} - 16px)`, right: 'auto' } : undefined} />
       {searching && (
         <div className="term-search" role="search">
           <input

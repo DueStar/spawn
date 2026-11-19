@@ -675,3 +675,15 @@
 .w-tab-drop span { padding: 8px 14px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink); }
 .w-tab-drop.full span { color: var(--red-text); }
 .w-tab-note { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 12px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink-2); }
+
+/* The split view (src/splitPanes.ts, 2026-11-19): two or three sessions side by side. One header per pane in the bar,
+   the pane in view marked as a chosen tab is (the quiet grey, a 2px line under it); hairlines between the panes */
+.w-sess-bar.split { gap: 0; padding: 0; }
+.w-pane-head { flex: 1 1 0; min-width: 0; display: flex; align-items: center; align-self: stretch; padding: 0 6px 0 10px; border-left: 1px solid var(--line); }
+.w-pane-head:first-child { border-left: 0; }
+.w-pane-head.on { background: var(--hover); box-shadow: inset 0 -2px 0 var(--ink-2); }
+.w-pane-head .w-sess-head { min-width: 0; }
+.w-pane-lines { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.w-pane-lines > i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--line); }
+.w-split-tools { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; -webkit-app-region: no-drag; }
+.w-split-tools .w-lens { margin-right: 0; }

@@ -31,13 +31,14 @@ import { changeSettings, useSettings, useWorkMode } from './settingsStore'
 import { restorePicks } from './resting'
 import { autoPartner, hideTitleKey, sessionLabel, sessionRowParts, shouldToast, viewIn, visibleViews, VIEWS, type View } from './workMode'
 import { SwapPicker, ThrowPicker } from './components/PartyPickers'
-import { SessionHeader } from './components/SessionHeader'
+import { LensSwitch, SessionHeader } from './components/SessionHeader'
 import { useDragOrder } from './useDragOrder'
 import { clampSideWidth, readSideWidth, sideMin, SIDE_DEFAULT, SIDE_MAX, writeSideWidth } from './sideWidth'
 import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, readChangesWidth, readOpen, writeChangesWidth, writeOpen } from './changesWidth'
 import { modeFromUrl, readCarry, writeCarry } from './carry'
 import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
+import { panesFor, paneStyle } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
@@ -689,7 +690,7 @@ const Widget: React.FC = () => {
   useEffect(() => { if (!tabNote) return; const timer = setTimeout(() => setTabNote(null), 3000); return () => clearTimeout(timer) }, [tabNote])
   const openInTab = useCallback((sid: string) => {
     const r = openTab(tabs, sid)
-    if (!r.ok) { setTabNote(t('탭은 {n}개까지 열 수 있어요. 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
+    if (!r.ok) { setTabNote(t('{n}개까지 나란히 볼 수 있어요. 칸 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
     setTabs(r.tabs)
     shownTab.current = sid
     setTarget(sid)
@@ -741,6 +742,20 @@ const Widget: React.FC = () => {
   const chRoom = winW - (folded ? RAIL_W : sideWidth) - 12
   const chWidth = clampChangesWidth(chBase, chRoom)
   const chMax = clampChangesWidth(CH_MAX, chRoom)
+  // The split view (src/splitPanes.ts, 2026-11-19): two or three open tabs side by side, each with its own header,
+  // conversation and composer (or terminal); the 변경 사항 panel only without it
+  const paneSids = view === 'terminal' && mode !== 'widget' ? panesFor(tabs.filter(sid => !!rowById.get(sid)?.terminal), shown?.sessionId, chRoom) : []
+  const split = paneSids.length >= 2
+  const chPanel = panelOn && !split
+  // each pane's composer handle (멈추기, focus); the session in view uses composerRef (the side panel's pointer uses it)
+  const paneRefs = useRef(new Map<string, React.MutableRefObject<ComposerHandle | null>>())
+  const paneRef = (sid: string): React.MutableRefObject<ComposerHandle | null> => {
+    if (sid === shown?.sessionId) return composerRef
+    let r = paneRefs.current.get(sid)
+    if (!r) { r = { current: null }; paneRefs.current.set(sid, r) }
+    return r
+  }
+  const focusPane = (sid: string) => { if (sid !== shown?.sessionId) { shownTab.current = sid; setTarget(sid) } }
   const setChangesWidth = (px: number | null, save: boolean) => {
     if (px === null) { setChRemembered(null); writeChangesWidth(null); return }
     const w = clampChangesWidth(px, chRoom)
@@ -792,7 +807,7 @@ const Widget: React.FC = () => {
   const sevenReset = sevenDay === 0 ? undefined : lim?.sevenDayResetsAt
   const claudeOpen = rows.some(r => r.terminal?.status === 'running' && (r.terminal.tool ?? 'claude') === 'claude')
   // the composer's control row: the shown session's model and context as its row shows them, the usage as the panel's
-  const chatControl = useMemo<ComposerControl>(() => {
+  const controlOf = (shown: Row | undefined): ComposerControl => {
     const used = shown?.meter?.context.used
     const size = shown?.meter?.context.size ?? null
     const left = typeof used === 'number' ? Math.max(0, Math.min(100, 100 - used)) : null
@@ -807,7 +822,8 @@ const Widget: React.FC = () => {
       context: { left, tip, label: barLabel },
       usage: { ...(typeof fiveHour === 'number' ? { fiveHour } : {}), ...(typeof sevenDay === 'number' ? { weekly: sevenDay } : {}) },
     }
-  }, [shown?.meter, shown?.session?.model, shown?.title, shown?.name, shown?.project, workMode, fiveHour, sevenDay, lang()]) // eslint-disable-line react-hooks/exhaustive-deps
+  }
+  const chatControl = useMemo<ComposerControl>(() => controlOf(shown), [shown?.meter, shown?.session?.model, shown?.title, shown?.name, shown?.project, workMode, fiveHour, sevenDay, lang()]) // eslint-disable-line react-hooks/exhaustive-deps
   const showClaudeLimits = typeof fiveHour === 'number' || typeof sevenDay === 'number' || claudeOpen
   // Codex CLI's windows, labelled by their length (5 hours, a week on today's plans)
   // (none while other AI tools are switched off, src/features.ts: Claude's rows only)
@@ -1415,6 +1431,14 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </>}
             </div>
             <span className="w-term-spacer" />
+            {/* the split view: 보기 정도 and 채팅 · 터미널 are the app's, not a pane's, so they sit here once (the pane
+                headers keep their names readable) */}
+            {split && lens.show && (
+              <div className="w-split-tools">
+                {lensMode === 'chat' && <Suspense fallback={null}><DensityMenu /></Suspense>}
+                <LensSwitch lens={{ mode: lensMode, enabled: lens.enabled, reason: lens.reason, onMode: setLens }} />
+              </div>
+            )}
             {updateButton}
             {/* The widget on and off: here it turns the widget on (the widget's ⇤ turns it off again); left of the text size.
                 The last thing to give way in a narrow window (the tray reaches the widget too) */}
@@ -1433,7 +1457,32 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </div>
           {/* Which session is open (the left list or the rail switches them): its picture, name,
               branch and project; rename and close here too. The bar keeps its height with none */}
-          {view === 'terminal' && (
+          {view === 'terminal' && split && (
+            <div className="w-sess-bar split">
+              {paneSids.map(sid => {
+                const r = rowById.get(sid)!
+                const on = sid === shown?.sessionId
+                return (
+                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} onPointerDown={() => focusPane(sid)}>
+                    <SessionHeader
+                      parts={sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode)}
+                      sprite={r.sprite}
+                      cwd={r.session?.cwd ?? r.terminal?.cwd}
+                      renaming={renaming?.id === sid && renaming.at === 'header'}
+                      onRenameStart={() => startRename(sid, 'header')}
+                      onRenameCommit={value => endRename(r, value)}
+                      onRenameCancel={() => endRename(r)}
+                      closing={false}
+                      onClose={() => closeTabOf(sid)}
+                      onCloseCancel={() => {}}
+                      paneClose
+                    />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {view === 'terminal' && !split && (
             <div className="w-sess-bar">
               {shown?.terminal && (
                 <SessionHeader
@@ -1475,15 +1524,21 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </Suspense>
           {/* (the 변경 사항 panel's width for the chat pane and the panel; folded for it, the terminals keep the box they
               had with the left panel open: --fold-pad, so a terminal fitted under the chat gets the size it will be shown at) */}
-          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(panelOn ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}
+          <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(chPanel ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}
             // a session dragged from the left list: where it would go, said while it is over the right side
             onDragOver={e => {
               if (!e.dataTransfer.types.includes(SESSION_MIME)) return
               e.preventDefault()
               e.dataTransfer.dropEffect = 'copy'
-              const hint = tabs.length < MAX_TABS ? t('놓으면 탭으로 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS }) : t('탭이 가득 찼어요 ({max}/{max})', { max: MAX_TABS })
+              const hint = tabs.length < MAX_TABS ? t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS }) : t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS })
               if (hint !== dropHint) setDropHint(hint)
             }}
+            onPointerDownCapture={split ? e => {
+              const box = e.currentTarget.getBoundingClientRect()
+              const i = Math.floor(((e.clientX - box.left) / Math.max(1, box.width)) * paneSids.length)
+              const sid = paneSids[Math.max(0, Math.min(paneSids.length - 1, i))]
+              if (sid) focusPane(sid)
+            } : undefined}
             onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHint(null) }}
             onDrop={e => {
               const sid = e.dataTransfer.getData(SESSION_MIME)
@@ -1507,14 +1562,45 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 // 7-48: the shown chat session's terminal is active, never focused, under the opaque chat pane
                 // until it has fitted once (src/chat/termWarm.ts); in terminal mode `warm` is always false
                 const warm = lensMode === 'chat' && view === 'terminal' && r.sessionId === shown?.sessionId && warmNeeded(r.terminal.id)
-                const active = (view === 'terminal' && shown?.sessionId === r.sessionId && !(r.sessionId === shown?.sessionId && lensMode === 'chat')) || warm
+                const pane = split ? paneSids.indexOf(r.sessionId) : -1
+                const active = split
+                  ? (view === 'terminal' && pane >= 0 && effectiveMode(r.terminal, mode, lensAll) === 'terminal') || warm
+                  : (view === 'terminal' && shown?.sessionId === r.sessionId && !(r.sessionId === shown?.sessionId && lensMode === 'chat')) || warm
                 // (first render only: whether its xterm fits before the replay arrives; only where this terminal
                 // offers the chat, so with the chat off nothing of termWarm runs)
                 if (lensAvailability(r.terminal, mode).show) noteMount(r.terminal.id, { active, visible: document.visibilityState === 'visible' })
-                return <TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm ? false : undefined} />
+                return <TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length) : undefined} />
               })}
             </Suspense>
-            {lensMode === 'chat' && view === 'terminal' && shown?.terminal && (
+            {split && paneSids.map((sid, i) => {
+              const r = rowById.get(sid)
+              if (!r?.terminal || effectiveMode(r.terminal, mode, lensAll) !== 'chat') return null
+              const ref = paneRef(sid)
+              const paneWho = sid === shown?.sessionId ? who : chatWho({ name: r.name ?? '', sprite: r.sprite ?? '', art: sessionArt(sid), noPokemon: noPokemon(r) }, workMode)
+              const onTerm = () => { focusPane(sid); toTerminal() }
+              return (
+                <div key={sid} className={`w-chat-pane split${sid === shown?.sessionId ? ' on' : ''}`} style={{ ...paneStyle(i, paneSids.length), right: 'auto' }} onPointerDownCapture={() => focusPane(sid)}>
+                  <ChatBoundary key={r.terminal.id} onTerminal={onTerm}>
+                    <Suspense fallback={null}>
+                      <ChatView
+                        key={r.terminal.id}
+                        term={r.terminal}
+                        who={paneWho}
+                        project={r.project}
+                        branch={r.branch ?? null}
+                        onTerminal={onTerm}
+                        onStop={() => ref.current?.stop()}
+                        workMode={workMode}
+                        onHelp={openChatHelp}
+                        footer={<Suspense fallback={null}><Composer key={r.terminal.id} term={r.terminal} who={paneWho} onTerminal={onTerm} control={sid === shown?.sessionId ? chatControl : controlOf(r)} focusRef={ref} /></Suspense>}
+                      />
+                    </Suspense>
+                  </ChatBoundary>
+                </div>
+              )
+            })}
+            {split && <div className="w-pane-lines" aria-hidden="true">{paneSids.slice(1).map((sid, i) => <i key={sid} style={{ left: paneStyle(i + 1, paneSids.length).left }} />)}</div>}
+            {!split && lensMode === 'chat' && view === 'terminal' && shown?.terminal && (
               <div className="w-chat-pane">
                 <ChatBoundary key={shown.terminal.id} onTerminal={toTerminal}>
                   <Suspense fallback={null}>
@@ -1536,7 +1622,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </div>
             )}
             {/* 변경 사항 (Phase 5): the chat area's right column, after the conversation and its composer (DOM order = visual order) */}
-            {panelOn && shown?.terminal && (
+            {chPanel && shown?.terminal && (
               <ChatBoundary key={`changes:${shown.terminal.id}`} onTerminal={toTerminal} where="w-ch-failed">
                 {/* (while its code loads, its column is already the panel's grey: nothing under the chat shows through) */}
                 <Suspense fallback={<div className="w-ch-wait" aria-hidden="true" />}>

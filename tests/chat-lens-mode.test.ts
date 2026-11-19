@@ -139,7 +139,8 @@ describe('Widget.tsx: every terminal stays mounted', () => {
     // the chat only takes the terminal's `active`, nothing else about it
     // (by session id, not object identity: a refactor of the rows can never leave the terminal active under the chat; review M17)
     // (Task 5.2: `|| warm`, the shown chat session's terminal until it has fitted once: tests/chat-term-warm.test.ts)
-    expect(src).toMatch(/const active = \(view === 'terminal' && shown\?\.sessionId === r\.sessionId && !\(r\.sessionId === shown\?\.sessionId && lensMode === 'chat'\)\) \|\| warm\n/)
+    // (2026-11-19: the split view's own branch first; outside it, this expression as before)
+    expect(src).toMatch(/: \(view === 'terminal' && shown\?\.sessionId === r\.sessionId && !\(r\.sessionId === shown\?\.sessionId && lensMode === 'chat'\)\) \|\| warm\n/)
   })
   it('the chat view is loaded lazily, and only in the chat mode', () => {
     expect(src).toMatch(/const ChatView = lazy\(\(\) => import\('\.\/components\/ChatView'\)\)/)

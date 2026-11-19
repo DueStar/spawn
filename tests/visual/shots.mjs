@@ -2471,42 +2471,60 @@ const FLOWS = {
   /** Claude Code's own queue: 대기 중 2 and the first text; no button in the strip; none → no strip */
   // 2026-11-17: the session tabs — a row dragged onto the right side opens a tab (the drop says where), Ctrl+click
   // too, at most three (the fourth is refused, said so), a tab's × closes only the tab, a tab click shows it
+  // the split view (2026-11-19, src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
   'session-tabs': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
     let app
     try {
-      app = await openApp(browser)
+      app = await openApp(browser, { chat: 'chat' })
       const { page } = app
       const rows = page.locator('.w-party .w-row')
-      const tabs = page.locator('.w-sess-tabs .w-sess-tab')
-      if (await tabs.count()) bad('tabs drawn with one session in view')
-      // drag the second row onto the right side: the hint while over it, then a tab
+      const heads = page.locator('.w-sess-bar.split .w-pane-head')
+      const panes = page.locator('.w-chat-pane.split')
+      if (await heads.count()) bad('panes drawn with one session in view')
+      // drag the second row onto the right side: the hint while over it, then two panes side by side
       const body = page.locator('.w-term-body')
       const box = await body.boundingBox()
       await rows.nth(1).dragTo(body, { targetPosition: { x: box.width / 2, y: box.height / 2 } })
-      await sleep(300)
-      if ((await tabs.count()) !== 2) bad(`after a drop: ${await tabs.count()} tabs, want 2`)
-      if (!(await page.locator('.w-sess-tab.on').count())) bad('no tab in view after the drop')
-      // Ctrl+click the third: a third tab; the fourth is refused, said so
+      await sleep(600)
+      if ((await heads.count()) !== 2) bad(`after a drop: ${await heads.count()} pane headers, want 2`)
+      if ((await panes.count()) !== 2) bad(`after a drop: ${await panes.count()} chat panes, want 2`)
+      if ((await page.locator('.w-pane-head.on').count()) !== 1) bad('not exactly one pane in view after the drop')
+      // Ctrl+click the third: three panes; the fourth is refused, said so
       await rows.nth(2).click({ modifiers: ['Control'] })
-      await sleep(200)
-      if ((await tabs.count()) !== 3) bad(`after Ctrl+click: ${await tabs.count()} tabs, want 3`)
+      await sleep(600)
+      if ((await heads.count()) !== 3) bad(`after Ctrl+click: ${await heads.count()} panes, want 3`)
+      if ((await page.locator('.chat-composer textarea.chat-input:not(.chat-input-twin)').count()) !== 3) bad('not one composer per pane')
       await rows.nth(3).click({ modifiers: ['Control'] })
       await sleep(200)
-      if ((await tabs.count()) !== 3) bad(`a fourth tab opened: ${await tabs.count()}`)
+      if ((await heads.count()) !== 3) bad(`a fourth pane opened: ${await heads.count()}`)
       if (!(await page.locator('.w-tab-note').count())) bad('the fourth was refused without a word')
-      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-session-tabs.png'), animations: 'disabled', caret: 'hide' })
-      // a click on another tab shows it; its × closes only the tab
-      const first = tabs.nth(0)
-      await first.click()
+      // the panes sit side by side, left to right, without overlapping
+      const boxes = []
+      for (let i = 0; i < await panes.count(); i++) boxes.push(await panes.nth(i).boundingBox())
+      for (let i = 1; i < boxes.length; i++) if (boxes[i].x < boxes[i - 1].x + boxes[i - 1].width - 2) bad(`pane ${i} overlaps pane ${i - 1}`)
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-split-chat.png'), animations: 'disabled', caret: 'hide' })
+      // a click in another pane puts it in view
+      await panes.nth(0).click({ position: { x: 40, y: 80 } })
       await sleep(200)
-      if (!(await first.evaluate(el => el.classList.contains('on')))) bad('a tab click did not show it')
-      await tabs.nth(1).hover()
-      await tabs.nth(1).locator('.w-sess-tab-x').click()
-      await sleep(200)
-      if ((await tabs.count()) !== 2) bad(`after a tab's ×: ${await tabs.count()} tabs, want 2`)
-      if ((await rows.count()) < 4) bad('closing a tab closed a session')
+      if (!(await heads.nth(0).evaluate(el => el.classList.contains('on')))) bad('a click in a pane did not put it in view')
+      // its × closes only the pane
+      await heads.nth(1).locator('.w-sess-head-close').click()
+      await sleep(400)
+      if ((await heads.count()) !== 2) bad(`after a pane's ×: ${await heads.count()} panes, want 2`)
+      if ((await rows.count()) < 4) bad('closing a pane closed a session')
+      // 터미널: each pane shows its own terminal, side by side
+      await page.locator('.w-split-tools .w-lens button').nth(1).click()
+      await sleep(800)
+      const views = page.locator('.w-term-body .term-wrap[style*="contents"] .term-view')
+      const n = await views.count()
+      if (n !== 2) bad(`terminal mode: ${n} terminals shown, want 2`)
+      else {
+        const a = await views.nth(0).boundingBox(), b2 = await views.nth(1).boundingBox()
+        if (!a || !b2 || Math.abs(a.x - b2.x) < 50) bad('the two terminals are not side by side')
+      }
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-split-terminal.png'), animations: 'disabled', caret: 'hide' })
     } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close() }
     return problems
   },
