@@ -154,6 +154,13 @@ const en: Record<string, string> = {
   // the @ mention (Phase 3)
   '파일': 'Files',
   '파일 멘션': 'Mention a file',
+  // the / menu (2026-11-19)
+  '맞는 명령이 없어요': 'No matching commands',
+  '내 명령': 'Mine',
+  '프로젝트': 'Project',
+  '스킬': 'Skill',
+  '플러그인': 'Plugin',
+  '링크 복사': 'Copy link',
   'Tab으로 추천 문장 채우기': 'Tab fills in the suggestion',
   '글이 길어서 앞부분만 보여요': "Long, so only the start is shown",
   '출력이 길어서 앞부분만 보여요': "The output is long, so only the start is shown",
@@ -461,6 +468,13 @@ const ja: Record<string, string> = {
   // the @ mention (Phase 3)
   '파일': 'ファイル',
   '파일 멘션': 'ファイルを指定',
+  // the / menu (2026-11-19)
+  '맞는 명령이 없어요': '一致するコマンドがありません',
+  '내 명령': '自分',
+  '프로젝트': 'プロジェクト',
+  '스킬': 'スキル',
+  '플러그인': 'プラグイン',
+  '링크 복사': 'リンクをコピー',
   'Tab으로 추천 문장 채우기': 'Tabで提案を入力',
   '글이 길어서 앞부분만 보여요': "長いので最初だけ表示しています",
   '출력이 길어서 앞부분만 보여요': "出力が長いので最初だけ表示しています",

@@ -10,8 +10,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { t } from '../../i18n'
 import { termText } from '../../termMetrics'
-import { answerDialog, parseDialog, sameDialog, type Dialog, type DialogKey } from '../../chat/dialog'
+import { answerDialog, dialogSig, parseDialog, type Dialog, type DialogKey } from '../../chat/dialog'
+import { commandRecent } from '../../chat/slash'
+import { boxSegments } from '../../chat/boxTable'
 import { CardShell, Exact } from './AnswerSurface'
+import { copyText } from './CodeBlock'
 
 const POLL_MS = 400
 
@@ -22,9 +25,11 @@ export function useTermDialog(id: string, on: boolean, read: (id: string) => str
   const [dialog, setDialog] = useState<Dialog | null>(null)
   useEffect(() => {
     if (!on) { setDialog(null); return }
+    // (the same reading kept; any change — another dialog with the same options and a new body, two permissions in a
+    // row — is a new one, so the card never shows the last dialog's words over the next)
     const look = () => {
       const d = parseDialog(read(id))
-      setDialog(cur => (d && cur && sameDialog(cur, d) && cur.selected === d.selected && cur.title === d.title ? cur : d))
+      setDialog(cur => (d && cur && dialogSig(cur) === dialogSig(d) ? cur : d))
     }
     look()
     const timer = setInterval(look, POLL_MS)
@@ -40,7 +45,13 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
   const field = useRef<HTMLInputElement>(null)
   useEffect(() => { if (words) field.current?.focus() }, [words?.index]) // eslint-disable-line react-hooks/exhaustive-deps
   // another dialog on the screen: a fresh card
-  useEffect(() => { setWords(null); setNote(null) }, [dialog.options.map(o => o.label).join('\n')]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { setWords(null); setNote(null); setCopied(null) }, [`${dialog.title}\n${dialog.options.map(o => o.label).join('\n')}`]) // eslint-disable-line react-hooks/exhaustive-deps
+  const [copied, setCopied] = useState<string | null>(null)
+  // a panel with no Esc line (/remote-control's) that opened right after the composer sent a command: Esc closes it,
+  // so 취소 is offered (decided once per panel, by its title: its rows may change while it is open)
+  const panelEsc = useRef<{ title: string; ok: boolean } | null>(null)
+  if (!panelEsc.current || panelEsc.current.title !== dialog.title) panelEsc.current = { title: dialog.title, ok: !dialog.numbered && commandRecent(id, Date.now()) }
+  const esc = dialog.esc || panelEsc.current.ok
 
   const deps = {
     read: () => read(id),
@@ -71,7 +82,30 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
         <CardShell title={<Exact text={label} />} label={label} kind={t('선택')} className="question dialog">
           {dialog.body.length > 0 && (
             <div className="chat-card-dbody">
-              {dialog.body.map((l, i) => (l ? <p key={i}><Exact text={l} /></p> : <span key={i} className="chat-card-dgap" />))}
+              {/* (a table the terminal drew: rows and cells again, or its lines in a monospace block: src/chat/boxTable.ts) */}
+              {boxSegments(dialog.body).map((s, k) => (s.kind === 'table'
+                ? (
+                  <div key={k} className="chat-prose chat-card-dtable"><div className="tbl-wrap"><table>
+                    <thead><tr>{s.table.head.map((c, i) => <th key={i}><Exact text={c} /></th>)}</tr></thead>
+                    <tbody>{s.table.rows.map((r, ri) => <tr key={ri}>{r.map((c, i) => <td key={i}><Exact text={c} /></td>)}</tr>)}</tbody>
+                  </table></div></div>
+                )
+                : s.kind === 'mono'
+                  ? <pre key={k} className="chat-card-dpre">{s.lines.join('\n')}</pre>
+                  : s.lines.map((l, i) => (l ? <p key={`${k}-${i}`}><Exact text={l} /></p> : <span key={`${k}-${i}`} className="chat-card-dgap" />))))}
+            </div>
+          )}
+          {/* the panel's links, whole (the terminal may have wrapped them), to select or copy */}
+          {dialog.links.length > 0 && (
+            <div className="chat-card-dlinks">
+              {dialog.links.map(u => (
+                <div key={u} className="chat-card-dlink">
+                  <code><Exact text={u} /></code>
+                  <button type="button" className="chat-btn chat-card-btn" onClick={() => { void copyText(u).then(ok => setCopied(ok ? u : '')) }}>
+                    {copied === u ? t('복사했어요') : copied === '' ? t('복사하지 못했어요') : t('링크 복사')}
+                  </button>
+                </div>
+              ))}
             </div>
           )}
           <div className="chat-card-opts">
@@ -92,7 +126,7 @@ export const DialogCard: React.FC<{ id: string; dialog: Dialog; dialogKey: KeyFn
             </form>
           )}
           <div className="chat-card-acts">
-            {dialog.esc && <button type="button" className="chat-btn chat-card-btn" disabled={busy} onClick={() => { void cancel() }}>{t('취소')}</button>}
+            {esc && <button type="button" className="chat-btn chat-card-btn" disabled={busy} onClick={() => { void cancel() }}>{t('취소')}</button>}
             <span className="chat-card-hint" role="status">{busy ? t('보내는 중…') : note ? t(note) : ''}</span>
           </div>
         </CardShell>

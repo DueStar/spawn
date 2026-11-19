@@ -40,6 +40,8 @@ import { continueList } from '../../chat/lists'
 import { QueueStrip } from './QueueStrip'
 import { AtIcon, PlusIcon, SendUpIcon } from './ChatIcons'
 import { MENU_ROWS, MentionMenu } from './MentionMenu'
+import { SlashMenu } from './SlashMenu'
+import { BUILTIN_COMMANDS, filterCommands, mergeCommands, noteCommand, slashAt, type SlashCommand } from '../../chat/slash'
 import { useChatContext } from './context'
 import { isTypingTarget } from './ChatList'
 
@@ -60,7 +62,7 @@ export interface ComposerHandle {
 
 type ChatBridge = NonNullable<typeof bridge>['chat']
 export interface ComposerDeps {
-  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded' | 'cycleMode' | 'dialogKey'>>) | null
+  chat: (Pick<ChatBridge, 'send' | 'submit' | 'interrupt' | 'image' | 'dropImage' | 'files'> & Partial<Pick<ChatBridge, 'stranded' | 'cycleMode' | 'dialogKey' | 'commands'>>) | null
   termText(id: string): string | null
   /** (1.6.2) the same lines' dim marks; absent: none (the ledger decides in main) */
   termDim?(id: string): string | null
@@ -85,6 +87,8 @@ export interface ComposerProps {
 }
 
 const ESC_AFTER_MENU_MS = 600
+/** after a command: when the screen is looked at for a dialog it opened (ms after the send, then between looks) */
+const COMMAND_LOOK_MS = [500, 500, 600]
 /** how often the empty composer looks for Claude Code's next-prompt suggestion on the terminal's row */
 const SUGGEST_POLL_MS = 700
 const MAX_CHARS = 20_000
@@ -99,6 +103,8 @@ const lacksOf = new Map<string, Set<FooterMode>>()
 /** the files picked from the @ menu, per session: badges, not text; sent as `@path` before the message */
 const refsOf = new Map<string, string[]>()
 const chipSeq = new Map<string, number>()
+/** the / menu's list per session: Claude Code's own and what main read (read again each time the menu opens) */
+const commandsOf = new Map<string, readonly SlashCommand[]>()
 const revoke = (url: string) => { try { URL.revokeObjectURL(url) } catch { /* not a page */ } }
 onChatForget(id => {
   drafts.delete(id)
@@ -106,6 +112,7 @@ onChatForget(id => {
   chipsOf.delete(id)
   refsOf.delete(id)
   chipSeq.delete(id)
+  commandsOf.delete(id)
 })
 
 const nameVars = (name: string) => ({ name, iga: josa(name, '이가') })
@@ -196,12 +203,35 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   const [sel, setSel] = useState(0)
   const dismissed = useRef<number | null>(null)
   const listId = `chat-mention-${id}`
-  const menuOpen = !!mention && menuFiles !== null
+  // the / menu (2026-11-19): the draft one /token with the caret in it; Claude Code's commands at once, the session's
+  // own and its skills once main has read them (kept per session); one closed with Esc stays shut until the token goes
+  const [slash, setSlash] = useState<{ query: string } | null>(null)
+  const [commandList, setCommandList] = useState<readonly SlashCommand[]>(() => commandsOf.get(id) ?? BUILTIN_COMMANDS)
+  const slashShut = useRef(false)
+  const slashId = `chat-slash-${id}`
+  const slashMatches = useMemo(() => (slash ? filterCommands(commandList, slash.query) : null), [slash, commandList])
+  const slashOpen = !!slashMatches && !shell
+  const menuOpen = (!!mention && menuFiles !== null) || slashOpen
+  useEffect(() => { setSel(0) }, [slash?.query])
+  useEffect(() => {
+    if (!slash || !chat?.commands) return
+    let live = true
+    chat.commands({ id }).then(r => {
+      if (!live || !r.ok) return
+      const list = mergeCommands(r.commands)
+      commandsOf.set(id, list)
+      setCommandList(list)
+    }, () => {})
+    return () => { live = false }
+  }, [!!slash, chat, id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const setDraft = (v: string) => { drafts.set(id, v); setText(v) }
   const look = () => {
     const el = ta.current
-    if (!el || ime.composing() || !chat) { setMention(null); return }
+    if (!el || ime.composing() || !chat) { setMention(null); setSlash(null); return }
+    const s = el.selectionStart === el.selectionEnd ? slashAt(el.value, el.selectionStart ?? 0) : null
+    if (!s) slashShut.current = false
+    setSlash(s && !slashShut.current ? (cur => (cur && cur.query === s.query ? cur : s)) : null)
     const m = el.selectionStart === el.selectionEnd ? mentionAt(el.value, el.selectionStart ?? 0) : null
     if (!m || dismissed.current === m.start) { if (!m) dismissed.current = null; setMention(null); return }
     setMention(cur => (cur && cur.start === m.start && cur.query === m.query ? cur : m))
@@ -226,7 +256,26 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     setMention(null)
   }
   const menuClosedAt = useRef(-Infinity)
-  const closeMenu = () => { if (mention) dismissed.current = mention.start; setMention(null); menuClosedAt.current = Date.now() }
+  const closeMenu = () => {
+    if (mention) dismissed.current = mention.start
+    setMention(null)
+    if (slash) { slashShut.current = true; setSlash(null) }
+    menuClosedAt.current = Date.now()
+  }
+  /** A command picked from the / menu: `/name ` fills the draft (never sends) */
+  const pickSlash = (i: number) => {
+    const el = ta.current
+    const c = slashMatches?.[i]
+    if (!el || !c) return
+    replaceRange(el, 0, el.value.length, `/${c.name} `)
+    setSlash(null)
+  }
+  /** The highlighted command typed out in full (its name or an alias): Enter sends it rather than filling it again */
+  const slashTyped = (i: number) => {
+    const c = slashMatches?.[i]
+    const q = slash?.query.toLowerCase() ?? ''
+    return !!c && !!q && (c.name.toLowerCase() === q || (c.aliases ?? []).some(a => a.toLowerCase() === q))
+  }
   const setChipList = (l: Chip[]) => { chipsOf.set(id, l); setChips(l) }
   const setRefList = (l: string[]) => { refsOf.set(id, l); setRefs(l) }
   const say = (n: Note | null, ms?: number) => {
@@ -270,6 +319,29 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     return now.startsWith(sent) ? now.slice(sent.length).replace(/^\s+/, '') : now
   }
 
+  /**
+   * After a command went (2026-11-19): a dialog or panel it opened shows as a card above (DialogCard), which is the
+   * answer, so nothing is said; only when, a moment later, the screen holds no dialog the card could show does the
+   * note say where the rest may be. Said only if nothing else was said meanwhile.
+   */
+  const commandSeq = useRef(0)
+  async function afterCommand(command: string) {
+    const seq = ++commandSeq.current
+    const wait = deps?.sleep ?? (ms => new Promise<void>(resolve => setTimeout(resolve, ms)))
+    const readScreen = deps?.termText ?? termText
+    for (const ms of COMMAND_LOOK_MS) {
+      await wait(ms)
+      if (seq !== commandSeq.current) return
+      if (parseDialog(readScreen(id))) return
+    }
+    setNote(cur => {
+      if (cur || seq !== commandSeq.current) return cur
+      clearTimeout(noteTimer.current)
+      noteTimer.current = setTimeout(() => setNote(null), 6000)
+      return { key: '{command} 보냈어요. 터미널에 화면이 열렸다면 거기서 이어서 해 주세요', vars: { command }, terminal: true }
+    })
+  }
+
   async function send() {
     if (sending.current || !chat) return
     const value = ta.current?.value ?? text
@@ -279,6 +351,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     sending.current = true
     setBusy(true)
     say(null)
+    commandSeq.current++
     const sentChips = chips
     const sentRefs = refs
     try {
@@ -293,7 +366,10 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         setDraft(rest(value))
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
         setRefList((refsOf.get(id) ?? []).filter(f => !sentRefs.includes(f)))
-        if (r.command) say({ key: '{command} 보냈어요. 터미널에 화면이 열렸다면 거기서 이어서 해 주세요', vars: { command: value.trim().split(/\s/)[0] }, terminal: true }, 6000)
+        if (r.command) {
+          noteCommand(id, Date.now())
+          void afterCommand(value.trim().split(/\s/)[0])
+        }
       } else if (r.leftOnPrompt) {
         // the text is on the terminal's prompt row: sending it again would double it
         setDraft(rest(value))
@@ -542,7 +618,9 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
             {note.terminal && <button type="button" className="chat-btn" onClick={onTerminal}>{t('터미널로 보기')}</button>}
           </>}
         </div>
-        {menuOpen && <MentionMenu listId={listId} files={menuFiles!} sel={sel} onPick={pick} onHover={setSel} />}
+        {slashOpen
+          ? <SlashMenu listId={slashId} commands={slashMatches!} sel={sel} onPick={pickSlash} onHover={setSel} />
+          : menuOpen && <MentionMenu listId={listId} files={menuFiles!} sel={sel} onPick={pick} onHover={setSel} />}
         <QueueStrip status={status} />
         <div
           className={`chat-cbox${shell ? ' shell' : ''}`}
@@ -571,19 +649,23 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
             onSelect={look}
             onCompositionStart={() => ime.start()}
             onCompositionEnd={() => { ime.end(); look() }}
-            onBlur={() => { ime.blur(); setMention(null) }}
+            onBlur={() => { ime.blur(); setMention(null); setSlash(null) }}
             aria-autocomplete="list"
-            aria-controls={menuOpen ? listId : undefined}
-            aria-activedescendant={menuOpen && menuFiles!.length ? `${listId}-${sel}` : undefined}
+            aria-controls={slashOpen ? slashId : menuOpen ? listId : undefined}
+            aria-activedescendant={slashOpen ? (slashMatches!.length ? `${slashId}-${sel}` : undefined) : menuOpen && menuFiles!.length ? `${listId}-${sel}` : undefined}
             onPaste={e => { const files = filesOf(e.clipboardData, true); if (files.length) void attach(files) }}
             onKeyDown={e => {
               const a = keyAction(
                 { key: e.key, code: e.code, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, isComposing: e.nativeEvent.isComposing, keyCode: e.keyCode },
                 // (Esc: a mention being typed counts as an open menu even while its files load, so the
                 // Esc meant to close it never stops the work)
-                { composing: ime.composing(), working, menuOpen, mentionOpen: !!mention, lightbox: !!ctx.lightbox },
+                { composing: ime.composing(), working, menuOpen, mentionOpen: !!mention || !!slash, lightbox: !!ctx.lightbox },
               )
-              const n = Math.min(menuFiles?.length ?? 0, MENU_ROWS)
+              const n = slashOpen ? slashMatches!.length : Math.min(menuFiles?.length ?? 0, MENU_ROWS)
+              // the / menu: Enter on a command typed out in full sends it; otherwise the menu's keys pick (fill) or close
+              // (and a command the menu does not know: it goes as typed, as before)
+              if (slashOpen && a === 'menu-pick' && e.key === 'Enter' && (slashTyped(sel) || !n)) { e.preventDefault(); setSlash(null); if (!busy) void send(); return }
+              if (slashOpen && a === 'menu-pick') { e.preventDefault(); if (n) pickSlash(sel); else closeMenu(); return }
               // Backspace on the empty draft leaves shell mode
               if (shell && e.key === 'Backspace' && !text && !ime.composing()) { e.preventDefault(); setShell(false); return }
               // Shift+Enter on a list line: the next item's mark comes with the new line (src/chat/lists.ts)

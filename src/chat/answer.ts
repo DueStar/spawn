@@ -119,6 +119,21 @@ export function shownCard(asks: readonly AskCard[] | undefined | null): AskCard 
 }
 
 /**
+ * Whether the terminal's screen is read for a dialog the chat shows as its own card (2026-11-19, the owner's report:
+ * "when I must choose several times in a row, I can choose only once"): whenever no card can be answered here — none,
+ * or every one passed to the terminal, timed out (main handed it back: the terminal draws it now), or answered and
+ * waiting for Claude Code to finish with it. Until 1.9.0 only cards passed to the terminal let it be read, so a dialog
+ * that came while an answered card waited for its tool to end (the next permission its hook did not hold, a command's
+ * confirmation) or after one timed out never got a card. `sentSettled`: an answered card has been so a moment (the
+ * screen has had time to drop the dialog that answer closed).
+ */
+export function screenDialogs(asks: readonly AskCard[] | undefined | null, sentSettled: boolean): boolean {
+  if (!asks || !asks.length) return true
+  if (asks.some(a => a.state === 'open')) return false
+  return sentSettled || !asks.some(a => a.state === 'sent')
+}
+
+/**
  * What the composer says about the card it waits behind (review M8): 'here' (answer it on the card
  * above), 'sent' (the answer went; Claude Code has not finished with it), 'terminal' (it can only be
  * answered in the terminal). Null: no card.

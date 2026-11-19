@@ -29,7 +29,7 @@ const code = (src: string) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[
 
 describe('the chat view sends nothing and changes nothing', () => {
   it('found its files', () => {
-    expect(MAIN.map(f => f.split(/[\\/]/).pop()).sort()).toEqual(['chatChanges.cjs', 'chatFiles.cjs', 'chatFull.cjs', 'chatHolds.cjs', 'chatHooks.cjs', 'chatHost.cjs', 'chatImages.cjs', 'chatInput.cjs', 'chatItems.cjs', 'chatLens.cjs', 'chatLog.cjs', 'chatSchema.cjs', 'chatTail.cjs', 'chatWorker.cjs'])
+    expect(MAIN.map(f => f.split(/[\\/]/).pop()).sort()).toEqual(['chatChanges.cjs', 'chatCommands.cjs', 'chatFiles.cjs', 'chatFull.cjs', 'chatHolds.cjs', 'chatHooks.cjs', 'chatHost.cjs', 'chatImages.cjs', 'chatInput.cjs', 'chatItems.cjs', 'chatLens.cjs', 'chatLog.cjs', 'chatSchema.cjs', 'chatTail.cjs', 'chatWorker.cjs'])
     expect(PAGE.length).toBeGreaterThanOrEqual(15)
   })
 

@@ -20,6 +20,8 @@
  * Nesting stops at 4 list levels and 8 quote levels.
  */
 
+import { unboxTables } from './boxTable'
+
 export type Inline =
   | { type: 'text'; text: string }
   | { type: 'code'; text: string }
@@ -634,6 +636,8 @@ export function parseMarkdown(src: string): Block[] {
   const cut = text.length > MD_CAP
   if (cut) text = text.slice(0, MD_CAP)
   text = text.replace(/\r\n?/g, '\n').replace(/\u0000/g, '�')
+  // a table as the terminal draws it (┌─┬─┐ │ ├─┼─┤ └─┴─┘), where text came from the screen: a table again (src/chat/boxTable.ts)
+  text = unboxTables(text)
   const blocks = parseBlocks(text.split('\n'), { list: 0, quote: 0 })
   if (cut) blocks.push({ type: 'cut' })
   return blocks

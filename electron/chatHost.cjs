@@ -47,6 +47,7 @@ const { versionVerdict } = require('./chatSchema.cjs')
 const { ENTER, ESC, SHIFT_TAB, ARROW_UP, ARROW_DOWN, LINE_END, BACKSPACE, PASTE_START, PASTE_END, INPUT_CAPS, sanitize, encodeSend, nextDraft, mayType, busyReason, isRealInput, pastablePath } = require('./chatInput.cjs')
 const { createImageStore } = require('./chatImages.cjs')
 const { scan: scanFiles, matchFiles } = require('./chatFiles.cjs')
+const { listCommands } = require('./chatCommands.cjs')
 const { createHolds, HOLD } = require('./chatHolds.cjs')
 const { errWord, versionWord } = require('./chatLog.cjs')
 const { previewShape } = require('./linkShape.cjs')
@@ -86,6 +87,8 @@ function createChatHost({
   // link previews (Phase 5): whether 설정 has them on (채팅으로 보기 and 링크 미리보기; asked at every request), and the
   // policy for the worker (allowLoopback: the test switch, which main sets only in a development build)
   previewsOn = () => false, preview: previewOpts = {},
+  // the / menu's commands and skills (chatCommands.cjs; tests pass their own reader)
+  readCommands = (cwd) => listCommands(cwd, typeof claudeDir === 'string' && claudeDir ? { config: claudeDir } : {}),
 }) {
   if (sweep) sweepChatFiles(userDataDir, fsx)
   const images = typeof imageRoot === 'string' && imageRoot ? makeImageStore({ root: imageRoot, log }) : null
@@ -991,6 +994,25 @@ function createChatHost({
     return { ok: true, files: matchFiles(await c.files, query, 50) }
   }
 
+  // ---- the / menu: the session's commands and skills besides Claude Code's own (chatCommands.cjs), kept 30 s
+
+  const COMMANDS_MS = 30_000
+  const commandReads = new Map() // terminal id → { at, cwd, list: Promise<object[]> }
+
+  /** chat:commands: only for an armed, running Claude Code session; its folder is the terminal's, never the page's */
+  async function commands(p) {
+    const id = typeof p?.id === 'string' ? p.id : ''
+    const term = termOf(id)
+    if (!st.on || !term || term.status === 'exited' || term.tool !== 'claude' || term.chat !== 'armed' || typeof term.cwd !== 'string' || !term.cwd) return { ok: false }
+    let c = commandReads.get(id)
+    if (!c || now() - c.at > COMMANDS_MS || c.cwd !== term.cwd) {
+      c = { at: now(), cwd: term.cwd, list: Promise.resolve().then(() => readCommands(term.cwd)).catch(() => []) }
+      commandReads.set(id, c)
+    }
+    const list = await c.list
+    return { ok: true, commands: Array.isArray(list) ? list : [] }
+  }
+
   /** chat:image-drop: a chip removed before sending; its file goes */
   function dropImage(p) {
     if (!images || typeof p?.id !== 'string') return
@@ -1074,6 +1096,7 @@ function createChatHost({
     ipcMain.handle('chat:image', guard((arg) => image(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.on('chat:image-drop', guard((arg) => dropImage(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:files', guard((arg) => files(arg && typeof arg === 'object' ? arg : {})))
+    ipcMain.handle('chat:commands', guard((arg) => commands(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:stranded', guard((id) => stranded(idOf(id))))
     // the buttons (Phase 4): which chat is shown, and an answer (checked and built here, never by the page)
     ipcMain.on('chat:visible', guard((arg, e) => visible(arg && typeof arg === 'object' ? arg : {}, e?.sender?.id)))
@@ -1102,7 +1125,7 @@ function createChatHost({
     if (e) await e.close().catch(() => {})
   }
 
-  return { state, enable, disable, ready, onTerminals, registerIpc, noteCreate, close: close_, onInput, onArrive, busy, stranded, send, submit, interrupt, cycleMode, dialogKey, inputState, image, dropImage, files, visible, pageGone, setWindowVisible, answer, releaseHolds, redraw, preview, setPreviews }
+  return { state, enable, disable, ready, onTerminals, registerIpc, noteCreate, close: close_, onInput, onArrive, busy, stranded, send, submit, interrupt, cycleMode, dialogKey, inputState, image, dropImage, files, commands, visible, pageGone, setWindowVisible, answer, releaseHolds, redraw, preview, setPreviews }
 }
 
 /**

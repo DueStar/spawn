@@ -228,6 +228,8 @@ const SCREENS = [
   'real-named-session', 'real-agents-panel',
   // the owner's own app (1.5.3's log): the prompt mark drawn as a plain >
   'real-ascii-mark',
+  // the /remote-control panel, reconstructed from what the 2.1.328 binary draws (not a captured screen)
+  'reconstructed-rc-panel',
 ]
 
 describe('the composer fixtures', () => {
