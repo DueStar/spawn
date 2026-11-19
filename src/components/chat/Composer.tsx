@@ -342,7 +342,11 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     })
   }
 
-  async function send() {
+  /**
+   * retried: the send after the terminal's prompt row was cleared for it (once: words left there never stop a send
+   * from here, 2026-11-19, the owner: "whichever side it is sent from, that is what is sent")
+   */
+  async function send(retried = false) {
     if (sending.current || !chat) return
     const value = ta.current?.value ?? text
     if (!value.trim() && (shell || (!chips.length && !refs.length))) return
@@ -354,6 +358,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     commandSeq.current++
     const sentChips = chips
     const sentRefs = refs
+    let clearFirst = false
     try {
       // (a `!` command goes alone: the pictures stay in the composer for the next message)
       const r = shell
@@ -378,12 +383,15 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
       } else {
         // (a dialog on the terminal's screen: its card is right above, never the terminal)
         if (r.reason === 'screen' && parseDialog((deps?.termText ?? termText)(id))) say({ key: '{name}{iga} 고르기를 기다려요. 위 카드에서 먼저 골라 주세요', vars: nameVars(who.name) })
+        // words typed on the terminal's prompt row: cleared, and this message sent instead (no question)
+        else if (r.reason === 'prompt-busy' && !retried && chat.dialogKey) clearFirst = true
         else say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.row))
       }
     } finally {
       sending.current = false
       setBusy(false)
     }
+    if (clearFirst) await takeRow('', true)
   }
 
   // ---- the control row's menus (2026-11-17): the model by `/model <alias>`, the mode by Shift+Tab until the footer shows it
@@ -501,7 +509,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
       requestAnimationFrame(() => ta.current?.focus({ preventScroll: true }))
       return
     }
-    void send()
+    await send(true)
   }
 
   async function stop() {
