@@ -3,8 +3,10 @@
  *
  * Runs on 127.0.0.1:3334, or SPAWN_PORT (server/config.js).
  * - The app's page connects via ws://127.0.0.1:<port>/ws
- * - The Claude Code hook (hooks/spawn-hook.cjs) POSTs to /event, the status
- *   line (hooks/status-line.cjs) to /status
+ * - Claude Code's http hooks POST to /hook/<key>/<terminal>/<Event> (the app's
+ *   sessions, every event but SessionStart), the command hook
+ *   (hooks/spawn-hook.cjs: SessionStart, and older releases' sessions) to
+ *   /event, the status line (hooks/status-line.cjs) to /status
  * - GET /sessions lists the Claude Code sessions, hooked ones and the ones only
  *   Claude Code's session registry knows about (server/sessions.js)
  * - The game (server/pokedex.js), the Pokémon artwork (server/sprites.js) and
@@ -27,6 +29,8 @@ import { createCloud, readHidePrompts } from './cloud.js'
 import { mountHealth, readVersion } from './health.js'
 import { readPort, readUiPort, readHost } from './config.js'
 import runtimeDirs from './runtime-dir.cjs'
+import hookEvents from '../hooks/hook-event.cjs'
+import { timingSafeEqual } from 'crypto'
 import { createGuards } from './guards.js'
 import { MAX_TEXT_LEN, clampString, clampCount, transcriptText, sanitiseTasks, validateEvent } from './events.js'
 import { WS_PROTOCOL, WS_TOKEN_PROTOCOL_PREFIX, wsTokenFrom, handleProtocols, redactForReadOnly } from './ws-protocol.js'
@@ -68,6 +72,8 @@ const UI_DEV_PORT = readUiPort()
 // changes the game or signs in needs it, and so does conversation text.
 //
 //   token required   POST /event, /status, /pokedex/*, /auth/start|signout|sync
+//   hook key         POST /hook/<key>/... (a key made from the token, in the
+//                    session settings file: Claude Code's http hooks cannot sign)
 //   open             every GET; the WebSocket without the token (no
 //                    conversation text, see below)
 //
@@ -688,6 +694,10 @@ app.use((req, res, next) => {
   next()
 })
 
+// Claude Code's http hooks (POST /hook/<key>/<terminal>/<Event>): before the
+// body parsers and CORS, which it needs neither of (see hookRoute)
+app.post('/hook/:key/:terminal/:event', hookRoute)
+
 // (the box order lists up to 1200 uids: more than the 10kb other bodies get)
 app.use((req, res, next) => (req.path === '/event' || req.path === '/pokedex/arrange' ? eventJsonBody : jsonBody)(req, res, next))
 
@@ -878,12 +888,19 @@ app.post('/flush', requireToken, (_req, res) => {
 })
 
 app.post('/event', requireToken, (req, res) => {
-  const body = req.body
+  const validationError = ingestEvent(req.body)
+  if (validationError) return res.status(400).json({ error: validationError })
+  res.json({ ok: true })
+})
 
+/**
+ * One hook event in: checked, clamped, applied to its session, broadcast and
+ * noted by the game. The validation error when it is not an event, else null.
+ * (POST /event, the command hook's, and POST /hook/..., Claude Code's http hook)
+ */
+function ingestEvent(body) {
   const validationError = validateEvent(body)
-  if (validationError) {
-    return res.status(400).json({ error: validationError })
-  }
+  if (validationError) return validationError
 
   // Clamp the fields kept, so nothing oversized reaches the page or agents.json
   const sanitised = {
@@ -937,8 +954,84 @@ app.post('/event', requireToken, (req, res) => {
   // The game: a session's partner, and a step through tall grass per tool call
   try { pokedex.noteEvent(sanitised, sanitised.sessionId ? sessions.get(sanitised.sessionId) : undefined) } catch (err) { console.error('[pokedex]', err.message) }
   health.markHook()  // a hook reached us (after the event, so its counts include it)
-  res.json({ ok: true })
-})
+  return null
+}
+
+/**
+ * POST /hook/<key>/<terminal id>/<Event> — Claude Code's own http hooks, the
+ * game's for every event but SessionStart (electron/terminals.cjs
+ * gameHookEntries writes them into a session's settings file): the hook's JSON
+ * input as the body, turned into the event by the same buildEvent the command
+ * hook uses (hooks/hook-event.cjs), with no process started per event.
+ *
+ * Claude Code waits for these, so the answer — 200 with an empty body, which it
+ * reads as "no decision, nothing to add" (the command hook's empty stdout) — is
+ * written as soon as the body is read, before parsing; the event is then
+ * applied in the same tick, so events are applied in the order their bodies
+ * arrived (each hook's request is answered before Claude Code goes on to the
+ * next). Never anything but an empty 200 to a well-formed request: a bad body
+ * or an event the game ignores is dropped silently. A refused request (404/403)
+ * is a non-blocking error to Claude Code: the session goes on.
+ *
+ * No Authorization header and no signature (an http hook cannot sign its
+ * body): the key in the path, derived from the server token (hookUrlKey), is
+ * what proves the caller read the session's settings file. The terminal id in
+ * the path stands for what the command hook got from its environment
+ * (SPAWN_SESSION_ID): the app terminal the session runs in.
+ */
+const HOOK_KEY = Buffer.from(hookEvents.hookUrlKey(AUTH_TOKEN))
+const HTTP_HOOK_EVENTS = new Set(hookEvents.HTTP_HOOK_EVENTS)
+const TERMINAL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+// A PostToolUse body holds the whole tool input and response (a file read, a long output):
+// read whole up to this, past it dropped (the hook still answered at once)
+const HOOK_BODY_LIMIT = 32 << 20
+const hookRefusedOnce = new Set()
+
+function hookKeyMatches(given) {
+  const b = Buffer.from(String(given))
+  return b.length === HOOK_KEY.length && timingSafeEqual(b, HOOK_KEY)
+}
+
+function hookRoute(req, res) {
+  const arrived = Date.now()  // the event's `at` (the command hook's is when it started)
+  const refuse = (status, why) => {
+    if (!hookRefusedOnce.has(why)) { hookRefusedOnce.add(why); console.warn(`[hook] refused a request (${why}, ${status})`) }
+    res.writeHead(status, { 'content-length': '0', connection: 'close' })
+    res.end()
+  }
+  // a page in a browser: never (the Host guard ran already)
+  if (req.headers.origin !== undefined) return refuse(403, 'an Origin header')
+  const { key, terminal, event } = req.params
+  if (!TERMINAL_ID.test(terminal) || !HTTP_HOOK_EVENTS.has(event)) return refuse(404, 'an unknown path')
+  if (!hookKeyMatches(key)) return refuse(404, 'a wrong key')
+  const chunks = []
+  let size = 0
+  let oversize = false
+  req.on('data', (c) => {
+    if (oversize) return
+    size += c.length
+    if (size > HOOK_BODY_LIMIT) { oversize = true; chunks.length = 0; return }
+    chunks.push(c)
+  })
+  req.on('error', () => {})
+  req.on('end', () => {
+    // answered first: Claude Code goes on at once
+    res.writeHead(200, { 'content-length': '0' })
+    res.end()
+    if (oversize) {
+      if (!hookRefusedOnce.has('oversize')) { hookRefusedOnce.add('oversize'); console.warn(`[hook] a ${event} body over ${HOOK_BODY_LIMIT} bytes was dropped`) }
+      return
+    }
+    try {
+      let payload = null
+      try { payload = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') } catch { return /* not JSON: nothing to send */ }
+      const built = hookEvents.buildEvent(payload, terminal)
+      if (built) ingestEvent({ ...built, at: arrived })
+    } catch (err) {
+      console.error(`[hook] ${event}:`, err.message)
+    }
+  })
+}
 
 /**
  * GET /sessions — the Claude Code sessions (one per terminal) the server knows

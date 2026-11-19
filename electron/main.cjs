@@ -28,6 +28,7 @@ const {
   healthChallenge,
 } = require('./helpers.cjs')
 const { createTray } = require('./tray.cjs')
+const { hookUrlKey } = require('../hooks/hook-event.cjs')
 const { createTerminalManager, gitBranch } = require('./terminals.cjs')
 const { claudeCommand } = require('./adapters.cjs')
 const { listHistory, claudeDir, runningSessions, runningCheck, readSessionLinks, appTitles } = require('./history.cjs')
@@ -1176,6 +1177,9 @@ function registerTerminalIpc() {
     emit: (event) => { void serverPost('/event', event) },
     // A Codex tab's context and usage limits (from its session log), as a status line would
     postStatus: (body) => { void serverPost('/status', body) },
+    // the game's hooks: http hooks Claude Code POSTs to the server itself (its port, and a key made from its
+    // token: hooks/hook-event.cjs hookUrlKey), no process per event; no token yet: release 1.4.0's command hooks
+    gameHooks: () => { const token = readServerToken(TOKEN_FILE); return token ? { port: SERVER_PORT, key: hookUrlKey(token) } : null },
     // The chat view: whether new Claude Code sessions get its hooks (off without the host: as 1.4.0)
     // and, for its composer, what reaches an armed session's input besides the chat (none of it while off)
     // (and whether a chat send is between its text and its Enter: the side box's send then waits, said)
