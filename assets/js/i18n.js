@@ -18,7 +18,7 @@ var SITE_LINKS = {
 };
 
 /* The latest release (shown under the closing download button; update with each release) */
-var LATEST_VERSION = '1.3.52'; // the fallback: loading.js asks GitHub for the newest
+var LATEST_VERSION = '1.9.0'; // the fallback: loading.js asks GitHub for the newest
 
 var STRINGS = {
   ko: {
@@ -205,6 +205,7 @@ var STRINGS = {
     'cta.soon': 'macOS 버전 준비 중',
     'nav.soon': '준비 중',
     'dl.intel': 'Intel Mac용 받기',
+    'dl.mac.arm': 'Mac용 받기 (Apple 실리콘)',
     'dl.win': 'Windows용 받기',
     'dl.soon': 'macOS 버전 준비 중',
     'hero.note.mac': '무료 · macOS · 비영리 팬 프로젝트',
@@ -407,6 +408,7 @@ var STRINGS = {
     'cta.soon': 'macOS version coming soon',
     'nav.soon': 'Coming soon',
     'dl.intel': 'Download for Intel Mac',
+    'dl.mac.arm': 'Download for Mac (Apple silicon)',
     'dl.win': 'Get it for Windows',
     'dl.soon': 'macOS version coming soon',
     'hero.note.mac': 'Free · macOS · Non-commercial fan project',
@@ -608,6 +610,7 @@ var STRINGS = {
     'cta.soon': 'macOS版は準備中',
     'nav.soon': '準備中',
     'dl.intel': 'Intel Mac用をダウンロード',
+    'dl.mac.arm': 'Mac版をダウンロード(Appleシリコン)',
     'dl.win': 'Windows版を入手',
     'dl.soon': 'macOS版は準備中',
     'hero.note.mac': '無料 · macOS · 非営利のファンプロジェクト',

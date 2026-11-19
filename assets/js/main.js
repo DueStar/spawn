@@ -93,10 +93,14 @@
     if (/Mac/i.test(navigator.platform || '') || /Macintosh|Mac OS X/.test(ua)) return navigator.maxTouchPoints > 1 ? 'win' : 'mac'; // iPadOS says Macintosh, with a touch screen
     return 'win';
   }
-  var PLATFORM = { os: detectOS(), arm: false, intel: false, locked: false };
+  // win: the latest release carries the Windows zip (then every Windows button downloads it straight away)
+  var PLATFORM = { os: detectOS(), arm: false, intel: false, win: false, locked: false };
   function platState() { return PLATFORM.os !== 'mac' ? 'win' : (PLATFORM.arm ? 'mac-ready' : 'mac-soon'); }
   function zipName(kind) { return PRODUCT_NAME + '-' + LATEST_VERSION + '-' + kind + '.zip'; }
   function macUrl(arch) { return SITE_LINKS.repo + '/releases/download/v' + LATEST_VERSION + '/' + zipName('mac-' + arch); }
+  /* 2026-11-19 (the owner: a button should download, not open a release page): the zip itself once GitHub has
+     named the latest release and its files; until then, or without an answer, the project's main page */
+  function winHref() { return PLATFORM.win ? SITE_LINKS.repo + '/releases/download/v' + LATEST_VERSION + '/' + zipName('win-x64') : SITE_LINKS.repo; }
   // the same text with the Mac wording where there is one (hero note, unzip step, the Mac FAQ answer)
   function platKey(key) {
     if (key === 'faq.a9') return PLATFORM.arm ? 'faq.a9.ready' : key;
@@ -113,7 +117,7 @@
     document.documentElement.setAttribute('data-plat', state);
     // back to the Windows baseline first, so switching platforms leaves nothing behind
     document.querySelectorAll('[data-dl]').forEach(function (a) {
-      a.href = SITE_LINKS.releases;
+      a.href = winHref();
       a.removeAttribute('aria-disabled');
       a.classList.remove('is-soon');
       if (a.hasAttribute('data-was-primary')) { a.classList.remove('btn-ghost'); a.classList.add('btn-primary'); a.removeAttribute('data-was-primary'); }
@@ -131,15 +135,14 @@
     if (zip) zip.textContent = versionText(zip);
     var note = document.querySelector('[data-mac-note]');
     if (note) { note.hidden = !mac; note.textContent = mac ? t('start.s2.note.mac') : ''; }
-    // the quiet second link: Intel Mac when the Mac build is out, Windows while it is not
+    // the quiet second line: on Windows the Mac downloads (once out); on a Mac the Intel one, or Windows while the
+    // Mac build is not out
     document.querySelectorAll('[data-dl-alt]').forEach(function (p) {
-      var a = p.querySelector('a');
-      var show = mac && (state === 'mac-soon' || PLATFORM.intel);
-      p.hidden = !show;
-      if (!show) { a.textContent = ''; a.removeAttribute('href'); return; }
-      a.textContent = t(state === 'mac-soon' ? 'dl.win' : 'dl.intel');
-      a.href = state === 'mac-soon' ? SITE_LINKS.releases : macUrl('x64');
-      a.rel = 'noopener';
+      var links = mac
+        ? (state === 'mac-soon' ? [['dl.win', winHref()]] : PLATFORM.intel ? [['dl.intel', macUrl('x64')]] : [])
+        : (PLATFORM.arm ? [['dl.mac.arm', macUrl('arm64')]].concat(PLATFORM.intel ? [['dl.intel', macUrl('x64')]] : []) : []);
+      p.hidden = !links.length;
+      p.innerHTML = links.map(function (l) { return '<a href="' + esc(l[1]) + '" rel="noopener">' + esc(t(l[0])) + '</a>'; }).join('<span class="dl-alt-sep" aria-hidden="true"> · </span>');
     });
     if (!mac) return;
     document.querySelectorAll('[data-dl]').forEach(function (a) {
@@ -162,10 +165,10 @@
   window.spawnMacAssets = function (assets) {
     if (PLATFORM.locked) return;
     var names = (assets || []).map(function (a) { return a && a.name; });
-    var was = PLATFORM.arm + '/' + PLATFORM.intel;
-    PLATFORM.arm = names.some(function (n) { return /-mac-arm64\.zip$/.test(n); });
+      PLATFORM.arm = names.some(function (n) { return /-mac-arm64\.zip$/.test(n); });
     PLATFORM.intel = names.some(function (n) { return /-mac-x64\.zip$/.test(n); });
-    if (was !== PLATFORM.arm + '/' + PLATFORM.intel) window.spawnReapply();
+    PLATFORM.win = names.some(function (n) { return n === zipName('win-x64'); });
+    window.spawnReapply();
   };
   window.spawnSetPlatform = function (o) {
     for (var k in o) PLATFORM[k] = o[k];
@@ -419,26 +422,37 @@
     return s;
   }
 
-  /* The session header above the terminal (SessionHeader.tsx): the session in view, named */
+  /* The session tabs above the terminal (1.8.0, SessionHeader.tsx): up to three open sessions, the one in view
+     named with its branch and ×, the others with their picture, name and a working / needs-you dot */
+  var headKey = '';
   function updateHead() {
     var s = demo.shown, head = els.head;
     head.hidden = !s;
     if (!s) return;
-    var img = head.querySelector('.w-sess-head-pic');
-    if (img.getAttribute('data-dex') !== String(s.dex || 0)) { setIcon(img, s.dex); img.setAttribute('data-dex', String(s.dex || 0)); }
-    head.querySelector('.w-sess-head-name').textContent = s.titleKey ? t(s.titleKey) : s.title;
-    var br = head.querySelector('.w-sess-head-branch');
-    br.textContent = s.branch || '';
-    br.hidden = !s.branch;
-    head.querySelector('.w-sess-head-proj').textContent = s.project;
+    var others = demo.sessions.filter(function (x) { return x !== s; }).slice(0, 2);
+    var tabs = demo.sessions.filter(function (x) { return x === s || others.indexOf(x) >= 0; });
+    var name = function (x) { return x.titleKey ? t(x.titleKey) : x.title; };
+    var key = tabs.map(function (x) { return [x.id, x.dex, x.mood, name(x), x.branch, x === s].join('|'); }).join('/') + lang;
+    if (key === headKey) return;
+    headKey = key;
+    head.innerHTML = '<span class="w-sess-tabs">' + tabs.map(function (x) {
+      var on = x === s;
+      return '<span class="w-sess-tab mood-' + x.mood + (on ? ' on' : '') + '">' +
+        (x.dex ? iconImg(x.dex, 'w-sess-head-pic') : '<img class="w-sess-head-pic" src="' + GENERIC_BALL + '" data-fb="' + OWN_BALL + '" alt="">') +
+        '<span class="' + (on ? 'w-sess-head-name' : 'w-sess-tab-name') + '">' + esc(name(x)) + '</span>' +
+        (on && x.branch ? '<span class="w-row-branch w-sess-head-branch">' + esc(x.branch) + '</span>' : '') +
+        (on ? '<span class="w-sess-tab-x">×</span>' : '<span class="w-sess-tab-dot"></span>') +
+        '</span>';
+    }).join('') + '</span><span class="w-sess-head-spacer"></span><span class="w-sess-head-close">×</span>';
   }
 
-  function update(s) { updateRow(s); if (s === demo.shown) updateHead(); }
+  function update(s) { updateRow(s); updateHead(); }
 
   function removeSession(s) {
     demo.sessions = demo.sessions.filter(function (x) { return x !== s; });
     if (s.ui) s.ui.row.remove();
     renderCount();
+    updateHead();
   }
 
   function show(s) {

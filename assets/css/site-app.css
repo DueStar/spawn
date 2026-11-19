@@ -183,7 +183,7 @@
 .step-log { flex: none; min-height: 0; }
 .step-log .today-day { position: static; margin: 0 0 2px; padding: 2px 4px; background: transparent; }
 .step-log .today-row { padding: 7px 4px; gap: 10px; }
-.step-log .today-row img.today-icon { width: 32px; height: 32px; }
+.step-log .today-row img.today-icon { width: 24px; height: 24px; }
 .step-log .today-sub { flex-wrap: wrap; white-space: normal; }
 .step-side { justify-content: flex-start; }
 
