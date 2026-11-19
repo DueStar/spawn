@@ -57,7 +57,7 @@ import { AnswerSurface, type AnswerFn } from './chat/AnswerSurface'
 import { DialogCard, useTermDialog } from './chat/DialogCard'
 import { FullButton, FullView, type FullState } from './chat/FullView'
 import { FindBar, useFind } from './chat/FindBar'
-import { cardNote, shownCard } from '../chat/answer'
+import { cardNote, screenDialogs, shownCard } from '../chat/answer'
 import { noticeText, overlayOpen } from '../chat/find'
 import { appShortcut } from '../keys'
 
@@ -347,6 +347,8 @@ const ChatLoading: React.FC = () => {
 
 /** How long one announcement stays before the next one (a screen reader reads a change, not a stack of them) */
 const ANNOUNCE_MS = 1500
+/** how long an answered card keeps the screen's dialogs unread (the dialog that answer closed may still be drawn) */
+const SENT_SETTLE_MS = 1500
 
 /**
  * The chat's live region (review M9): mounted with the view, so the first card is heard; what comes
@@ -550,7 +552,17 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const dialogKey = fixed ? undefined : bridge?.chat.dialogKey
   // (a card that can only be answered in the terminal — too long, a sub-agent's — gives way to the dialog its
   // terminal shows, read from the screen; one answerable here, or an answer on its way, keeps the screen untouched)
-  const termOnly = asks.length > 0 && asks.every(a => a.state === 'terminal')
+  // (2026-11-19: also one timed out, or answered and still waiting on Claude Code a moment after: src/chat/answer.ts
+  // screenDialogs — a dialog that follows an answer gets its card too)
+  const sentKeys = asks.filter(a => a.state === 'sent').map(a => a.key).join('\n')
+  const [sentSettled, setSentSettled] = useState(true)
+  useEffect(() => {
+    if (!sentKeys) { setSentSettled(true); return }
+    setSentSettled(false)
+    const timer = setTimeout(() => setSentSettled(true), SENT_SETTLE_MS)
+    return () => clearTimeout(timer)
+  }, [sentKeys])
+  const termOnly = asks.length > 0 && screenDialogs(asks, sentSettled)
   const dialog = useTermDialog(id, !!dialogKey && (!asks.length || termOnly))
   const waiting = wait && !asks.length ? { text: t(wait.kind === 'permission' ? '{name}{iga} 허락을 기다려요' : '{name}{iga} 답을 기다려요', nameVars(who.name)), key: wait.key } : null
   // the chat's one live region (review M9): there before any card, announcements one after another
