@@ -1,7 +1,7 @@
 /**
- * Density (Phase 5, Task 5.5): 기본 / 생각 포함 / 전부. src/chat/density.ts (the levels, remembered as one
+ * Density: 기본 / 생각 포함 / 전부. src/chat/density.ts (the levels, remembered as one
  * word, the virtual list's estimate per level, the initial open state), src/chat/rows.ts (thinking rows only
- * from 생각 포함; 기본 gives exactly the Phase 2 rows; the never-collapsed rule in every level), the thinking
+ * from 생각 포함; 기본 gives exactly the rows from before density levels; the never-collapsed rule in every level), the thinking
  * row, the header's menu and the list's props.
  */
 
@@ -44,7 +44,7 @@ function items(name: string): ChatItem[] {
   return [...byId.values()].sort((a, b) => a.order - b.order || (a.id < b.id ? -1 : 1))
 }
 const dayLabel = (at: number) => new Date(at).toISOString().slice(0, 10)
-// (the turn summary's feet, Task 5.6, are left out here: tests/chat-foot.test.ts pins them)
+// (the turn summary's feet are left out here: tests/chat-foot.test.ts pins them)
 const noFeet = (rows: Row[]) => rows.filter(r => r.row !== 'foot')
 const shape = (rows: Row[]) => noFeet(rows).map(r => r.row)
 const json = (x: unknown) => JSON.parse(JSON.stringify(x))
@@ -52,12 +52,12 @@ const json = (x: unknown) => JSON.parse(JSON.stringify(x))
 // ---------------------------------------------------------------- rows
 
 describe('buildRows by density', () => {
-  // taken from Phase 2's rows.ts and chatItems.cjs before this task changed them (tests/fixtures/chat/rows-phase2.json)
+  // taken from rows.ts and chatItems.cjs before density levels changed them (tests/fixtures/chat/rows-phase2.json)
   const SNAP = JSON.parse(readFileSync(join(FIX, 'rows-phase2.json'), 'utf8')).rows as Record<string, Row[]>
 
-  it('기본 gives exactly the Phase 2 rows (deep-equal to the snapshot taken before the change), with or without the option', () => {
+  it('기본 gives exactly the pre-density rows (deep-equal to the snapshot taken before the change), with or without the option', () => {
     expect(Object.keys(SNAP)).toEqual(['tools.jsonl', 'thinking.jsonl', 'basic.jsonl', 'agent.jsonl', 'turns.jsonl', 'image.jsonl'])
-    // (since 2026-11-17 a progress note — thinkingDisplay "updates", a thinking block with text — shows in 기본 too:
+    // (a progress note — thinkingDisplay "updates", a thinking block with text — shows in 기본 too:
     // thinking.jsonl has one; the rest of 기본 is the snapshot's, row for row)
     const notes = (rows: Row[]) => rows.filter(r => r.row === 'thinking' && r.item.update)
     // (a turn's head is keyed by the turn's first shown item: the note now, where it was the answer)
@@ -229,7 +229,7 @@ describe('the thinking row', () => {
     expect(html).toContain('<code>largest</code>')
     expect(html).not.toContain('기록에 남지 않았어요')
     expect(html).toContain('글이 길어서 앞부분만 보여요')
-    // (2026-11-17: the rest is read again from the record, 전체 보기, never "see the terminal")
+    // (the rest is read again from the record, 전체 보기, never "see the terminal")
     expect(html).not.toContain('터미널에서 보세요')
   })
 })

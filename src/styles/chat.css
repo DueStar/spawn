@@ -1,7 +1,7 @@
-/* src/styles/chat.css — the chat view (Phase 2, the read-only lens), on the 차분하게 2 tokens.
+/* src/styles/chat.css — the chat view (the read-only lens), on the 차분하게 2 tokens.
    Imported by src/components/ChatView.tsx (and the 변경 사항 panel, loaded only with the chat shown), so with the
    chat view off none of this loads.
-   The values follow the design lab (calm-lab/app.css "chat view" and the v3 block). Font stacks
+   The values follow the design mock-up. Font stacks
    are literal (tests/fonts.test.ts): prose in Pretendard, code in Monaspace. Text sizes are the
    four text steps' tokens only. Nothing here animates. */
 
@@ -35,7 +35,7 @@
 .fchip:hover .fchip-in { background: rgba(255, 255, 255, 0.09); }
 .fchip svg { opacity: 0.7; flex: none; }
 
-/* a link preview card (Phase 5, opt-in; the lab's .og, app.css 223–230): after the block that holds the link, a hairline
+/* a link preview card (opt-in): after the block that holds the link, a hairline
    box, the whole card one link. The site line is the link's own host (a neutral globe, never the site's own picture);
    the picture (a blob: URL the page made) at 104×68 on the right when there is one */
 .chat-prose a.chat-og { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: center; max-width: 480px; padding: 10px 10px 10px 12px; border: 1px solid var(--line); border-radius: var(--r-l); text-decoration: none; color: inherit; margin: 2px 0 10px; }
@@ -137,7 +137,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-dl.del { background: var(--del-bg); color: var(--ink-2); }
 .chat-dl.del .sg { color: var(--red-text); }
 .chat-dl.gap { color: var(--ink-3); }
-/* the counts as a button (Phase 5): they open the 변경 사항 panel at this edit; a hairline chip with the panel glyph (the lab's .cchip) */
+/* the counts as a button: they open the 변경 사항 panel at this edit; a hairline chip with the panel glyph */
 .chat-counts-btn { align-items: center; min-height: 22px; padding: 0 7px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; cursor: pointer; }
 .chat-counts-btn:hover { border-color: var(--line-hover); background: var(--hover); }
 .chat-counts-ico { display: inline-flex; color: var(--ink-3); }
@@ -151,7 +151,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat :is(button, a, [tabindex="0"]):focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
 .chat-list { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
 .chat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; overflow-anchor: none; outline: none; }
-/* a thin bar off the edge (2026-11-19, the owner: too thick, glued to the right): a 10px track, the thumb 4px wide with
+/* a thin bar off the edge: a 10px track, the thumb 4px wide with
    4px of air on its right (transparent borders, the paint kept to the padding box) */
 .chat-scroll::-webkit-scrollbar { width: 10px; }
 .chat-scroll::-webkit-scrollbar-track { background: transparent; }
@@ -168,7 +168,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-older { min-height: 20px; text-align: center; font-size: var(--t-meta); color: var(--ink-3); }
 .chat-day { text-align: center; font-size: var(--t-meta); color: var(--ink-3); padding: 2px 0 6px; }
 .chat-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-/* the list's 위 / 아래 내용 더 보기 stops: unseen until the keyboard reaches one, then a quiet visible label (Phase 6) */
+/* the list's 위 / 아래 내용 더 보기 stops: unseen until the keyboard reaches one, then a quiet visible label */
 .chat-sentinel:focus-visible { width: auto; height: auto; min-height: 22px; display: inline-flex; align-items: center; overflow: visible; clip-path: none; z-index: 3; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg); color: var(--ink-2); font-size: var(--t-meta); }
 
 /* the user's messages: right-aligned quiet blocks */
@@ -193,7 +193,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-text-acts { display: flex; justify-content: flex-end; margin-top: 2px; opacity: 0; }
 .chat-row:hover .chat-text-acts, .chat-text-acts:focus-within { opacity: 1; }
 @media (hover: none) { .chat-text-acts { opacity: 1; } }
-/* the turn summary (the lab's .turn-foot / .tf-copy, app.css 660–663): one quiet line after a finished turn — its
+/* the turn summary: one quiet line after a finished turn — its
    time, its tool calls, the files it changed (the step count's look is in chat-game.css), and the answer's 복사 at
    the right, always shown */
 .chat-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 24px; font-size: var(--t-meta); color: var(--ink-3); padding-top: 2px; }
@@ -204,7 +204,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-live { display: flex; flex-direction: column; gap: 2px; }
 .chat-live-label { font-size: var(--t-micro); color: var(--ink-3); }
 .chat-live .chat-prose { color: var(--ink-2); }
-/* a thinking block (the lab's .think, app.css 232–233; only from 생각 포함): a left hairline, 생각 · {time} quiet above,
+/* a thinking block: a left hairline, 생각 · {time} quiet above,
    then the text in the quiet grey, or the line that says it is not in the record */
 .chat-think { padding-left: 12px; border-left: 1px solid var(--line); font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-ui); line-height: 1.65; color: var(--ink-3); min-width: 0; }
 .chat-think-head { display: block; margin-bottom: 2px; font-size: var(--t-meta); font-weight: 500; color: var(--ink-3); }
@@ -246,7 +246,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-empty-sub { font-size: var(--t-meta); color: var(--ink-3); }
 .chat-empty-hint { max-width: 440px; margin-top: 6px; font-size: var(--t-meta); color: var(--ink-3); line-height: 1.6; }
 
-/* ---------------------------------------------------------------- the composer (Phase 3; the lab's .composer, app.css 337–371)
+/* ---------------------------------------------------------------- the composer
    Under the conversation, in the reading column. The send button is the only yellow. Nothing moves. */
 .chat-composer { flex: none; padding: 0 32px 14px; position: relative; }
 @container (max-width: 900px) { .chat-composer { padding: 0 16px 12px; } }
@@ -315,14 +315,14 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-lightbox figcaption { font-size: var(--t-meta); color: var(--ink-2); }
 .chat-lightbox-x { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--card); color: var(--ink-2); cursor: pointer; }
 .chat-lightbox-x:hover { color: var(--ink); border-color: var(--line-hover); }
-/* the @ menu (the lab's .menu, app.css 383–390): above the composer, the textarea keeps the focus */
+/* the @ menu: above the composer, the textarea keeps the focus */
 .chat-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 20; width: 300px; max-width: 100%; box-sizing: border-box; padding: 4px; background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
 .chat-menu-title { padding: 6px 8px 4px; font-size: var(--t-meta); color: var(--ink-3); }
 .chat-mi { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 26px; padding: 4px 8px; box-sizing: border-box; border-radius: var(--r-s); color: var(--ink-3); cursor: pointer; }
 .chat-mi.sel, .chat-mi:hover { background: rgba(255, 255, 255, 0.06); }
 .chat-mi code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink); }
 .chat-menu-empty { padding: 6px 8px; font-size: var(--t-meta); color: var(--ink-3); }
-/* the / menu (2026-11-19): the same menu, wider, its rows on one line (name, aliases, description cut), scrolling */
+/* the / menu: the same menu, wider, its rows on one line (name, aliases, description cut), scrolling */
 .chat-menu.slash { width: 460px; max-height: 268px; overflow-y: auto; overscroll-behavior: contain; }
 .chat-menu.slash .chat-menu-title { position: sticky; top: -4px; background: var(--card); }
 .chat-mi-cmd { display: flex; align-items: baseline; gap: 8px; min-width: 0; white-space: nowrap; }
@@ -331,12 +331,12 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-mi-kind { padding: 0 5px; border: 1px solid var(--line); border-radius: var(--r-s); }
 .chat-mi-desc { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: var(--t-meta); color: var(--ink-3); }
 
-/* ---------------------------------------------------------------- the answer surface (Phase 4; the lab's .card.ask, app.css 296–309)
+/* ---------------------------------------------------------------- the answer surface
    Between the conversation and the composer, in the reading column. Amber only for "needs you" (the edge, the bar,
    the dot); 허용 is the ink button, 거부 a hairline one; nothing yellow, nothing red, nothing moves. */
 .chat-answer { flex: none; padding: 0 32px 10px; }
 @container (max-width: 900px) { .chat-answer { padding: 0 16px 8px; } }
-/* (the conversation's column, as the lab's card sits in it: the column's inset less half its scrollbar gutter) */
+/* (the conversation's column: the column's inset less half its scrollbar gutter) */
 .chat-answer-in { max-width: var(--read-w); margin: 0 auto; padding: 0 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
 @container (max-width: 900px) { .chat-answer-in { padding: 0 12px; } }
 .chat-answer-more { padding: 0 4px; font-size: var(--t-meta); color: var(--ink-3); }
@@ -350,7 +350,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-kind { margin-left: auto; flex: none; font-size: var(--t-meta); font-weight: 400; color: var(--ink-3); white-space: nowrap; }
 /* what is asked, exactly: its own scroll past 160px, never cut */
 .chat-card-cmd { max-height: 160px; overflow: auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--term-bg); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-code); line-height: 1.6; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; unicode-bidi: isolate; }
-/* the request's own text, in logical order as the terminal shows it (review M3: no right-to-left run reorders it) */
+/* the request's own text, in logical order as the terminal shows it (no right-to-left run reorders it) */
 .chat-exact { direction: ltr; unicode-bidi: bidi-override; }
 .chat-card-cmd.args { font-size: calc(var(--t-code) - 1px); color: var(--ink-2); }
 .chat-card-pr { color: var(--ink-3); user-select: none; }
@@ -358,14 +358,14 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-cc { padding: 0 2px; border: 1px solid var(--line-hover); border-radius: var(--r-xs); color: var(--ink-2); font-size: calc(var(--t-code) - 2px); }
 .chat-card-sub { margin-top: -4px; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); overflow-wrap: anywhere; }
 .chat-card-diff { margin: 0; }
-/* the whole path, wrapped, never cut (review C1); the counts after it */
+/* the whole path, wrapped, never cut; the counts after it */
 .chat-card-diff .chat-diff-head { flex-wrap: wrap; align-items: flex-start; padding: 4px 10px; }
 .chat-diff-file.chat-card-file { flex: 1 1 0; min-width: 0; cursor: default; display: block; line-height: 1.6; padding: 1px 4px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
 .chat-card-diff .chat-counts { line-height: 1.6; padding-top: 1px; }
-/* every line wrapped in the box (review C2): nothing out of sight to the right */
+/* every line wrapped in the box: nothing out of sight to the right */
 .chat-card-lines { max-height: 220px; overflow-x: hidden; overflow-y: auto; }
 .chat-card-lines .chat-dl { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
-/* a tab and trailing spaces on a changed line, quietly (review M12) */
+/* a tab and trailing spaces on a changed line, quietly */
 .chat-ws { color: var(--ink-3); }
 .chat-dl.nonum { grid-template-columns: 22px minmax(0, 1fr); }
 .chat-dl.nonum .sg { text-align: center; }
@@ -396,7 +396,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-plan { color: var(--ink-2); }
 .chat-card-plan.all { max-height: 320px; overflow: auto; }
 
-/* ---------------------------------------------------------------- 변경 사항 (Phase 5; the lab's .changes, app.css 417–440, .rz 769–779)
+/* ---------------------------------------------------------------- 변경 사항
    The chat area's right column (Widget.tsx: inside .w-term-body, width --ch-w; the chat pane leaves it room), on the
    side panel's grey with a hairline. The selected file on the quiet selection grey, never yellow. Each edit its own
    section, its lines as the record holds them. Nothing moves. */
@@ -404,7 +404,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-changes button { -webkit-app-region: no-drag; }
 .chat-changes button:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
 /* its left edge drags its width: a 7px strip over the hairline, its centre line only on hover, focus and while dragging */
-/* (a 22px grip centred on the edge, its 1px line in the middle: Phase 6 hit areas) */
+/* (a 22px grip centred on the edge, its 1px line in the middle) */
 .chat-ch-rz { position: absolute; top: 0; bottom: 0; left: -11px; width: 22px; z-index: 6; cursor: col-resize; touch-action: none; -webkit-app-region: no-drag; outline: none; }
 .chat-ch-rz::after { content: ''; position: absolute; top: 0; bottom: 0; left: 10px; width: 1px; background: transparent; }
 .chat-ch-rz:hover::after, .widget.resizing .chat-ch-rz::after { background: rgba(255, 255, 255, 0.3); }
@@ -444,7 +444,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-ch-cut { flex: none; white-space: nowrap; }
 .chat-ch-note { margin: 2px 14px 4px; font-size: var(--t-meta); line-height: 1.6; color: var(--ink-3); }
 .chat-ch-note .chat-link-btn { font-size: var(--t-meta); }
-/* the diff grid of Phase 2, at the panel's size and wrapped (nothing out of sight to the right) */
+/* the diff grid, at the panel's size and wrapped (nothing out of sight to the right) */
 .chat-ch-lines { padding: 2px 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); line-height: 1.55; }
 .chat-ch-lines .chat-dl { grid-template-columns: 32px 14px minmax(0, 1fr); min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-ch-lines .chat-dl > span:last-child { padding-right: 10px; }
@@ -454,7 +454,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-ch-foot p { margin: 0; }
 .chat-card-more { align-self: flex-start; margin-top: -6px; font-size: var(--t-meta); }
 
-/* find in the conversation (Phase 5): the terminal's .term-search place and size, in the chat's greys; the matches are
+/* find in the conversation: the terminal's .term-search place and size, in the chat's greys; the matches are
    painted with the Custom Highlight API (no markup touched), every one a light grey, the current one a stronger grey
    with the body ink (tests/tokens.test.ts: the contrast over prose, bubbles, code and diff rows). Never yellow. */
 .chat-find { position: absolute; top: 10px; right: 18px; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 4px 8px; border-radius: var(--r-m); border: 1px solid rgba(255, 255, 255, 0.1); background: var(--card-2); -webkit-app-region: no-drag; }
@@ -509,7 +509,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-queue-n { flex: none; min-width: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
 .chat-queue-full { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; }
 .chat-queue-more { color: var(--ink-3); }
-/* several questions, or a multi-select (2026-11-17): each question, its options to pick, then 보내기 */
+/* several questions, or a multi-select: each question, its options to pick, then 보내기 */
 .chat-card-q + .chat-card-q { margin-top: 10px; }
 .chat-card-qtext { margin: 0 0 6px; font-size: var(--t-ui); line-height: 1.5; color: var(--ink); }
 .chat-card-qtext b { font-weight: var(--w-name); color: var(--ink-2); }
@@ -519,7 +519,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-opt.pick.multi .chat-card-mark { border-radius: var(--r-xs); }
 .chat-card-opt.pick.on { border-color: var(--ink-2); background: var(--hover); }
 .chat-card-opt.pick.on .chat-card-mark { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 2px var(--card); }
-/* the model and the mode as menus (2026-11-17): the item a quiet button, its menu opening above it */
+/* the model and the mode as menus: the item a quiet button, its menu opening above it */
 .chat-ctrl-anchor { position: relative; display: inline-flex; min-width: 0; }
 .chat-ctrl-item.btn { font: inherit; color: inherit; background: none; border: 0; border-radius: var(--r-s); cursor: pointer; }
 .chat-ctrl-item.btn:hover:not(:disabled), .chat-ctrl-item.btn.open { background: var(--hover); color: var(--ink-2); }
@@ -556,10 +556,10 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 /* the dialog card (a terminal dialog read from the screen): its body, the marked option, a field for words */
 .chat-card-dbody { margin: 0 0 8px; font-size: var(--t-ui); line-height: 1.55; color: var(--ink-2); }
 .chat-card-dbody p { margin: 0; overflow-wrap: anywhere; }
-/* a table the terminal drew, in a dialog's body (2026-11-19): a table again, or its lines lined up */
+/* a table the terminal drew, in a dialog's body: a table again, or its lines lined up */
 .chat-card-dtable .tbl-wrap { margin: 2px 0 6px; }
 .chat-card-dpre { margin: 2px 0 6px; overflow-x: auto; white-space: pre; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); line-height: 1.35; color: var(--ink-2); }
-/* a panel's link (2026-11-19, /remote-control): whole, selectable, with a copy button */
+/* a panel's link (e.g. /remote-control): whole, selectable, with a copy button */
 .chat-card-dlinks { display: grid; gap: 6px; margin: 0 0 8px; }
 .chat-card-dlink { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .chat-card-dlink code { flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; user-select: text; cursor: text; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink); }
@@ -568,7 +568,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-words { display: flex; gap: 6px; margin-top: 8px; }
 .chat-card-field { flex: 1; min-width: 0; height: 30px; padding: 0 10px; box-sizing: border-box; font: inherit; font-size: var(--t-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-s); outline: none; }
 .chat-card-field:focus { border-color: var(--line-hover); }
-/* a question's 직접 입력 (2026-11-19): its last option, a label and a field (Claude Code's "Other" row) */
+/* a question's 직접 입력 (free text): its last option, a label and a field (Claude Code's "Other" row) */
 .chat-card-words.chat-card-other { align-items: center; margin-top: 0; width: 100%; }
 .chat-card-otherlabel { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; font-size: var(--t-ui); color: var(--ink-2); }
 .chat-card-otherlabel > span:not(.chat-card-mark) { flex: none; }
@@ -584,7 +584,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-full-pre { margin: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
 .chat-full-note { margin: 0 0 8px; font-size: var(--t-meta); color: var(--ink-3); }
 
-/* ---- the sub-agents at work (src/components/chat/AgentPanel.tsx, 2026-11-19) ----
+/* ---- the sub-agents at work (src/components/chat/AgentPanel.tsx) ------------
    The strip above the composer: one quiet chip per sub-agent at work, unfolded (grid rows 0fr to 1fr) while any
    runs. Still here (chat.css moves nothing); its unfolding, a chip's coming and going and the breathing dot are in
    chat-game.css, with the rest of the chat's motion. */

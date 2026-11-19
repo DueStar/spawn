@@ -57,7 +57,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  /* 30px (was 40): the two read as one pair beside 새로운 세션 시작하기 (owner, 2026-11-16) */
+  /* 30px (was 40): the two read as one pair beside 새로운 세션 시작하기 */
   width: 30px;
   font: inherit;
   font-size: 14px;
@@ -183,15 +183,15 @@
   .w-lens-word { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
 /* the chat view fills the terminal's place; the terminals stay mounted underneath (display: none) */
-/* opaque, also while ChatView loads: the shown session's terminal may be active under it (7-48, src/chat/termWarm.ts) */
+/* opaque, also while ChatView loads: the shown session's terminal may be active under it (src/chat/termWarm.ts) */
 .w-chat-pane { position: absolute; inset: 0; z-index: 1; background: var(--bg); }
-/* the 변경 사항 panel open (Phase 5): the chat pane leaves it the column on the right (--ch-w, set only then) */
+/* the 변경 사항 panel open: the chat pane leaves it the column on the right (--ch-w, set only then) */
 .w-chat-pane { right: var(--ch-w, 0px); }
 .w-chat-failed.w-ch-failed { left: auto; width: var(--ch-w, 320px); z-index: 2; }
 .w-ch-wait { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: var(--ch-w, 320px); box-sizing: border-box; background: var(--side-bg); border-left: 1px solid var(--line); }
 /* the chat's own tools in the session header, before the 채팅 · 터미널 pair (only while the chat is shown) */
 .w-chat-tools { flex: none; display: inline-flex; align-items: center; gap: 2px; margin-right: 6px; -webkit-app-region: no-drag; }
-/* 변경 사항 (the lab's .chg): the panel glyph and the conversation's +N −N; pressed on the quiet selection grey, never yellow */
+/* 변경 사항: the panel glyph and the conversation's +N −N; pressed on the quiet selection grey, never yellow */
 .w-chg {
   display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; box-sizing: border-box;
   font: inherit; font-size: var(--t-meta); font-weight: 400; line-height: 1; color: var(--ink-2); white-space: nowrap;
@@ -206,7 +206,7 @@
 .w-chg-counts .a { color: var(--green); }
 .w-chg-counts .d { color: var(--red-text); }
 .w-chg-counts .z { color: var(--ink-3); }
-/* 보기 정도 (the lab's .dens and its menu, app.css 382–402): the eye, the level's name, a chevron; the menu of the three
+/* 보기 정도: the eye, the level's name, a chevron; the menu of the three
    levels, the chosen one checked on the quiet selection grey, never yellow (DensityMenu.tsx) */
 .w-dens-anchor { position: relative; z-index: 40; flex: none; display: inline-flex; -webkit-app-region: no-drag; }
 .w-dens {
@@ -327,13 +327,13 @@
 /* A destructive confirm keeps its red */
 .resume-warn-actions button.danger, .resume-warn-actions button.danger:hover { background: var(--danger); border-color: transparent; color: #fff; }
 
-/* deleting a past session (2026-11-17): a trash button on the row's right when hovered, the row asking once, an undo bar */
+/* deleting a past session: a trash button on the row's right when hovered, the row asking once, an undo bar */
 .resume-row { position: relative; }
 .resume-row .resume-item { padding-right: 40px; }
 .resume-trash { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer; opacity: 0; }
 .resume-row:hover .resume-trash, .resume-trash:focus-visible { opacity: 1; }
 .resume-trash:hover { color: var(--red-text); background: var(--hover); }
-/* (2026-11-19) the conversations a /clear left behind: one quiet line, then rows a little dimmer */
+/* the conversations a /clear left behind: one quiet line, then rows a little dimmer */
 .resume-old-toggle { display: block; width: 100%; margin: 4px 0; padding: 6px 12px; background: none; border: 0; border-radius: var(--r-s); color: var(--ink-3); font: inherit; font-size: var(--t-meta); text-align: left; cursor: pointer; }
 .resume-old-toggle:hover { color: var(--ink-2); background: var(--hover); }
 .resume-row.old .resume-title { color: var(--ink-2); }
@@ -403,8 +403,8 @@
 .widget.mode-window .w-bento, .widget.mode-fullscreen .w-bento { gap: 0; }
 .widget.mode-window .w-side .w-limits, .widget.mode-fullscreen .w-side .w-limits { padding: 12px 16px; }
 .widget.mode-window .w-side .w-launch, .widget.mode-fullscreen .w-side .w-launch { padding: 6px 8px; }
-/* (1.6.2, the owner's ask: the Pokédex strip and the session list are divided like the other sections; until then
-   they read as one block, with no line between them) */
+/* the Pokédex strip and the session list are divided like the other sections (without the line
+   they read as one block) */
 /* A row with no fill shows the panel */
 .widget.mode-window .w-row, .widget.mode-fullscreen .w-row { --row-base: var(--side-bg); }
 .widget.mode-window .w-side .w-compose textarea, .widget.mode-fullscreen .w-side .w-compose textarea { background: var(--card); }
@@ -463,7 +463,7 @@
 
 /* ---------- Patch notes after an update (PatchNotes.tsx) ---------- */
 .w-notes-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 16px 8px; line-height: 1.55; font-size: var(--t-name); }
-/* (2026-11-19) min-height 0: without it the body grew past the modal and its older releases were cut off, unreachable */
+/* min-height 0: without it the body grew past the modal and its older releases were cut off, unreachable */
 .w-notes-group { border-bottom: 1px solid var(--line); padding: 2px 0 6px; }
 .w-notes-group:last-child { border-bottom: 0; }
 .w-notes-group > summary { display: flex; align-items: baseline; gap: 10px; padding: 8px 0 4px; cursor: pointer; list-style: none; }
@@ -545,7 +545,7 @@
 /* 32×18, a 14px knob; on: the HP green with a dark knob */
 .set-switch { flex: none; position: relative; width: 32px; height: 18px; padding: 0; border-radius: 999px; border: 0; background: #2c303b; cursor: pointer; transition: background 0.15s; }
 .set-switch i { position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #c9cdd6; transition: transform 0.15s, background 0.15s; }
-/* on: the primary colour (the owner's call, 2026-11-17; green until then, the HP bar's) */
+/* on: the primary colour (not green: that is the HP bar's) */
 .set-switch.on { background: var(--accent); }
 .set-switch.on i { transform: translateX(14px); background: var(--accent-ink); }
 .set-switch:disabled { cursor: default; }
@@ -654,17 +654,17 @@
 .work-mode .w-head .w-conn { margin-right: auto; }
 /* (the folded rail without the ball keeps its slot empty: .w-rail-blank, so nothing below moves) */
 
-/* The chat view's composer (Phase 3): while the shown session is in 채팅, the side panel's box keeps its
+/* The chat view's composer: while the shown session is in 채팅, the side panel's box keeps its
    place, size and frame, and points to the composer under the chat (its own text waits for the flip back) */
 .w-compose-pointer .w-input .w-send { visibility: hidden; }
 .w-compose-pointer .w-input textarea { pointer-events: none; }
 .w-input-pointer { position: absolute; inset: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 0 11px; font-size: var(--t-ui); color: var(--ink-3); }
-/* (the words wrap rather than cut: "Send from the box under the chat" is two lines in a 300px panel; Phase 6 en / ja) */
+/* (the words wrap rather than cut: "Send from the box under the chat" is two lines in a 300px panel in en / ja) */
 .w-input-pointer span { min-width: 0; line-height: 1.3; overflow-wrap: anywhere; }
 .w-input-to { flex: none; min-height: 26px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); white-space: nowrap; cursor: pointer; -webkit-app-region: no-drag; }
 .w-input-to:hover { color: var(--ink); border-color: var(--line-hover); }
 
-/* ---------- The session tabs (2026-11-17): up to three over the right side; the one in view on the quiet selection ---------- */
+/* ---------- The session tabs: up to three over the right side; the one in view on the quiet selection ---------- */
 .w-sess-head.tabbed { align-items: center; }
 .w-sess-tabs { display: flex; align-items: stretch; align-self: stretch; gap: 2px; min-width: 0; flex: 0 1 auto; }
 .w-sess-tab { display: flex; align-items: center; gap: 6px; min-width: 0; max-width: 260px; padding: 0 4px 0 8px; border-radius: var(--r-s) var(--r-s) 0 0; color: var(--ink-3); cursor: pointer; }
@@ -687,7 +687,7 @@
 .w-tab-drop.full span { color: var(--red-text); }
 .w-tab-note { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 12px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink-2); }
 
-/* The split view (src/splitPanes.ts, 2026-11-19): two or three sessions side by side. One header per pane in the bar,
+/* The split view (src/splitPanes.ts): two or three sessions side by side. One header per pane in the bar,
    the pane in view marked as a chosen tab is (the quiet grey, a 2px line under it); hairlines between the panes */
 .w-sess-bar.split { gap: 0; padding: 0; }
 .w-pane-head { flex: 1 1 0; min-width: 0; display: flex; align-items: center; align-self: stretch; padding: 0 6px 0 10px; border-left: 1px solid var(--line); }

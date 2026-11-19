@@ -542,7 +542,7 @@ describe('pokedex', () => {
     expect(sent.at(-1).event).toMatchObject({ kind: 'catch', tier: 'mythical', pity: true, attendance: false })
   })
 
-  it('a wild Pokémon flees 20% / 30% / 50% / 60% / 70% of the time, common to mythical (2026-11-12)', () => {
+  it('a wild Pokémon flees 20% / 30% / 50% / 60% / 70% of the time, common to mythical', () => {
     expect(CATCH).toEqual({ common: 0.8, rare: 0.7, sub: 0.5, legendary: 0.4, mythical: 0.3 })
   })
 

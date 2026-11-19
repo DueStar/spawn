@@ -15,7 +15,7 @@ import { describe, expect, it } from 'vitest'
 
 const DIR = join(__dirname, 'fixtures', 'chat')
 
-// ---- what must never be in a tracked file, without writing any of it into one (re-review m-13)
+// ---- what must never be in a tracked file, without writing any of it into one
 
 /**
  * The machine owner's names, read at run time (the user name and the home folder's name): whoever
@@ -40,7 +40,7 @@ const sha256 = (s: string) => createHash('sha256').update(s).digest('hex')
 interface Secrets { owners: string[]; digests: Set<string> }
 const SECRETS: Secrets = { owners: ownerNames(), digests: PRIVATE_DIGESTS }
 
-/** The private things in a text: an owner's name (as a word, any case) or a hex run whose hash is listed */
+/** The private things in a text: the machine owner's name (as a word, any case) or a hex run whose hash is listed */
 function privateHits(text: string, secrets: Secrets = SECRETS): string[] {
   const out: string[] = []
   const lower = text.toLowerCase()
@@ -68,7 +68,7 @@ const FILES = walk(DIR)
 const rel = (p: string) => relative(DIR, p).split('\\').join('/')
 
 /**
- * The binary fixtures (Phase 5: the link previews' images), each listed by name with its SHA-256 and what
+ * The binary fixtures (the link previews' images), each listed by name with its SHA-256 and what
  * its header says: no binary can come into the folder unseen. `fake.png` is HTML under a picture's name.
  */
 const BINARIES: Record<string, { sha256: string; type: 'png' | 'jpeg' | 'webp' | 'gif' | 'html'; width?: number; height?: number }> = {
@@ -148,7 +148,7 @@ describe('the chat fixtures', () => {
   })
 
   it('(b) no user name, real id, key, e-mail address or token', () => {
-    // (the owner's name and private strings: privateHits, built at run time — none is written here)
+    // (the machine owner's name and private strings: privateHits, built at run time — none is written here)
     const LEAK = /DueStar|spawn-promo|chat-spike|AppData\\\\Local\\\\Temp\\\\claude|msg_011|toolu_01[A-Za-z0-9]{20}|sk-ant|@[a-z0-9-]+\.[a-z]{2,}|Bearer /i
     for (const file of TEXTS) {
       const text = textOf(file)
@@ -215,18 +215,18 @@ describe('the chat fixtures', () => {
   })
 })
 
-// ---- the chat composer's fixtures (Phase 3): terminal screens as text, queue lines, input hook bodies
+// ---- the chat composer's fixtures: terminal screens as text, queue lines, input hook bodies
 
 const SCREENS = [
   'idle-empty', 'idle-placeholder', 'after-turn-suggestion', 'typed', 'typed-multiline', 'working-empty',
   'dialog-bash', 'dialog-edit', 'dialog-plan', 'dialog-trust', 'dialog-question',
   'echo-plain', 'echo-korean', 'echo-pasted', 'echo-image', 'echo-image-pending', 'echo-after-suggestion',
   'narrow-wrap', 'bash-mode', 'no-box-shell', 'short',
-  // what the Phase 3 trial showed on Claude Code 2.1.325 (hand-redacted real shapes)
+  // what a trial run showed on Claude Code 2.1.325 (hand-redacted real shapes)
   'real-placeholder-nbsp', 'real-idle-empty-nbsp', 'real-history-recall',
-  // the owner's session after 1.5.1: a named session, a subagent running (tests/chat-real-owner-screens.test.ts)
+  // a real session after 1.5.1: a named session, a subagent running (tests/chat-real-screens.test.ts)
   'real-named-session', 'real-agents-panel',
-  // the owner's own app (1.5.3's log): the prompt mark drawn as a plain >
+  // a real install (1.5.3's log): the prompt mark drawn as a plain >
   'real-ascii-mark',
   // the /remote-control panel, reconstructed from what the 2.1.328 binary draws (not a captured screen)
   'reconstructed-rc-panel',
@@ -266,7 +266,7 @@ describe('the composer fixtures', () => {
   })
 })
 
-// ---- the chat's buttons (Phase 4): permission requests, questions, a rejected call, the answers
+// ---- the chat's buttons: permission requests, questions, a rejected call, the answers
 
 describe('the answer fixtures', () => {
   const lines = (name: string) => parsed(join(DIR, name)).map(p => p.value as { event: string; body: Record<string, any> })
@@ -313,7 +313,7 @@ describe('the answer fixtures', () => {
   })
 })
 
-// ---- Phase 5: the changes panel, thinking, turn summaries, wild rows, link previews
+// ---- the changes panel, thinking, turn summaries, wild rows, link previews
 
 const requireCjs = createRequire(import.meta.url)
 const { checkLine, quickSkip } = requireCjs('../electron/chatSchema.cjs')
@@ -367,7 +367,7 @@ function pngChunks(b: Buffer): string[] {
   return out
 }
 
-describe('the Phase 5 fixtures', () => {
+describe('the changes, thinking, foot, wild and preview fixtures', () => {
   const P5 = ['changes.jsonl', 'changes-agent/subagents/agent-afixture02.jsonl', 'changes-agent/subagents/agent-afixture02.meta.json',
     'thinking.jsonl', 'turns.jsonl', 'dex-events.json',
     'preview/og-basic.html', 'preview/og-entities.html', 'preview/og-euckr.html', 'preview/og-late.html', 'preview/og-script.html', 'preview/og-bidi.html',
@@ -578,7 +578,7 @@ describe('the Phase 5 fixtures', () => {
   })
 })
 
-// review M19: allowlists, not only the owner's known strings; and the chat tests' own sources
+// allowlists, not only the known private strings; and the chat tests' own sources
 const SYNTHETIC_UUID = /^(00000000-0000-4000-8000-[0-9a-f]{12}|([0-9a-f])\2{7}-\2{4}-4\2{3}-8\2{3}-\2{12})$/
 const UUID_ANY = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi
 const IDS = /\b(msg|toolu|req)_[A-Za-z0-9]+/g
@@ -616,7 +616,7 @@ function textFiles(dir: string): string[] {
   })
 }
 
-describe('the allowlists (review M19)', () => {
+describe('the allowlists', () => {
   it('catch what the denylist did not: real-looking uuids and ids, UNC, WSL and ~/ paths', () => {
     // (a made-up uuid of the real kind; no real one is ever written here)
     expect(fixtureProblems('4f1c2a9e-7b3d-4e8a-9c5f-1a2b3c4d5e6f')).toEqual(['uuid 4f1c2a9e-7b3d-4e8a-9c5f-1a2b3c4d5e6f'])
@@ -643,7 +643,7 @@ describe('the allowlists (review M19)', () => {
   })
 })
 
-describe('no private value in the repository (re-review m-13)', () => {
+describe('no private value in the repository', () => {
   it('the guard catches an owner\'s name and a listed hex string, built here from made-up parts', () => {
     // never a real value: a made-up name and a made-up 16-digit hex string, and the hash of the latter
     const owner = ['zq', 'w', '7x'].join('')

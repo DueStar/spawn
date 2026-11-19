@@ -1,5 +1,5 @@
 /**
- * The chat view's event model (main → page), as the plan for Phase 2 fixes it.
+ * The chat view's event model (main → page).
  * electron/chatItems.cjs and electron/chatLens.cjs carry the same shapes as
  * JSDoc @typedefs; tests/chat-items.test.ts checks real outputs against these
  * field lists.
@@ -29,7 +29,7 @@ export interface ToolItem extends ItemBase {
   output?: ToolOutput; diff?: DiffBlock; durationMs?: number
   agentId?: string; agentTools?: number                  // Agent/Task rows: the sub-agent and its tool count so far
 }
-export interface ToolInput {   // a whitelisted, capped excerpt (Task 4) — never the whole input
+export interface ToolInput {   // a whitelisted, capped excerpt — never the whole input
   file?: string; command?: string; description?: string; pattern?: string; path?: string; url?: string
   query?: string; question?: string; options?: string[]; plan?: string; todos?: { done: number; total: number }
   agentType?: string; background?: true                 // Agent / Task: run_in_background
@@ -68,8 +68,8 @@ export interface LensStatus {
   queued?: QueuedPrompt[]              // what Claude Code queued, oldest first (at most 3 sent; absent when none)
   queuedCount?: number                 // all of them
   mode?: PermissionMode | null         // the permission mode the hooks last reported (null: one not known; absent: none yet)
-  asks?: AskCard[]                     // Phase 4: what waits on the user, oldest first (absent when none)
-  changes?: ChangeSummary              // Phase 5: the conversation's file changes (absent: no index for this view)
+  asks?: AskCard[]                     // what waits on the user, oldest first (absent when none)
+  changes?: ChangeSummary              // the conversation's file changes (absent: no index for this view)
   agents?: RunningAgent[]              // the sub-agents at work now, oldest first (absent when none; electron/chatLens.cjs syncAgents)
 }
 
@@ -85,7 +85,7 @@ export interface RunningAgent {
   last?: { tool: string; input: ToolInput }   // its latest tool call
 }
 
-// ---- the changes panel (Phase 5): electron/chatChanges.cjs mirrors these in JSDoc
+// ---- the changes panel: electron/chatChanges.cjs mirrors these in JSDoc
 
 /** The conversation's file changes as the worker's index has them (status.changes; `v` grows with every change) */
 export interface ChangeSummary {
@@ -113,7 +113,7 @@ export interface ChangeEdit {
   diff?: DiffBlock                                    // only in chat:change-file answers, rebuilt from the transcript line
 }
 
-// ---- link previews (Phase 5): electron/linkFetch.cjs mirrors this in JSDoc
+// ---- link previews: electron/linkFetch.cjs mirrors this in JSDoc
 
 /** A link preview card, fetched by the chat worker under the preview policy (opt-in; every failure is silent) */
 export interface LinkCardData {
@@ -126,7 +126,7 @@ export interface LinkCardData {
 }
 
 /**
- * Something the session waits on the user for (Phase 4, electron/chatLens.cjs). `holdId` null: it can only be
+ * Something the session waits on the user for (electron/chatLens.cjs). `holdId` null: it can only be
  * answered in the terminal. The card shows what Claude Code asks, whole (`cut`: it could not be shown whole, so
  * it is answered in the terminal), and its `state` is the hold's as main tells it — never what was clicked.
  */
@@ -149,7 +149,7 @@ export interface AskCard {
   fetchPrompt?: string                          // WebFetch: what is asked of the page
   always: { rule: string } | null               // 항상 허용 offered: the rule it adds for this session
   question?: { text: string; header?: string; options: { label: string; description?: string }[] }
-  /** several questions, or a multi-select one (2026-11-17): every question, the first as `question` too */
+  /** several questions, or a multi-select one: every question, the first as `question` too */
   questions?: { text: string; header?: string; multiSelect?: true; options: { label: string; description?: string }[] }[]
   state: 'open' | 'sent' | 'timeout' | 'terminal'
   sent?: 'allow' | 'always' | 'deny' | 'option' | 'options'
@@ -169,7 +169,7 @@ export type ChatOp =
   | { op: 'status'; status: LensStatus }
 export interface ChatUpdate { id: string /* terminal id */; rev: number; ops: ChatOp[] }
 
-// ---- the composer (Phase 3): the send's two calls (electron/chatHost.cjs, electron/chatInput.cjs)
+// ---- the composer: the send's two calls (electron/chatHost.cjs, electron/chatInput.cjs)
 
 /** The page's reading of the terminal's prompt row (src/chat/promptRow.ts) */
 /**
@@ -185,5 +185,5 @@ export type SendRefusal = 'off' | 'no-session' | 'not-claude' | 'unarmed' | 'dup
 export type SubmitRefusal = 'not-in-flight' | 'no-echo' | 'waiting' | 'no-session'
 export type InterruptRefusal = 'not-working' | 'waiting' | 'sending' | 'debounced' | 'no-session'
 export type ImageRefusal = 'type' | 'size' | 'limit' | 'off' | 'io'
-/** chat:redraw (7-48, electron/chatHost.cjs redraw): why no resize nudge was made */
+/** chat:redraw (electron/chatHost.cjs redraw): why no resize nudge was made */
 export type RedrawRefusal = 'off' | 'no-session' | 'unarmed' | 'not-shown' | 'sending' | 'waiting' | 'recent'

@@ -1,5 +1,5 @@
 /**
- * The chat view's budgets for a long session, page side (Phase 6, Task 6.1; the numbers in docs/HANDOFF.md 7-51).
+ * The chat view's budgets for a long session, page side.
  * Each measure prints its number and fails only past its budget: the median of several runs after a warm-up, so a
  * busy machine's one slow run does not fail it.
  *

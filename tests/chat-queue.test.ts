@@ -1,5 +1,5 @@
 /**
- * electron/chatLens.cjs, Phase 3 — what the composer's strip and control row read from the
+ * electron/chatLens.cjs — what the composer's strip and control row read from the
  * lens: the prompts Claude Code itself queued (the transcript's `queue-operation` lines and
  * the `queued_command` attachment), the permission mode the hooks report, and a signal to main
  * when UserPromptSubmit says a terminal's prompt row was taken. A strip that is not Claude
@@ -161,7 +161,7 @@ describe('the queue strip\'s source', () => {
     expect(s.status().queuedCount).toBe(1)
   })
 
-  it('queued.jsonl (2.1.325): the same conversation as in Phase 2, and no strip at the end', async () => {
+  it('queued.jsonl (2.1.325): the same conversation as without the strip, and no strip at the end', async () => {
     const s = setup()
     const lines = fixture('queued.jsonl').split('\n').filter(Boolean)
     const sid = '00000000-0000-4000-8000-000000000399'

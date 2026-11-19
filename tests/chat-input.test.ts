@@ -148,7 +148,7 @@ describe('the input ledger', () => {
     expect(nextDraft('clean', kb('\x1b[200~pasted\x1b[201~'))).toBe('dirty')
     expect(nextDraft('dirty', kb('\r'))).toBe('submitted')
     expect(nextDraft('clean', kb('\r'))).toBe('clean')
-    // (review I-3: Enter on an unknown row — a prompt recalled with ↑, a suggestion taken with Tab — submits it)
+    // (Enter on an unknown row — a prompt recalled with ↑, a suggestion taken with Tab — submits it)
     expect(nextDraft('unknown', kb('\r'))).toBe('submitted')
     expect(nextDraft('clean', kb('\x7f'))).toBe('clean')
     expect(nextDraft('clean', kb('\b'))).toBe('clean')
@@ -199,7 +199,7 @@ describe('the input ledger', () => {
   })
 })
 
-describe('the review of Phase 3 (what it found, fixed)', () => {
+describe('review fixes for the composer input', () => {
   const kb = (data: string) => ({ via: 'keyboard', data, dialog: false })
   const run = (d: string, evs: object[]) => evs.reduce((x: string, ev) => nextDraft(x, ev), d)
 
@@ -218,7 +218,7 @@ describe('the review of Phase 3 (what it found, fixed)', () => {
   it('I-2: blank lines before the text go; the leading-space rule and the echo look at the first real line; the head is never empty', () => {
     expect(sanitize('\n\n  \nhello')).toBe('hello')
     expect(sanitize('\n   keep the lead')).toBe('   keep the lead')
-    // the reviewer's reproductions: an empty head made the echo pass for anything on the row
+    // reproductions: an empty head made the echo pass for anything on the row
     const bang = encodeSend({ text: sanitize('\n!rm -rf ~'), images: [] })
     expect(bang.steps[0].data).toBe('\x1b[200~ !rm -rf ~\x1b[201~')
     expect(bang.expect.head).toBe('!rm -rf ~')

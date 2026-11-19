@@ -1,5 +1,5 @@
 /**
- * Wild Pokémon in the chat's flow (Phase 5, Decision 12): the game's own `catch` / `flee` events of this session that
+ * Wild Pokémon in the chat's flow: the game's own `catch` / `flee` events of this session that
  * happened inside this conversation's time, as entries the rows place where they met (src/chat/rows.ts `extra`).
  *
  * Only what the server reported: an event with this session's id (server/pokedex.js stamps each encounter with the

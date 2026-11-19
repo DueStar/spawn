@@ -29,7 +29,7 @@ const { isRealInput } = require('./chatInput.cjs')
 const MAX_BUFFER = 200_000 // characters of scrollback kept for a tab opened later
 const TYPING_MS = 1500 // a send asked notWhileTyping: refused this long after a real key in the terminal (1.6.2)
 // spawn.log (1.6.2): in a session's first minutes, the keys that move or answer a question, counted (never what was
-// typed), with how much the tool drew since: a trust question that took no key on the owner's PC could not be told
+// typed), with how much the tool drew since: a trust question that took no key on a real PC could not be told
 // apart (no key reached the terminal / the tool had exited / it drew nothing back)
 const KEY_DIAG_MS = 10 * 60_000
 const KEY_DIAG_BATCH_MS = 5000
@@ -140,7 +140,7 @@ function sessionSettingsJson(repoRoot, runtime = process.execPath, chat = null, 
   const http = game ? gameHookEntries(game) : {}
   const hooks = Object.fromEntries(HOOK_EVENTS.map(e => [e, [http[e] ?? { hooks: [{ type: 'command', command: hook, ...(ASYNC_HOOKS.has(e) ? { async: true } : {}) }] }]]))
   if (chat) {
-    // (a chat value is one group, or a list of groups: Phase 4's matcher group for AskUserQuestion)
+    // (a chat value is one group, or a list of groups: the matcher group for AskUserQuestion)
     for (const [event, group] of Object.entries(chat)) hooks[event] = [...(hooks[event] ?? []), ...[].concat(group)]
   }
   const settings = {
@@ -512,7 +512,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
       send('terminals:list', list())
       // Claude killed with its terminal never runs SessionEnd: say it ourselves
       if (onExit) { try { onExit(t.sessionId, exitCode) } catch {} }
-      // /exit (2026-11-19, the owner: "it should work as closing the session from the left panel"): Claude Code ended
+      // /exit (works as closing the session from the left panel): Claude Code ended
       // cleanly and said goodbye as /exit does, so the tab goes as the panel's × makes it go. A crash, a kill or Windows
       // ending the process at shutdown says no goodbye: that tab stays (and is reopened at the next start)
       if (userExited(t, exitCode)) {
@@ -580,7 +580,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     const asked = !!t.asking || t.questionSeen === true
     t.pty.write(data)
     t.activity?.input()
-    // (1.6.2) when the owner last typed here: a key, not the terminal's own reports or the cursor moving
+    // when the user last typed here: a key, not the terminal's own reports or the cursor moving
     if (isRealInput(data)) t.lastKeyAt = Date.now()
     noteKeys(t, data)
     // An answer (Enter, or Esc to dismiss) clears the question
@@ -606,7 +606,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     return true
   }
 
-  /** A question answered from the chat (Phase 4): as an Enter in the terminal clears it */
+  /** A question answered from the chat: as an Enter in the terminal clears it */
   function clearAsking(id) {
     const t = terms.get(id)
     if (!t) return
@@ -620,7 +620,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
    * keyboard, then Enter. A multi-line instruction is sent as one paste
    * (bracketed paste) so Claude Code keeps it as a single prompt.
    * `notWhileTyping` (1.6.2, the widget's /rename): refused (`typing`) while
-   * the owner types in this terminal, so it never lands inside their text.
+   * the user types in this terminal, so it never lands inside their text.
    */
   function sendInstruction(id, text, { notWhileTyping = false } = {}) {
     const t = terms.get(id)
@@ -656,7 +656,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
   }
 
   /**
-   * The chat view's redraw nudge (7-48; asked only by chatHost.cjs redraw, which checks when): a
+   * The chat view's redraw nudge (asked only by chatHost.cjs redraw, which checks when): a
    * Claude Code session shown as chat whose hidden xterm replayed before it fitted. Its pty gets one
    * row less (one more at the smallest size) and, 150 ms later, its size again, so Claude Code draws
    * its screen anew as on any window resize. A resize only: nothing reaches the session's input. The
@@ -722,7 +722,7 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     // An ended session's pty is closed too: node-pty leaves its pseudo-console and output
     // worker open after a plain exit, and once the tab is gone shutdown() cannot reach it
     try { t.pty.kill() } catch {}
-    // (2026-11-19) Claude Code may take a few seconds more to end (its SessionEnd hooks, Windows' own teardown):
+    // Claude Code may take a few seconds more to end (its SessionEnd hooks, Windows' own teardown):
     // meanwhile the resume list says 닫는 중, not 실행 중, and deleting it waits for the end (main's sessions:trash)
     if (t.status !== 'exited' && t.adapter.id === 'claude') {
       const at = Date.now()

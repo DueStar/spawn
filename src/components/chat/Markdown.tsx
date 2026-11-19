@@ -4,8 +4,8 @@
  * click hands the address to `onLink` (the page opens it through the app, which
  * allows http/https only); its address is the title. A file path is a chip
  * button that hands the file and line to `onPath`. Tables scroll sideways in
- * their own box. A ```markdown block (and a new .md file's diff, DiffBlock.tsx) is a document card (2026-11-17,
- * the owner's call: raw markdown in a code box read badly): drawn as prose with 문서 / 원문 to switch, long ones
+ * their own box. A ```markdown block (and a new .md file's diff, DiffBlock.tsx) is a document card (raw
+ * markdown in a code box reads badly): drawn as prose with 문서 / 원문 to switch, long ones
  * folded with 전체 보기. One level only: a markdown block inside the document stays a code block.
  */
 
@@ -18,7 +18,7 @@ export interface MarkdownProps {
   blocks: Block[]
   onLink(url: string): void
   onPath(file: string, line?: number, col?: number): void
-  /** Drawn after a top-level block, by its stable key (blockKeys): a finished answer's link preview cards (Phase 5) */
+  /** Drawn after a top-level block, by its stable key (blockKeys): a finished answer's link preview cards */
   afterBlock?: (block: Block, key: string) => React.ReactNode
 }
 

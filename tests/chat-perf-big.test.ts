@@ -1,5 +1,5 @@
 /**
- * A 300 MB transcript (Phase 6, Task 6.1), through the lens as the chat worker runs it:
+ * A 300 MB transcript, through the lens as the chat worker runs it:
  *
  *   open: the event loop's longest lag ≤ 50 ms; the reset emitted ≤ 2 s after open; ≤ 16 MB read for it
  *   the change scan over the whole file ≤ 20 s; heap growth during it ≤ 120 MB; a hook posted during it emitted ≤ 250 ms

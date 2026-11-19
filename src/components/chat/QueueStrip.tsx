@@ -1,8 +1,8 @@
 /**
- * What Claude Code itself queued while it works (the lab's `.queue`), attached above the
+ * What Claude Code itself queued while it works, attached above the
  * composer's box: a grey dot, 대기 중 N, the first prompt's text. A click opens the whole list
  * (oldest first; the record gives at most three texts, the rest said as 외 N개) and closes it
- * again. Display only (the plan's Decision 7: no 지금 보내기, no 빼기 — Claude Code's queue is
+ * again. Display only (no 지금 보내기, no 빼기 — Claude Code's queue is
  * not edited from outside). The text comes from the session's record (src/chat/types.ts
  * LensStatus.queued), never from what this page sent.
  */

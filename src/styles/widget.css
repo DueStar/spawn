@@ -170,7 +170,7 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 
 /* The instruction box: the note sits above it, 보내기 inside it */
 .w-compose { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 6px; }
-/* Widget mode: the field is the box (as the lab draws it), not a field inside a card */
+/* Widget mode: the field is the box, not a field inside a card */
 .widget.mode-widget .w-card.w-compose { background: none; border: 0; padding: 0; }
 /* The textarea takes the full width; 보내기 is a small icon button inside it, bottom right */
 .w-input { position: relative; display: flex; }
@@ -332,7 +332,7 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-limits.idle { flex-direction: row; align-items: center; gap: 10px; padding: 11px 12px; }
 .w-limits-hint { font-size: var(--t-meta); color: var(--ink-3); }
 /* The session's model, left of its context bar. The model and the number are fixed columns (every HP bar the same
-   length), sized to what they hold (2026-11-19: 'Sonnet 5.5', '200K'), the two a little closer than the rest */
+   length), sized to what they hold (e.g. 'Sonnet 5.5', '200K'), the two a little closer than the rest */
 .w-row-model + .w-row-num { margin-left: -3px; }
 .w-row-model { flex: none; width: 5.5em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right; font-size: var(--t-meta); color: var(--ink-3); }
 /* The context window as HP: what is left drains like a Pokémon's HP bar (hpTone, src/sessionList.ts) */

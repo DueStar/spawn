@@ -386,7 +386,7 @@ describe('updates', () => {
   })
 })
 
-describe('long sessions (chat view phase 2, Task 16)', () => {
+describe('long sessions', () => {
   /** A lens over a Claude folder whose reads are counted in bytes */
   function counted() {
     const claudeDir = tempDir()

@@ -114,7 +114,7 @@ describe('no disk', () => {
   })
 })
 
-// I3 (review-1-10.md): a minified file or a long-line Write must not send megabytes per row
+// I3: a minified file or a long-line Write must not send megabytes per row
 describe('size caps', () => {
   it('each line is cut, and the block says it is cut', () => {
     const d = buildDiff({ type: 'create', filePath: `${CWD}\\bundle.min.js`, content: 'x'.repeat(3_000_000), structuredPatch: [], originalFile: null }, { cwd: CWD })

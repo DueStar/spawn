@@ -1,5 +1,5 @@
 /**
- * Find in the conversation (Phase 5): the bar (the terminal's `.term-search` place and size, in the chat's calm
+ * Find in the conversation: the bar (the terminal's `.term-search` place and size, in the chat's calm
  * greys) and what it does. Ctrl/⌘+F opens it (ChatView's key listener).
  *
  *   - It searches the store (src/chat/find.ts), only what is loaded: while older items exist it says

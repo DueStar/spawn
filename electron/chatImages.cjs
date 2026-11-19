@@ -1,8 +1,8 @@
 'use strict'
 
 /**
- * chatImages.cjs — images pasted, dropped or picked in the chat composer (the chat view,
- * Phase 3). The page sends the bytes; main checks what they are by their first bytes (never
+ * chatImages.cjs — images pasted, dropped or picked in the chat composer (the chat view).
+ * The page sends the bytes; main checks what they are by their first bytes (never
  * by a name or a type the page claims), writes them under the app's own temp folder with a
  * name it makes, and answers with an opaque token. The composer's send names tokens only, so
  * the page never chooses a path. Claude Code reads the file from its pasted path (FINDINGS §7:

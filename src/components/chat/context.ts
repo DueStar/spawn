@@ -24,11 +24,11 @@ export interface ChatContextValue {
   openImage?(url: string, caption: string, from: HTMLElement | null): void
   /** Whether an image is shown large now */
   lightbox?: boolean
-  /** "전체 보기" (2026-11-17): an item shown cut read again whole and shown over the view; absent: no reader here */
+  /** "전체 보기": an item shown cut read again whole and shown over the view; absent: no reader here */
   openFull?(itemId: string, title: string): void
   /** The pictures of a message sent from this composer in this run (src/chat/outbox.ts), by its item id */
   thumbs?(itemId: string): string[]
-  /** A card below the conversation can answer what a row waits on (Phase 4): the row points there, not to the terminal */
+  /** A card below the conversation can answer what a row waits on: the row points there, not to the terminal */
   cardHere?: boolean
   /** Open the 변경 사항 panel at this file and edit (a diff block's +N −N); absent: no panel here (the counts stay text) */
   openChanges?(p: { file: string; toolId: string }): void

@@ -5,19 +5,19 @@
  * page reads the same file through src/features.ts, so there is one value).
  *
  * OTHER_TOOLS: AI tools other than Claude Code (Codex CLI, tools added in
- * 설정 › AI 도구). Hidden on 2026-11-13 at the owner's request: off, every
+ * 설정 › AI 도구). Hidden by default: off, every
  * session runs Claude Code (or the plain shell), the 설정 section, the tool
  * picker, Codex's usage rows and its log watcher are gone, and the stored
  * tools / default tool / Codex tabs in the reopen list are kept as they are.
  * Flip `otherTools` to true in features.json to bring it all back.
  *
- * CHAT_VIEW: the chat view of a Claude Code session (Phase 2, a read-only
+ * CHAT_VIEW: the chat view of a Claude Code session (a read-only
  * lens). Off, nothing of it runs: no chat hooks in the session settings, no
  * endpoint, no worker, no 설정 row (the app is release 1.4.0). On, it still
  * waits for 설정 › 세션 › 채팅으로 보기 (off by default). SPAWN_CHAT_VIEW=1
  * turns the switch on for development runs and tests only: never in a
  * packaged (installed) app, so a release that ships the switch off cannot be
- * turned on from the environment (the final review's M3).
+ * turned on from the environment.
  */
 
 const FEATURES = require('./features.json')

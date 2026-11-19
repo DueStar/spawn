@@ -1,5 +1,5 @@
 /**
- * /exit closes the tab as the left panel's × does (2026-11-19): a clean exit with Claude Code's goodbye in its last
+ * /exit closes the tab as the left panel's × does: a clean exit with Claude Code's goodbye in its last
  * output; a crash, a kill or a shutdown (no goodbye, or a non-zero code) keeps the tab.
  */
 

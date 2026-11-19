@@ -1,6 +1,6 @@
 /**
- * The session tabs over the right side (2026-11-17, the owner's ask: up to three, a session dragged from the left list
- * opens in one). Pure: the tabs are session ids in order; which one is shown is the app's `target`.
+ * The session tabs over the right side (up to three; a session dragged from the left
+ * list opens in one). Pure: the tabs are session ids in order; which one is shown is the app's `target`.
  *
  *   show    a session chosen in the left list: shown in the tab in view (its tab already open: that one)
  *   open    a session dropped on the right side (or Ctrl+clicked): a tab of its own, while there are fewer than three

@@ -1,5 +1,5 @@
 /**
- * Find in the conversation (Phase 5, Task 5.8): src/chat/find.ts searches plain text taken from the store's items
+ * Find in the conversation: src/chat/find.ts searches plain text taken from the store's items
  * (markdown removed), only what is loaded; each match names the row it is drawn in (a group's member → the group, a
  * sub-agent's row → its Agent row) and openFor lists what must open for it to show. The keys come through appShortcut
  * in ChatView; src/keys.ts is not edited. setRowOpen opens a row from outside it (context.ts).

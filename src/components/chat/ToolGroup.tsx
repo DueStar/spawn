@@ -1,5 +1,5 @@
 /**
- * Finished reads and searches in a row, folded into one line (the lab's "파일 3개 읽음 ·
+ * Finished reads and searches in a row, folded into one line ("파일 3개 읽음 ·
  * 검색 2회"). Opening it lists each file (with its line count when known) and each
  * pattern. Only finished, plain reads and searches ever get here (src/chat/rows.ts): a
  * call waiting on the user, a failure or a running call is never folded.

@@ -1,7 +1,6 @@
 /**
  * The QA page's 채팅 section (src/QaPage.tsx): the chat view (src/components/ChatView.tsx)
- * with a fixed conversation — no bridge, no session — in the shape of the design lab's
- * (calm-lab "chat view"): a question, reads and searches folded, an answer with a table,
+ * with a fixed conversation — no bridge, no session — in this shape: a question, reads and searches folded, an answer with a table,
  * a list, code and a link, an edit with its diff, a failed command, a call waiting on the
  * terminal. Then the read-failed banner over it, and a new session's empty state.
  */
@@ -109,7 +108,7 @@ export const QaChat: React.FC = () => {
   </>
 }
 
-// ---------------------------------------------------------------- 채팅 › 입력란 (the composer, Phase 3)
+// ---------------------------------------------------------------- 채팅 › 입력란 (the composer)
 
 const QUEUED: Partial<LensStatus> = { queued: [{ text: '끝나면 README의 "로그인" 절에도 바뀐 점 적어 주세요', truncated: false }, { text: '테스트 이름도 정리해 주세요', truncated: false }], queuedCount: 2 }
 const NOTES: { title: string; note: Note }[] = [
@@ -150,7 +149,7 @@ export const QaComposer: React.FC = () => {
   </>
 }
 
-// ---------------------------------------------------------------- 채팅 › 답하기 (the answer cards, Phase 4)
+// ---------------------------------------------------------------- 채팅 › 답하기 (the answer cards)
 
 const ASK = { toolId: null, agent: false, always: null, state: 'open', since: at(130) } as const
 const EDIT_LINES = [

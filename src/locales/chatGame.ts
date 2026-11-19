@@ -1,5 +1,5 @@
 /**
- * The chat view's words that speak of the game (Phase 5): the turn summary's step count and the wild Pokémon met in
+ * The chat view's words that speak of the game: the turn summary's step count and the wild Pokémon met in
  * the flow. Kept apart from src/locales/chat.ts, whose words can all show in 업무 모드: these are used only by parts
  * drawn outside it (tests/work-mode.test.ts checks where each is used). The Korean text is the key (src/i18n.ts).
  */

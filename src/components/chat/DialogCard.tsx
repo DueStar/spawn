@@ -1,5 +1,5 @@
 /**
- * The dialog card (2026-11-17): a dialog Claude Code draws in the terminal that no hold card covers — a `/model`
+ * The dialog card: a dialog Claude Code draws in the terminal that no hold card covers — a `/model`
  * confirmation, the folder trust, a plan's choices, a permission or a question its hooks could not hold — read from
  * the terminal's screen (src/chat/dialog.ts) and answered here, so nothing of a chat session needs the terminal.
  * Its words are the screen's, exact. An option is a button; one that takes words (Type something, Tell Claude what

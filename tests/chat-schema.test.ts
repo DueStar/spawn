@@ -36,7 +36,7 @@ describe('noise is skipped without parsing', () => {
   it('knows the bookkeeping types, and keeps only the mid-turn prompt among the attachments', () => {
     for (const t of ['file-history-snapshot', 'queue-operation', 'last-prompt', 'ai-title', 'cost-state', 'mode', 'api-request-blob', 'summary', 'bridge-session']) expect(NOISE_TYPES).toContain(t)
     expect([...KEEP_ATTACHMENTS]).toEqual(['queued_command'])
-    // (Phase 3: the composer's queue strip reads these; they are still noise for the conversation)
+    // (the composer's queue strip reads these; they are still noise for the conversation)
     expect(quickSkip('{"type":"queue-operation","operation":"enqueue"}')).toBe(false)
     expect(classify({ type: 'queue-operation', operation: 'enqueue' })).toBe('noise')
     expect(quickSkip('{"type":"user","message":{"role":"user","content":"{\\"type\\":\\"mode\\"}"}}')).toBe(false)

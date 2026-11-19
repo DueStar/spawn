@@ -1,5 +1,5 @@
 /**
- * The chat composer (Phase 3; the lab's `composerHtml`): under the conversation of a Claude
+ * The chat composer: under the conversation of a Claude
  * Code session shown as 채팅, it sends what the user writes into that session's real
  * terminal (src/chat/send.ts: typed without Enter, Enter only after the echo; main checks
  * everything again). Multiline; Enter sends, Shift+Enter breaks the line; an IME's keys are
@@ -70,7 +70,7 @@ export interface ComposerDeps {
   sleep(ms: number): Promise<void>
 }
 
-/** row: words left on the terminal's prompt row stopped the send; the note offers to take them or clear them (2026-11-17) */
+/** row: words left on the terminal's prompt row stopped the send; the note offers to take them or clear them */
 export interface Note { key: string; vars?: Record<string, string | number>; terminal?: boolean; image?: true; row?: string }
 
 export interface ComposerProps {
@@ -117,7 +117,7 @@ onChatForget(id => {
 
 const nameVars = (name: string) => ({ name, iga: josa(name, '이가') })
 
-/** What the composer says for a send that did not go (`card`: where the card above it stands, review M8) */
+/** What the composer says for a send that did not go (`card`: where the card above it stands) */
 /** The start of what is on the terminal's prompt row, for a note: one line, at most 24 characters */
 function rowQuote(row: string): string {
   const one = row.replace(/\s+/g, ' ').trim()
@@ -127,7 +127,7 @@ function rowQuote(row: string): string {
 
 function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who: ChatWho, card: CardNote = null, row?: string): Note | null {
   switch (reason) {
-    // a card above the composer waits for its answer (Phase 4): it points there when it can be answered
+    // a card above the composer waits for its answer: it points there when it can be answered
     // there, to the terminal when only the terminal can, and says so while an answer sent is being worked on
     case 'waiting':
       if (card === 'here') return { key: '{name}{iga} 답을 기다리고 있어요. 위 카드에서 먼저 답해 주세요', vars: nameVars(who.name) }
@@ -135,7 +135,7 @@ function refusalNote(reason: SendRefusal | SubmitRefusal | InterruptRefusal, who
       if (card === 'terminal') return { key: '{name}{iga} 답을 기다리고 있어요. 터미널에서 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
       return { key: '{name}{iga} 답을 기다리고 있어요. 먼저 답해 주세요', vars: nameVars(who.name), terminal: true }
     // (1.6.2) what is there, quoted: the terminal is hidden behind the chat, so the note shows it
-    // (2026-11-17: the note offers to take those words into this box, or to clear them and send: never the terminal)
+    // (the note offers to take those words into this box, or to clear them and send: never the terminal)
     case 'prompt-busy': case 'prompt-unknown': return row?.trim()
       ? { key: 'Claude Code 입력란에 쓰던 글이 남아 있어요: “{text}”', vars: { text: rowQuote(row) }, row }
       : reason === 'prompt-busy'
@@ -203,7 +203,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   const [sel, setSel] = useState(0)
   const dismissed = useRef<number | null>(null)
   const listId = `chat-mention-${id}`
-  // the / menu (2026-11-19): the draft one /token with the caret in it; Claude Code's commands at once, the session's
+  // the / menu: the draft one /token with the caret in it; Claude Code's commands at once, the session's
   // own and its skills once main has read them (kept per session); one closed with Esc stays shut until the token goes
   const [slash, setSlash] = useState<{ query: string } | null>(null)
   const [commandList, setCommandList] = useState<readonly SlashCommand[]>(() => commandsOf.get(id) ?? BUILTIN_COMMANDS)
@@ -250,7 +250,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     const f = menuFiles?.[i]
     if (!el || !mention || !f) return
     const caret = el.selectionStart ?? el.value.length
-    // the typed `@query` leaves the text; the file becomes a badge (the owner's call, 2026-11-17)
+    // the typed `@query` leaves the text; the file becomes a badge
     replaceRange(el, mention.start, caret, '')
     if (!refs.includes(f)) setRefList([...refs, f])
     setMention(null)
@@ -320,7 +320,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   }
 
   /**
-   * After a command went (2026-11-19): a dialog or panel it opened shows as a card above (DialogCard), which is the
+   * After a command went: a dialog or panel it opened shows as a card above (DialogCard), which is the
    * answer, so nothing is said; only when, a moment later, the screen holds no dialog the card could show does the
    * note say where the rest may be. Said only if nothing else was said meanwhile.
    */
@@ -344,7 +344,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
 
   /**
    * retried: the send after the terminal's prompt row was cleared for it (once: words left there never stop a send
-   * from here, 2026-11-19, the owner: "whichever side it is sent from, that is what is sent")
+   * from here: whichever side it is sent from, that is what is sent)
    */
   async function send(retried = false) {
     if (sending.current || !chat) return
@@ -394,7 +394,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     if (clearFirst) await takeRow('', true)
   }
 
-  // ---- the control row's menus (2026-11-17): the model by `/model <alias>`, the mode by Shift+Tab until the footer shows it
+  // ---- the control row's menus: the model by `/model <alias>`, the mode by Shift+Tab until the footer shows it
   const [ctrlBusy, setCtrlBusy] = useState(false)
   const [modeShown, setModeShown] = useState<FooterMode | null>(null)
   const [lacks, setLacks] = useState<ReadonlySet<FooterMode>>(() => lacksOf.get(id) ?? new Set())
@@ -429,7 +429,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     }
   }
 
-  // The effort level (2026-11-19): `/effort <level>`, as the model. The status line says the new level only after
+  // The effort level: `/effort <level>`, as the model. The status line says the new level only after
   // Claude Code's next state change, so the one chosen here shows until then
   const [effortChosen, setEffortChosen] = useState<string | null>(null)
   useEffect(() => { setEffortChosen(null) }, [control.effort, id])
@@ -569,7 +569,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
     replaceRange(el, start, end, s)
   }
 
-  // the view's handle: focus (Phase 2's focus rules decide when), 멈추기, insertText
+  // the view's handle: focus (the view's focus rules decide when), 멈추기, insertText
   const handle = useRef<ComposerHandle>({ focus: () => false, stop: () => {}, insertText: () => {} })
   handle.current.focus = () => { const el = ta.current; if (!el) return false; el.focus({ preventScroll: true }); return true }
   handle.current.stop = () => { void stop() }
@@ -598,7 +598,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
   })
 
   // Claude Code's next-prompt suggestion (the dim text on the terminal's prompt row), shown as the placeholder
-  // while the draft is empty; Tab or → takes it into the draft, never sends it (the owner's call, 2026-11-17)
+  // while the draft is empty; Tab or → takes it into the draft, never sends it
   const [suggestion, setSuggestion] = useState<string | null>(null)
   const idleNow = status?.state === 'idle'
   useEffect(() => {

@@ -1,7 +1,7 @@
 /**
- * The composer's quiet control row (the lab's `.ctrl`): the model, the permission mode (hidden while not known),
+ * The composer's quiet control row: the model, the permission mode (hidden while not known),
  * the context left as the side panel shows it (HP, or 컨텍스트 in 업무 모드, with its green / amber / red), and
- * the 5-hour and weekly usage. Since 2026-11-17 the model and the mode are menus (the owner's call: nothing of a
+ * the 5-hour and weekly usage. The model and the mode are menus (nothing of a
  * chat session should need the terminal): a model sends `/model <alias>`, a mode steps Shift+Tab until the footer
  * shows it (src/chat/modeSwitch.ts). The composer does both; this row only asks.
  */
@@ -29,7 +29,7 @@ export const MODELS: readonly { alias: string; label: string }[] = [
   { alias: 'sonnet', label: 'Sonnet' }, { alias: 'haiku', label: 'Haiku' },
 ]
 /**
- * The effort levels offered (2026-11-19), sent as `/effort <level>` (Claude Code 2.1.327: low, medium, high, xhigh,
+ * The effort levels offered, sent as `/effort <level>` (Claude Code 2.1.327: low, medium, high, xhigh,
  * max, and auto for the model's own default)
  */
 export const EFFORTS: readonly { level: string; label: string }[] = [
@@ -53,7 +53,7 @@ export interface ControlActions {
   /** why the model cannot change now (Claude works, a card waits); null: it can */
   modelWhy: string | null
   /** why the effort cannot change now: `/effort` is one of Claude Code's immediate commands, so only a card or an
-   *  ended session stops it, never Claude working (2026-11-19: it looked dead while the session worked) */
+   *  ended session stops it, never Claude working (so it never looks dead while the session works) */
   effortWhy?: string | null
   modeWhy: string | null
   /** modes this session's cycle was seen to lack */

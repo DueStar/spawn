@@ -118,7 +118,7 @@ function Choice<T extends string>({ label, hint, value, options, onChange }: { l
   )
 }
 
-/** The 채팅 보기 help's five lines (Phase 6, Task 6.8): what the chat is, what a send does, what the panel knows, what a
+/** The 채팅 보기 help's five lines: what the chat is, what a send does, what the panel knows, what a
  *  preview tells a site, what an unchecked version turns off. No game word (tests/work-mode.test.ts) */
 const CHAT_HELP = [
   '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요',

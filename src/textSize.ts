@@ -1,6 +1,6 @@
 /**
  * One text size for the whole app: the lists, the panels and the terminal change together, as a percent of
- * 100% in steps of 10 (80–130%; the owner's call of 2026-11-17, named 작게 / 보통 / 크게 / 아주 크게 until then).
+ * 100% in steps of 10 (80–130%; older versions named them 작게 / 보통 / 크게 / 아주 크게).
  * The UI reads the step as a class on <html> (ts-80 … ts-130; 100% has none) that switches the type scale in
  * src/styles/tokens.css; the terminal reads its px from TERM_PX (src/termFont.ts).
  *
@@ -22,7 +22,7 @@ export const textStepLabel = (s: TextStep): string => `${s}%`
 export const UI_PX: Record<TextStep, number> = { 80: 10, 90: 11, 100: 12, 110: 13, 120: 14, 130: 16 }
 /** The terminal's font size per step: 13px at 100%, scaled and rounded */
 export const TERM_PX: Record<TextStep, number> = { 80: 10, 90: 12, 100: 13, 110: 14, 120: 16, 130: 17 }
-/** A step stored by its old name (before 2026-11-17) */
+/** A step stored by its old name (older versions) */
 const OLD_NAMES: Record<string, TextStep> = { small: '90', normal: '100', large: '110', xlarge: '120' }
 
 export const TEXT_KEY = 'spawn-text-size'

@@ -425,7 +425,7 @@ describe('1.6.2: what spawn.log says about a session\'s first minutes (the trust
 
 describe('1.6.2: a reopened Claude Code session that never got a prompt (no transcript)', () => {
   // On 1.6.1 such a tab was left out of the reopen list (nothing to resume), and the next write of the list dropped it
-  // for good: the owner's new-folder session was gone after an update restart.
+  // for good: a new-folder session was gone after an update restart.
   const ID = '55555555-5555-4555-8555-555555555555'
   const OTHER = '66666666-6666-4666-8666-666666666666'
   function manager(transcripts: string[], link?: string) {
@@ -576,7 +576,7 @@ describe('reopening tabs', () => {
 })
 
 // ---------------------------------------------------------------------------
-// The chat view's hooks (Phase 2): appended to the same generated settings file;
+// The chat view's hooks: appended to the same generated settings file;
 // with the feature off the file is exactly release 1.4.0's
 // ---------------------------------------------------------------------------
 
@@ -841,7 +841,7 @@ describe('the terminal manager and the chat view', () => {
     expect('chat' in terms.create({})).toBe(false)
   })
 
-  it('off: redrawForChat (Task 5.2) exists but does nothing; resizes are 1.4.0\'s; only chatHost.redraw calls it, after its off check', () => {
+  it('off: redrawForChat exists but does nothing; resizes are 1.4.0\'s; only chatHost.redraw calls it, after its off check', () => {
     vi.useFakeTimers()
     try {
       const log: string[] = []
@@ -1012,7 +1012,7 @@ describe('the terminal manager and the chat view', () => {
   })
 })
 
-describe('the terminal manager and the chat composer (Phase 3)', () => {
+describe('the terminal manager and the chat composer', () => {
   /** A pty that records every write with the fake clock's time */
   function recordingPty() {
     const base = fakePty()
@@ -1193,7 +1193,7 @@ describe('the terminal manager and the chat composer (Phase 3)', () => {
     expect(terms.typeForChat('nope', 'x')).toBe(false)
     expect(terms.typeForChat(armed.id, 42 as any)).toBe(false)
     expect(pty.writes.map(w => w.data)).toEqual(['x'])
-    // a question on screen (the trust question), cleared from the chat (Phase 4)
+    // a question on screen (the trust question), cleared from the chat
     const pid = [...pty.procs.keys()][0]
     pty.data(pid, 'Do you trust the files in this folder?\n❯ 1. Yes, proceed\n')
     expect(terms.list().find((t: any) => t.id === armed.id).asking).toBe(true)

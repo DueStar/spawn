@@ -8,7 +8,7 @@
  * Pokémon pictures. Headless Chromium (playwright-core, loaded from outside the
  * repo: no dependency) opens the app's page with a fake desktop bridge
  * (fake-bridge.js) and answers its WebSocket with the fixture snapshot
- * (fixture.mjs). No Electron, no pty, nothing of the owner's is read.
+ * (fixture.mjs). No Electron, no pty, nothing of the real user's is read.
  *
  * Run `node tests/visual/shots.mjs --help` for the options.
  */
@@ -148,7 +148,7 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-robust  open { ok: false } → banner (unarmed: its own words); nothing sent → 불러오는 중…; a
                               sub-agent's rows asked once, and again once let go; a cut answer copied says so; a row
                               that throws leaves the window standing; older { ok: false } clears its line
-                   chat-allow  (phase 4) at the top of a long session a card shows in view, the focus stays in the
+                   chat-allow  at the top of a long session a card shows in view, the focus stays in the
                               composer; a press the moment it appears answers nothing, nor do digits; Tab to 허용 and
                               Enter → one chat.answer allow; 보내는 중…; sent; gone with the next status
                    chat-always  the rule said under the buttons and in 항상 허용's title; a click → always; no 항상 허용 without a rule
@@ -158,29 +158,29 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-ask-terminal-first  chat.answer refused (gone) → 보내지 못했어요 · 터미널에서 답해 주세요; gone with the next status
                    chat-question  chat.visible(id) at mount; the options as buttons; Tab, Tab, Enter → option 1
                    chat-question-hidden  the flip to 터미널 → chat.visible(null); a card handed to the terminal is read-only
-                   chat-question-flip  (2026-11-19) 터미널 / 채팅 three times, then the question from the screen (2.1.328's) answers
+                   chat-question-flip  터미널 / 채팅 three times, then the question from the screen (2.1.328's) answers
                    chat-plan  read-only: no answer button, 더 보기, 터미널에서 답하기 flips
                    chat-ask-a11y  a card arriving mid-composition moves nothing; between the list and the composer;
                               its group named; announced once; Shift+Tab from the composer reaches it; buttons ≥ 22px
-                   chat-ask-gate  (review I1) a 300-line command: 허용 and 항상 허용 wait, with the reason, until the
+                   chat-ask-gate  a 300-line command: 허용 and 항상 허용 wait, with the reason, until the
                               box is scrolled to its end (거부 does not); a diff box says 길어요 and holds 허용 too
-                   chat-ask-guard  (review I2) a press under 800 ms after the card is painted, or after the window comes
+                   chat-ask-guard  a press under 800 ms after the card is painted, or after the window comes
                               back (focus), answers nothing; a press begun on one card and let go on the next neither
-                   chat-ask-wrap  (review C1, C2) a 300-character path's file name in view on the card; a diff line's
+                   chat-ask-wrap  a 300-character path's file name in view on the card; a diff line's
                               far tail wrapped into view; nothing on a card scrolls sideways
-                   chat-ask-facts  (review C3, C4, M2–M5, M13) sandbox-off with the amber dot (no fill), background, the
+                   chat-ask-facts  sandbox-off with the amber dot (no fill), background, the
                               time limit, the folder, Claude's description labelled, the URL host in punycode, a direction
                               mark marked; a Write over a file titled as an overwrite, no 새 파일
-                   chat-ask-retry  (review I3) chat.answer refused as hidden: the buttons stay with 다시 눌러 주세요; pressed
+                   chat-ask-retry  chat.answer refused as hidden: the buttons stay with 다시 눌러 주세요; pressed
                               again → answered
-                   chat-ask-order  (review M7, M8, M9) a plan before an open card: the open one shown; the composer's note
+                   chat-ask-order  a plan before an open card: the open one shown; the composer's note
                               per card state (here / terminal / sent); one live region, there before any card
-                   chat-reload-size  (7-48) the shown chat's hidden terminal: at load and after a reload fitted (not 80
+                   chat-reload-size  the shown chat's hidden terminal: at load and after a reload fitted (not 80
                               columns), never focused (sampled every frame), hidden again, the pane opaque, the composer
                               sends, no chat.redraw; a background session switched to in chat: one chat.redraw, not a
                               second; its flip to 터미널 resizes as a session switch does; hidden while the terminals
                               mount: one chat.redraw; terminal mode: none, and no resize of a terminal never shown
-                   chat-changes  (phase 5) the 변경 사항 panel: the header button's counts, pressed, toggling; a diff block's
+                   chat-changes  the 변경 사항 panel: the header button's counts, pressed, toggling; a diff block's
                               +N −N opens the panel at that file with that edit in view; the tree's keys; the edge's drag,
                               ← / →, Home and double-click; the width and the open state remembered across a reload
                    chat-changes-fold  at 1200 wide the left panel folds to the rail for the panel and comes back on close or
@@ -188,38 +188,38 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-changes-terminal  the panel open (folded at 1200), the flip to 터미널: the terminal's box and resizes as
                               without the panel, no panel or chat tools; a load in chat with it open: the shown size only
                    chat-changes-widget  the widget mode: no panel, no button, no chat.changes
-                   chat-density  (phase 5) 보기 정도 by keyboard (↓ opens on the checked level, ↓ ↑ Home End, Esc / Tab close,
+                   chat-density  보기 정도 by keyboard (↓ opens on the checked level, ↓ ↑ Home End, Esc / Tab close,
                               the focus back), remembered across a reload, the chosen level grey; 생각 포함 shows thinking
                               rows; 전부 opens rows but not one the user closed; chat-long: each switch holds the rows in
                               view (2px), settles in ≤ 300 ms, ≤ 300 rows; chat-waiting: the waiting row its own in each level
-                   chat-foot  (phase 5) the turn summary: a foot per finished turn (time, 도구 n회, 파일 n개 바꿈), whose 복사
+                   chat-foot  the turn summary: a foot per finished turn (time, 도구 n회, 파일 n개 바꿈), whose 복사
                               writes the turn's answer (a clipboard stub) and takes the rows' own; a turn with no foot keeps
                               its row's; no GET /pokedex at load; a turn ending live while watched: 8걸음 after 1.5 s (two
                               routed reads), a second turn with no new start none; a reload: the feet, no steps, no read;
                               업무 모드: no read at all, no steps
-                   chat-wild  (phase 5) wild Pokémon: the conversation's meetings from the snapshot's game state, none
+                   chat-wild  wild Pokémon: the conversation's meetings from the snapshot's game state, none
                               animating at load; a pokedex message with a new catch of the shown session: one more row,
                               with appear (its animation runs; none under reduced motion); another session's catch, a
                               level-up: no row; a reload: every row, none with appear; 업무 모드: no .chat-wild, ever
-                   chat-a11y-walk  (phase 6) keyboard only over chat-changes: Tab in visual order (header, list, composer,
+                   chat-a11y-walk  keyboard only over chat-changes: Tab in visual order (header, list, composer,
                               panel), never to <body> or a hidden terminal, every stop named and >= 22px; Esc gives the focus
                               back (density menu, find); Ctrl+F from the list, the composer, the tree; the accessibility tree
                               named (tree items with level and selected); reduced motion: nothing runs, scrolling auto
-                   chat-perf  (phase 6) the long session's page budgets: a 5,000-item reset (4,000 kept, the cut's line at
+                   chat-perf  the long session's page budgets: a 5,000-item reset (4,000 kept, the cut's line at
                               the top) → first rows ≤ 300 ms; 30 × 400px steps ≤ 16 ms of work each (fail > 50); 기본 → 전부
                               settled ≤ 300 ms, ≤ 300 rows; find's Enter to a hit ~3,000 rows up placed ≤ 200 ms
-                   chat-soak  (phase 6) an hour of streaming in the page: 20,280 pushes after 60 warm-up turns; after a forced
+                   chat-soak  an hour of streaming in the page: 20,280 pushes after 60 warm-up turns; after a forced
                               gc the JS heap grows ≤ 40 MB, DOM nodes ≤ 1.2×, blob: URLs ≤ 64, listeners not growing
                               (SOAK_ROUNDS=<n> runs a shorter one)
-                   chat-find  (phase 5) find in the conversation: Ctrl+F opens the bar (role search, named controls ≥ 22px,
+                   chat-find  find in the conversation: Ctrl+F opens the bar (role search, named controls ≥ 22px,
                               the terminal's place) with the focus in it; typing searched after 120 ms, never mid-
                               composition; matches painted (CSS highlights), Enter / Shift+Enter move; a hit in a closed
                               read group opens it; a flip and back keeps the bar; Esc closes, nothing painted, the focus
                               back; chat-long: a hit 1,500 rows up placed in view and painted, 1/1, ≤ 300 rows, the
                               loaded-only note; in the terminal Ctrl+F opens the terminal's own bar; the Mac: ⌘F (not Ctrl+F)
-                   chat-preview-off  (phase 5) link previews off (the default; or on with 채팅으로 보기 off): chat-link scrolled
+                   chat-preview-off  link previews off (the default; or on with 채팅으로 보기 off): chat-link scrolled
                               end to start: no chat.preview call, no card, no blob: URL, no request beyond the harness's server
-                   chat-preview  (phase 5) link previews on: chat.preview only for links of rows drawn (never a user's, a tool's,
+                   chat-preview  link previews on: chat.preview only for links of rows drawn (never a user's, a tool's,
                               code's, a stopped answer's or a fourth link), once each; the MDN card (its name, its own host, a
                               blob: picture 104×68, after its paragraph), a click opens it through the app; the redirect's
                               → host, a page naming another site shows the link's host; off: cards gone, every blob: URL
@@ -241,20 +241,20 @@ Surfaces (each at 1440x900 and 1100x720 unless noted):
   -work (chat): chat-work chat-banner-work chat-empty-work
   chat-compose chat-compose-fail chat-compose-pending (the composer: a draft with two images and a queue of one;
                    the prompt-busy note; a bubble sending and one not in the record yet), -work, chat-compose-mac
-  chat-ask-bash chat-ask-edit chat-ask-agent chat-ask-question chat-ask-plan chat-ask-timeout (phase 4: the answer
+  chat-ask-bash chat-ask-edit chat-ask-agent chat-ask-question chat-ask-plan chat-ask-timeout (the answer
                    cards above the composer), chat-ask-longpath chat-ask-longline chat-ask-sandbox chat-ask-overwrite
-                   chat-ask-long (the review of phase 4), each also -work and -mac
+                   chat-ask-long (edge cases), each also -work and -mac
   chat-changes chat-changes-missing chat-changes-empty (1440x900) chat-changes-1100 (1100x720, folded to the rail):
-                   the 변경 사항 panel (phase 5); chat-changes also -work and -mac
-  chat-thinking chat-all  density (phase 5, seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the lab's
+                   the 변경 사항 panel; chat-changes also -work and -mac
+  chat-thinking chat-all  density (seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the reference design's
                    turn; 전부 over chat (rows opened); both also -work
-  chat-foot        the turn summary (phase 5): the lab's turn finished, the next one ended live with 8걸음 (GET
+  chat-foot        the turn summary: the reference design's turn finished, the next one ended live with 8걸음 (GET
                    /pokedex routed); also -work (no steps, no read)
-  chat-wild        wild Pokémon (phase 5): the lab's work turn with a new Rattata caught (잡았다 · Lv.6 · 새로 등록), a rare
+  chat-wild        wild Pokémon: the reference design's work turn with a new Rattata caught (잡았다 · Lv.6 · 새로 등록), a rare
                    Dratini that got away and a shiny Eevee, from the snapshot's game events; also -work (no row)
-  chat-find        find in the conversation (phase 5): Ctrl+F, safeRedirect typed and Enter: the bar at the terminal's
+  chat-find        find in the conversation: Ctrl+F, safeRedirect typed and Enter: the bar at the terminal's
                    find place, the matches in grey, the current one stronger
-  chat-link        link preview cards (phase 5, 링크 미리보기 seeded on): the lab answer's MDN card under its paragraph;
+  chat-link        link preview cards (링크 미리보기 seeded on): the lab answer's MDN card under its paragraph;
                    also -work and -mac.   chat-link-settings (1440x900): 설정 › 세션's 링크 미리보기 row under 채팅으로 보기
 
 Files: <surface>-<W>x<H>.png (qa and toast: the PNG's real size, e.g. toast-1342x1630.png).
@@ -262,7 +262,7 @@ Exit code 0 only when every requested shot was written and every requested check
 
 Environment: PLAYWRIGHT_CORE (path to playwright-core, default the spawn-promo copy),
 SHOTS_BROWSER (a browser executable to use instead of Chromium / Edge / Chrome),
-LAB_SHOTS (the lab's reference folder, default calm-lab/shots-v5).
+LAB_SHOTS (the reference design's screenshot folder, default calm-lab/shots-v5).
 Uses port ${PORT} and tests/visual/.home only.
 `
 
@@ -272,7 +272,7 @@ Uses port ${PORT} and tests/visual/.home only.
  * What each base surface opens. view: the carried view (spawn-carry); mode: the window
  * kind; local: extra page storage; then a step to reach it (click a cell, open 설정).
  */
-/** 설정 with link previews on (채팅으로 보기 and 링크 미리보기): the link preview surfaces and flows (phase 5) */
+/** 설정 with link previews on (채팅으로 보기 and 링크 미리보기): the link preview surfaces and flows */
 const LINK_ON = { session: { chatView: true, linkPreviews: true } }
 
 const SURFACES = {
@@ -282,14 +282,14 @@ const SURFACES = {
   'session-12-compact': { view: 'terminal', twelve: true, local: { 'spawn-list-mode': 'compact' } },
   // The last session has no Pokémon yet (none rested when it opened): the plain glyph, no Lv, no swap
   'session-nomon': { view: 'terminal', noMon: 1 },
-  // spawn-text-size arrives in Task 7 (harmless before); spawn-term-font is today's terminal size
+  // spawn-text-size (harmless on a build without it); spawn-term-font is today's terminal size
   // and the key the step migrates from, so the before set shows the terminal at that size too
   'size-small': { view: 'terminal', local: { 'spawn-text-size': 'small', 'spawn-term-font': '12' } },
   'size-xlarge': { view: 'terminal', local: { 'spawn-text-size': 'xlarge', 'spawn-term-font': '17' } },
   dex: { view: 'dex', click: '.dex-grid .dex-cell.caught' },
   box: { view: 'box', click: '.box-grid .box-cell' },
   log: { view: 'today', ready: '.today' },
-  // The board's own twelve rows (the viewer 7th), as the lab shows them: practice rivals hidden
+  // The board's own twelve rows (the viewer 7th), as the reference design shows them: practice rivals hidden
   rank: { view: 'rank', ready: '.rank-name', local: { 'spawn-rank-npc': '0' } },
   settings: { view: 'terminal', settings: true },
   // The pickers and dialogs, opened by a click as a user would (window mode, the session view)
@@ -306,20 +306,20 @@ const SURFACES = {
   },
   rail: { view: 'terminal', local: { 'spawn-side-hidden': '1' } },
   widget: { mode: 'widget', sizes: [[340, 820]] },
-  // The lab's widget has no session waiting: no question card over the lower rows (the plain widget above keeps one)
+  // The reference design's widget has no session waiting: no question card over the lower rows (the plain widget above keeps one)
   'widget-plain': { mode: 'widget', sizes: [[340, 820]], plain: true },
   'widget-xlarge': { mode: 'widget', sizes: [[340, 820]], local: { 'spawn-text-size': 'xlarge', 'spawn-term-font': '17' } },
   toast: { page: 'qa', clip: '.qa-section', sizes: [[1440, 900]] },
   qa: { page: 'qa', fullPage: true, sizes: [[1440, 900]] },
   'status-card': { page: 'status-card', sizes: [[300, 96]] },
-  // The chat view (chat view phase 2): the first session shown as chat — its terminal armed, 채팅
+  // The chat view: the first session shown as chat — its terminal armed, 채팅
   // chosen in the carry, chat.open answered with the conversation of chatFixture.mjs by that name
   ...Object.fromEntries(chatFixture.NAMES.map(n => [n, { view: 'terminal', chat: n }])),
   'chat-agent': {
     view: 'terminal', chat: 'chat-agent', ready: '.chat-agent-body .chat-tool',
     open: async page => { await page.locator('.chat-agent .chat-tool-toggle').first().click() },
   },
-  // the sub-agents at work (2026-11-19): the strip above the composer; a chip opens the sub-agent panel beside the chat
+  // the sub-agents at work: the strip above the composer; a chip opens the sub-agent panel beside the chat
   'chat-agents': { view: 'terminal', chat: 'chat-agents', sizes: [[1440, 900]], ready: '.chat-agents.on .chat-agent-chip + .chat-agent-chip' },
   'chat-agents-panel': {
     view: 'terminal', chat: 'chat-agents', sizes: [[1440, 900]], ready: '.chat-ag-panel .chat-ag-body .chat-tool',
@@ -329,24 +329,24 @@ const SURFACES = {
     view: 'terminal', chat: 'chat-agents', sizes: [[900, 720]], ready: '.chat-ag-panel .chat-ag-body .chat-tool',
     open: async page => { await page.locator('.chat-agent-chip').first().click() },
   },
-  // The composer (chat view phase 3): a two-line draft with two pasted images, Claude Code's queue of
+  // The composer: a two-line draft with two pasted images, Claude Code's queue of
   // one and the control row; the prompt-busy refusal; a bubble sending and one not in the record yet
   'chat-compose': { view: 'terminal', chat: 'chat', ready: '.chat-composer .chat-ichip + .chat-ichip', open: async page => composeDraft(page) },
   'chat-compose-fail': { view: 'terminal', chat: 'chat', ready: '.chat-cnote .chat-btn', open: async page => composeFail(page) },
   'chat-compose-pending': { view: 'terminal', chat: 'chat', ready: '.chat-user.pending.sending', open: async page => composePending(page) },
-  // The 변경 사항 panel (chat view phase 5): open (spawn-changes-open), changes.jsonl's index built by the real
+  // The 변경 사항 panel: open (spawn-changes-open), changes.jsonl's index built by the real
   // electron/chatChanges.cjs (chatFixture.mjs changes()); the latest changed file (src/math.js: four edits, the third a
   // sub-agent's, the second two hunks 41 lines apart); the patchless edit of src/config.js; a conversation with no edit;
-  // at 1100 wide the left panel folded to the rail for it (the lab's narrow, app.css 453)
+  // at 1100 wide the left panel folded to the rail for it (the reference design's narrow)
   'chat-changes': { view: 'terminal', chat: 'chat-changes', sizes: [[1440, 900]], local: { 'spawn-changes-open': '1' }, ready: '.chat-changes .chat-ch-edit .chat-dl', open: async page => changesFile(page, 'math.js') },
   'chat-changes-missing': { view: 'terminal', chat: 'chat-changes', sizes: [[1440, 900]], local: { 'spawn-changes-open': '1' }, ready: '.chat-changes .chat-ch-edit .chat-ch-note', open: async page => changesFile(page, 'config.js') },
   'chat-changes-empty': { view: 'terminal', chat: 'chat-changes-empty', sizes: [[1440, 900]], local: { 'spawn-changes-open': '1' }, ready: '.chat-changes .chat-ch-empty', open: async page => { await page.waitForSelector('.chat-changes', { timeout: 10_000 }) } },
   'chat-changes-1100': { view: 'terminal', chat: 'chat-changes', sizes: [[1100, 720]], local: { 'spawn-changes-open': '1' }, ready: '.widget.side-hidden .chat-changes .chat-ch-edit .chat-dl', open: async page => changesFile(page, 'math.js') },
-  // Density (chat view phase 5, seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the lab's turn (each thinking
+  // Density (seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the reference design's turn (each thinking
   // block a row: its time and 생각한 내용은 기록에 남지 않았어요, the one with text shown); 전부 over the chat conversation
-  // (the read group, the outputs and the diff opened, the lab's app.css 253–254)
+  // (the read group, the outputs and the diff opened, as in the reference design)
   'chat-thinking': { view: 'terminal', chat: 'chat-thinking', local: { 'spawn-chat-density': 'thinking' }, ready: '.chat .chat-think',
-    // (the turns of thinking.jsonl and the lab turn's thinking row above its answer in view)
+    // (the turns of thinking.jsonl and the reference turn's thinking row above its answer in view)
     // (the list's own scroll only: scrollIntoView would also move the page when the list cannot scroll that far)
     open: async page => {
       await page.waitForSelector('.chat .chat-think')
@@ -372,11 +372,11 @@ const SURFACES = {
       })
       await sleep(500)
     } },
-  // The turn summary (chat view phase 5): the lab's first turn finished (1분 48초 · 도구 5회 · 복사), then its second
+  // The turn summary: the reference design's first turn finished (1분 48초 · 도구 5회 · 복사), then its second
   // arriving live while the session works; two GET /pokedex reads (routed: 10, then 18 steps) bracket it, so its foot
   // says 8걸음 1.5 s after its end (-work: no read at all, no steps; the same boxes)
   'chat-foot': { view: 'terminal', chat: 'chat-foot', ready: '.chat .chat-foot', open: async page => footShot(page) },
-  // Wild Pokémon (chat view phase 5, the lab's .wild): the lab's work turn with a new Rattata caught after the edit (잡았다 ·
+  // Wild Pokémon (the reference design's .wild): the reference design's work turn with a new Rattata caught after the edit (잡았다 ·
   // Lv.6 · 새로 등록), a rare Dratini that got away, a shiny Eevee after the turn, from the game's own events in the snapshot
   // (chatFixture.mjs wild); another session's catch and a level-up make no row. -work: no row at all, the same turn
   'chat-wild': { view: 'terminal', chat: 'chat-wild', ready: '.chat .chat-foot',
@@ -394,7 +394,7 @@ const SURFACES = {
       })
       await sleep(600)
     } },
-  // Find in the conversation (chat view phase 5): Ctrl+F over the chat conversation, a word typed and Enter pressed: the
+  // Find in the conversation: Ctrl+F over the chat conversation, a word typed and Enter pressed: the
   // bar at the terminal's find place (top right), every match a light grey, the current one a stronger grey (no yellow)
   'chat-find': { view: 'terminal', chat: 'chat', ready: '.chat .chat-find',
     open: async page => {
@@ -408,19 +408,19 @@ const SURFACES = {
       await page.keyboard.press('Enter')
       await sleep(1000)
     } },
-  // Link preview cards (chat view phase 5, the lab's .og): 링크 미리보기 on (설정 seeded), the chat-link conversation at its
-  // end: the lab's answer with its MDN link and the card under that paragraph (its picture drawn by chatFixture.mjs, shown
+  // Link preview cards (the reference design's .og): 링크 미리보기 on (설정 seeded), the chat-link conversation at its
+  // end: the reference design's answer with its MDN link and the card under that paragraph (its picture drawn by chatFixture.mjs, shown
   // from a blob: URL the page made). -work: the same card (nothing of the game in it); -mac: the same
   'chat-link': { view: 'terminal', chat: 'chat-link', appSettings: LINK_ON, ready: '.chat .chat-og img', open: async page => linkShot(page) },
   // 설정 › 세션 with the chat view on: 링크 미리보기 (채팅) right under 채팅으로 보기 (off, and enabled)
   'chat-link-settings': { view: 'terminal', chat: 'chat', appSettings: { session: { chatView: true } }, sizes: [[1440, 900]], ready: '.set-modal', open: async page => sessionSettings(page) },
-  // (phase 6) a Claude Code newer than the verified range: the quiet note with 자세히 open (what is off, and the way to the help)
+  // a Claude Code newer than the verified range: the quiet note with 자세히 open (what is off, and the way to the help)
   'chat-new-version': { view: 'terminal', chat: 'chat-new-version', ready: '.chat .chat-note', open: async page => {
     await page.locator('.chat .chat-note .chat-link-btn').first().click()
     await page.waitForSelector('.chat .chat-note-more', { timeout: 5000 })
     await sleep(200)
   } },
-  // (phase 6) 설정 › 세션 with the chat view on and 채팅 보기란? open: its five lines
+  // 설정 › 세션 with the chat view on and 채팅 보기란? open: its five lines
   'chat-help-settings': { view: 'terminal', chat: 'chat', appSettings: { session: { chatView: true } }, ready: '.set-modal', open: async page => {
     await sessionSettings(page)
     await page.locator('.set-help-toggle').click()
@@ -445,7 +445,7 @@ function parseId(id) {
   return { id, base, work, mac, ...SURFACES[base] }
 }
 
-/** The lab picture a surface is compared with (docs/superpowers/plans/2026-11-14-calm-style-2.md) */
+/** The reference design's picture a surface is compared with */
 const LAB_REF = {
   session: 's2-session-terminal.png', 'session-compact': 's2-chat-compact.png', 'session-12-compact': 's2-chat-compact.png', 'session-work': 's2-work-terminal.png',
   'size-small': 's2-size-smallest-terminal.png', 'size-xlarge': 's2-size-largest-terminal.png',
@@ -518,13 +518,13 @@ function fail(msg) {
 /** name -> async (ctx) => string[] (problems) */
 const FLOWS = {
   /**
-   * The session tab row is gone (calm-style plan, Task 5): every job it did still has a home.
+   * The session tab row is gone: every job it did still has a home.
    * In 상세, in 간략 and with the left panel folded: × asks 닫기 once, the ask clears when the
    * mouse leaves, a second click closes (one terminals.close with that row's terminal); rename
    * opens exactly one field and Enter sends one terminals.rename; a drag sends one
    * terminals.move. Also: the list header's >_ / + / 간략·상세, the rail's >_, switching by the
    * rail and by Ctrl+Tab / Ctrl+Shift+Tab (the header follows), the chosen row kept in sight
-   * among twelve, and 업무 모드's header with no picture. And (the final review's M1, M2): an
+   * among twelve, and 업무 모드's header with no picture. Also: an
    * ended session's 간략 row is dimmed; the widget's >_ that opens no shell keeps the widget and
    * its note.
    */
@@ -679,7 +679,7 @@ const FLOWS = {
   },
 
   /**
-   * The left panel's right edge (calm-style plan, Task 6): 300px at first, dragged to a width
+   * The left panel's right edge: 300px at first, dragged to a width
    * clamped to 240–420 and remembered (spawn-side-w), the terminal fitted again once it rests
    * (fewer columns, and the session told the new size); double-click and Home go back to 300
    * and forget it; ← / → move 16px; a window too narrow keeps the terminal 320px; no edge
@@ -855,7 +855,7 @@ const FLOWS = {
   },
 
   /**
-   * One text step for the UI and the terminal (calm-style plan, Task 7): the step a page
+   * One text step for the UI and the terminal: the step a page
    * starts on (picked, or carried over from the old terminal size, nearest step, ties larger,
    * nothing written), its <html> class, the terminal's px, the UI's name size, the lockup the
    * same at every step, and the terminal's rows inside its box (measured with the bundled face).
@@ -897,7 +897,7 @@ const FLOWS = {
         if (app) await app.ctx.close()
       }
     }
-    // Task 8: the keys, the wheel and the − 가 + control move the same step, once per press
+    // the keys, the wheel and the − 가 + control move the same step, once per press
     for (const mac of [false, true]) {
       let app
       const label = mac ? 'Mac' : 'Windows'
@@ -1022,7 +1022,7 @@ const FLOWS = {
   },
 
   /**
-   * Hit areas (calm-style plan, Task 14; the final review's C1): the size of every control the
+   * Hit areas: the size of every control the
    * restyle touched, at 1440×900 보통, against the sizes on main before the plan (0dbb6c9, measured
    * with this same flow: HIT_BEFORE_RUN=1 on that build) — none smaller. Each control has its own
    * floor (the 도감 segments and the tier chips apart); the header's 로그인 and update button are
@@ -1049,18 +1049,18 @@ const FLOWS = {
       },
       'launcher side': {
         floor: [30, 34],
-        why: 'the owner (2026-11-16): narrower, so the folder and resume icons read as one pair beside 새로운 세션 시작하기',
+        why: 'narrower, so the folder and resume icons read as one pair beside 새로운 세션 시작하기',
       },
-      // the owner (2026-11-16): the update button is an icon, the header's own 26 × 26, so the profile never shrinks
+      // the update button is an icon, the header's own 26 × 26, so the profile never shrinks
       'update button': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
       'update button (en)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
       'update button (ja)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
     }
     const NEW = ['list mode', 'list button', 'session header ×', 'text size', '간략 row ×',
-      // the chat view (chat view phase 2)
+      // the chat view
       'chat flip', 'chat tool row', 'chat group head', 'chat 복사', 'chat diff file', 'chat 새 메시지 pill', 'chat banner button', 'chat 터미널로 보기',
       'chat path chip', 'chat 답 복사',
-      // the composer (chat view phase 3)
+      // the composer
       'composer +', 'composer @', 'composer 보내기', 'composer chip picture', 'composer chip ×', 'composer 멈추기', 'composer note button',
       'composer mention row', 'composer thumbnail', 'composer lightbox ×']
     const measure = (page, sel, { hitAfter = false } = {}) => page.evaluate(([s, after]) => {
@@ -1135,7 +1135,7 @@ const FLOWS = {
       app = await openApp(browser, { local: { 'spawn-side-w': '328' } })
       await take(app.page, 'launcher main (panel 328)', '.w-side .w-launch-main')
       if (!process.env.HIT_BEFORE_RUN) {
-        // The chat view's controls (new in chat view phase 2: 22px each way)
+        // The chat view's controls (22px each way)
         await app.ctx.close()
         app = await openApp(browser, { chat: 'chat' })
         await app.page.waitForSelector('.chat .chat-row', { timeout: 10_000 })
@@ -1144,7 +1144,7 @@ const FLOWS = {
         await take(app.page, 'chat tool row', '.chat-tool-toggle')
         await take(app.page, 'chat group head', '.chat-group .chat-tool-toggle')
         await take(app.page, 'chat 복사', '.chat-code .chat-copy')
-        // (phase 5: a finished turn's 답 복사 is in its foot)
+        // (a finished turn's 답 복사 is in its foot)
         await take(app.page, 'chat 답 복사', '.chat-foot .chat-copy, .chat-text-acts .chat-copy')
         await take(app.page, 'chat path chip', '.fchip')
         // the diff and the failed command are in the first turn: up there
@@ -1163,7 +1163,7 @@ const FLOWS = {
         app = await openApp(browser, { chat: 'chat-waiting' })
         await app.page.waitForSelector('.chat .chat-row', { timeout: 10_000 })
         await take(app.page, 'chat 터미널로 보기', '.chat-tool-head .chat-btn, .chat-status .chat-btn')
-        // the composer's controls (chat view phase 3)
+        // the composer's controls
         await app.ctx.close()
         app = await openApp(browser, { chat: 'chat' })
         const page = app.page
@@ -1223,7 +1223,7 @@ const FLOWS = {
   },
 
   /**
-   * The keyboard and screen readers (the final review's I2 and M7). In 상세 and in 간략: Tab
+   * The keyboard and screen readers. In 상세 and in 간략: Tab
    * reaches the rows (after the list header's buttons), each row is a button whose name says the
    * session's name and status (간략 too, where only the dot shows), the one in view is
    * aria-current; a focused row shows a quiet hairline ring (no yellow) and a click shows none;
@@ -1338,7 +1338,7 @@ const FLOWS = {
         }
       })
     }
-    // The chat view (chat view phase 2): Tab reaches the flip, Enter flips; in the conversation Tab
+    // The chat view: Tab reaches the flip, Enter flips; in the conversation Tab
     // reaches the tool rows (buttons with aria-expanded), the links and the 복사 buttons, each with a
     // visible ring that is not yellow; Enter opens a row; the banner is a status, the pill a polite live region
     await run('채팅', { chat: 'chat', chatMode: false }, async ({ page }, bad) => {
@@ -1349,7 +1349,7 @@ const FLOWS = {
       await page.keyboard.press('Enter')
       await page.waitForSelector('.chat .chat-row', { timeout: 10_000 }).catch(() => bad('Enter on 채팅 did not open the chat'))
       if (await page.locator('.w-lens button[aria-pressed="true"]').innerText() !== '채팅') bad('after Enter the flip does not say 채팅')
-      // (phase 3: the composer takes the focus on the user's own flip)
+      // (the composer takes the focus on the user's own flip)
       if (!(await page.evaluate(() => document.activeElement?.matches('textarea.chat-input:not(.chat-input-twin)')))) bad(`the composer did not take the focus (${await page.evaluate(() => document.activeElement?.className)})`)
       // The list is announced as a list of rows
       const roles = await page.evaluate(() => ({ list: document.querySelector('.chat-rows')?.getAttribute('role'), item: document.querySelector('.chat-row')?.getAttribute('role'), region: document.querySelector('.chat-scroll')?.getAttribute('aria-label') }))
@@ -1422,7 +1422,7 @@ const FLOWS = {
       if (await page.locator('.w-textsize-menu').count()) bad('the menu stayed open after Enter on a step')
       if (!(await page.evaluate(() => document.activeElement?.classList.contains('w-textsize-cur')))) bad('after a pick the focus is not back on the button')
     })
-    // The composer (chat view phase 3): the DOM order is the visual order (list → queue strip → chips →
+    // The composer: the DOM order is the visual order (list → queue strip → chips →
     // field → + → @ → 보내기 → control row); Tab and Shift+Tab walk it; every control names itself
     await run('the composer', { chat: 'chat' }, async ({ page }, bad) => {
       const id = await firstTerm(page)
@@ -1466,7 +1466,7 @@ const FLOWS = {
   },
 
   /**
-   * Hovered is not chosen (the final review's M4): in 도감 (filters, tier chips), 박스 (sort),
+   * Hovered is not chosen: in 도감 (filters, tier chips), 박스 (sort),
    * 랭킹 (boards) and 설정 (a choice), a hovered option's words differ from the chosen one's, and
    * hovering the chosen one leaves it as it was.
    */
@@ -1518,7 +1518,7 @@ const FLOWS = {
   },
 
   /**
-   * A narrow window (calm-style plan, Task 14): at 560 (the window's minimum) and 640 wide, on
+   * A narrow window: at 560 (the window's minimum) and 640 wide, on
    * Windows and on a Mac, the left panel open and folded, the top bar fits its card — nothing
    * past the bar's end, the window buttons whole and on top (Windows), the text size still
    * reachable (folded to one 가 button when it must, its menu inside the window), the traffic
@@ -1526,7 +1526,7 @@ const FLOWS = {
    */
   narrow: async ({ browser, opts }) => {
     const problems = []
-    // (and at 560 with the chat view shown: its 채팅 / 터미널 flip in the session bar; chat view phase 2)
+    // (and at 560 with the chat view shown: its 채팅 / 터미널 flip in the session bar)
     for (const chat of [false, true]) for (const mac of [false, true]) for (const folded of [false, true]) for (const width of chat ? [560] : [560, 640]) {
       const label = `${mac ? 'Mac' : 'Windows'} ${folded ? 'folded' : 'open'} ${width}${chat ? ' chat' : ''}`
       const bad = m => problems.push(`${label}: ${m}`)
@@ -1646,7 +1646,7 @@ const FLOWS = {
   },
 
   /**
-   * The 채팅 / 터미널 flip (chat view phase 2, Task 15): the terminal stays mounted and keeps
+   * The 채팅 / 터미널 flip: the terminal stays mounted and keeps
    * working while the chat is shown. Terminal 1 armed, 200 lines of output, scrolled up: 채팅
    * opens the chat (one chat.open, nothing written, created or closed, the same terminals);
    * output sent meanwhile reaches the terminal; 터미널 shows the same xterm again with its scroll
@@ -1795,7 +1795,7 @@ const FLOWS = {
       if (await page.locator('.chat').count()) bad('a click on the disabled 채팅 opened the chat')
       if ((await calls(page)).slice(n).length) bad(`a click on the disabled 채팅 made calls: ${JSON.stringify((await calls(page)).slice(n))}`)
       if (await page.locator('.w-lens button[aria-pressed="true"]').innerText() !== '터미널') bad('the flip left 터미널')
-      // the click says why, under the pair, to the eye and a screen reader (review M14)
+      // the click says why, under the pair, to the eye and a screen reader
       const note = page.locator('.w-lens-note')
       if (await note.getAttribute('role') !== 'status') bad('the reason line is not role="status"')
       if ((await note.innerText()).trim() !== '이 세션은 채팅 보기를 켜기 전에 열렸어요. 다시 열면 채팅으로 볼 수 있어요') bad(`after the click the reason line says ${JSON.stringify(await note.innerText())}`)
@@ -1808,7 +1808,7 @@ const FLOWS = {
   },
 
   /**
-   * A long session (chat view phase 2, Task 16): 2000 items. The DOM holds ≤ 300 rows at the bottom,
+   * A long session: 2000 items. The DOM holds ≤ 300 rows at the bottom,
    * in the middle and at the top; the top asks chat.older exactly once until the next update; 150
    * older rows pushed above keep the first row in view within 2px; 3 new rows below while scrolled
    * up show "새 메시지 3개", which lands at the bottom and goes; 30 scroll steps of 400px, timed.
@@ -1917,7 +1917,7 @@ const FLOWS = {
   },
 
   /**
-   * Scrolling the conversation (review C1, M7, M15, M1): from the bottom, a wheel of −100 and ↑ move
+   * Scrolling the conversation: from the bottom, a wheel of −100 and ↑ move
    * the view up and it stays there; rows arriving while scrolled up leave it and show 새 메시지 N개;
    * at the bottom new rows are followed and a new answer is announced; a row opened at the bottom keeps
    * its place (no snap to the end); Tab walks on past the rows mounted at first.
@@ -2001,7 +2001,7 @@ const FLOWS = {
       await app.ctx.close()
       app = null
       // at the bottom of a long session, the conversation focused (as after a keyboard flip): Tab goes to the first
-      // control in view and Shift+Tab leaves it, neither moves the view, and it still follows new rows (re-review I-3)
+      // control in view and Shift+Tab leaves it, neither moves the view, and it still follows new rows
       app = await openApp(browser, { chat: 'chat-long' })
       const p3 = app.page
       const t3 = app.shot.terminals[0].id
@@ -2071,7 +2071,7 @@ const FLOWS = {
   },
 
   /**
-   * A wait on the user while scrolled up (review I1): the pill turns amber and says who waits, and it
+   * A wait on the user while scrolled up: the pill turns amber and says who waits, and it
    * jumps to the waiting row; a sub-agent's wait (no row of its own) shows on its Agent row.
    */
   'chat-wait': async ({ browser }) => {
@@ -2117,7 +2117,7 @@ const FLOWS = {
       const agentRow = { ...app.shot.chat[t1].ops[0].items.find(i => i.tool === 'Agent'), state: 'running' }
       agentRow.agentId ??= 'afixture01'
       const waitStatus = extra => ({ state: 'waiting', since: Date.now(), label: null, banner: null, note: null, version: '2.1.323', hasOlder: false, empty: false, ...extra })
-      // first the main thread's own wait the lens could not pair (no waitingAgent): no Agent row is blamed (re-review m-10)
+      // first the main thread's own wait the lens could not pair (no waitingAgent): no Agent row is blamed
       await p2.evaluate(([id, row, st]) => window.__CHAT_PUSH__(id, [{ op: 'upsert', items: [row] }, { op: 'status', status: st }]), [t1, agentRow, waitStatus({})])
       await sleep(500)
       if (await p2.locator('.chat-agent .chat-dot.amber').count()) bad('the main thread\'s own wait (not paired) is put on a running Agent row')
@@ -2136,7 +2136,7 @@ const FLOWS = {
   },
 
   /**
-   * The sub-agents at work (2026-11-19): a chip opens the panel (chat.agent asked once, not again for nothing; again
+   * The sub-agents at work: a chip opens the panel (chat.agent asked once, not again for nothing; again
    * when the sub-agent moved on), a finished chip says 끝남 then leaves, the strip folds away when none runs, the
    * panel then says its sub-agent is done, Esc closes it, and the Agent row's 열어 보기 opens it again.
    */
@@ -2210,7 +2210,7 @@ const FLOWS = {
       const { page, shot } = app
       const t1 = shot.terminals[0].id
       await page.waitForSelector('.chat .chat-empty', { timeout: 15_000 })
-      // (Phase 3: while the chat shows, the side panel's box points to the composer; the typing is the composer's)
+      // (while the chat shows, the side panel's box points to the composer; the typing is the composer's)
       await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
       const box = page.locator('.chat-composer textarea.chat-input:not(.chat-input-twin)')
       await box.click()
@@ -2253,7 +2253,7 @@ const FLOWS = {
   },
 
   /**
-   * When main cannot answer, a sub-agent's rows let go, a row that throws (review I3, I4, I6, M12):
+   * When main cannot answer, a sub-agent's rows let go, a row that throws:
    * open answered { ok: false } → the banner; nothing sent → 불러오는 중… (never a blank pane); an open
    * Agent row whose rows went away asks again; a row that throws leaves the window and its terminals
    * standing, says so and offers the terminal; an older page answered { ok: false } clears its line.
@@ -2279,7 +2279,7 @@ const FLOWS = {
       if (!text.includes('채팅을 읽는 부분이 멈췄어요')) no(`no banner (${JSON.stringify(text)})`)
       if (!(await banner.locator('button', { hasText: '터미널로 보기' }).count())) no('the banner offers no 터미널로 보기')
     })
-    // a refusal for a session not armed (a race the flip should keep out) says so, not that the reader stopped (re-review m-11)
+    // a refusal for a session not armed (a race the flip should keep out) says so, not that the reader stopped
     await run('open { ok: false, reason: unarmed }', { chat: 'chat', chatOpts: { openFails: 'unarmed' } }, async ({ page }, no) => {
       const banner = page.locator('.chat-banner')
       await banner.waitFor({ timeout: 5000 }).catch(() => {})
@@ -2299,7 +2299,7 @@ const FLOWS = {
       const asks = async () => (await calls(page)).filter(c => c.fn === 'chat.agent').length
       await sleep(600)
       const n = await asks()
-      // the answer's rows arriving is no reason to ask again (re-review m-5)
+      // the answer's rows arriving is no reason to ask again
       if (n !== 1) no(`opening the Agent row asked for its rows ${n} times`)
       // main let the view go (a minute away, 다시 읽기): its reset comes without the sub-agent's rows
       await page.evaluate(([id, u]) => window.__CHAT_PUSH__(id, u.ops), [t1, shot.chat[t1]])
@@ -2307,7 +2307,7 @@ const FLOWS = {
       if (await asks() <= n) no('the open Agent row did not ask for its rows again')
       if (!(await page.locator('.chat-agent-body .chat-tool').count())) no('the sub-agent\'s rows did not come back')
     })
-    // 답 복사 on an answer cut at the lens's cap: the head is copied, and the button says the rest was not (re-review m-7)
+    // 답 복사 on an answer cut at the lens's cap: the head is copied, and the button says the rest was not
     await run('a cut answer copied', { chat: 'chat' }, async ({ page, shot }, no) => {
       const t1 = shot.terminals[0].id
       await page.waitForSelector('.chat .chat-row', { timeout: 15_000 })
@@ -2366,7 +2366,7 @@ const FLOWS = {
    * <out>/../00-before/session-1440x900.png made from release 1.4.0's build).
    */
   /**
-   * The composer sends (chat view phase 3): Enter → exactly one chat.send with the screen's verdict, the
+   * The composer sends: Enter → exactly one chat.send with the screen's verdict, the
    * echo on the fake screen → exactly one chat.submit 'ok'; the bubble says 보내는 중… and then is sent; the
    * record's user line replaces it (one row, no bubble left).
    */
@@ -2583,9 +2583,9 @@ const FLOWS = {
   },
 
   /** Claude Code's own queue: 대기 중 2 and the first text; no button in the strip; none → no strip */
-  // 2026-11-17: the session tabs — a row dragged onto the right side opens a tab (the drop says where), Ctrl+click
+  // the session tabs — a row dragged onto the right side opens a tab (the drop says where), Ctrl+click
   // too, at most three (the fourth is refused, said so), a tab's × closes only the tab, a tab click shows it
-  // the update button (2026-11-19): one to get (an icon) and one downloaded (재시작); both no taller than the bar's icons
+  // the update button: one to get (an icon) and one downloaded (재시작); both no taller than the bar's icons
   'update-button': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -2609,7 +2609,7 @@ const FLOWS = {
     return problems
   },
 
-  // the left list's order (2026-11-19, src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
+  // the left list's order (src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
   // list goes where it is put (an insertion line on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
   'session-order': async ({ browser, opts }) => {
     const problems = []
@@ -2692,7 +2692,7 @@ const FLOWS = {
     return problems
   },
 
-  // the split view (2026-11-19, src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
+  // the split view (src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
   'session-tabs': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -2748,7 +2748,7 @@ const FLOWS = {
       const w2 = (await panes.nth(0).boundingBox()).width
       if (Math.abs(w2 - w0) > 4) bad(`a double-click did not make the widths even (${Math.round(w2)} vs ${Math.round(w0)})`)
       if (await heads.nth(0).evaluate(el => getComputedStyle(el).boxShadow !== 'none')) bad('the pane in view still has a line under it')
-      // a narrower window (2026-11-19): three panes → the two that fit and a +1 chip; the panes keep MIN_PANE_W
+      // a narrower window: three panes → the two that fit and a +1 chip; the panes keep MIN_PANE_W
       await page.setViewportSize({ width: 1100, height: 900 })
       await sleep(500)
       if ((await heads.count()) !== 2) bad(`1100 wide: ${await heads.count()} panes, want 2`)
@@ -2915,7 +2915,7 @@ const FLOWS = {
   },
 
   /**
-   * The composer owns the focus by Phase 2's rules: the user's flip to 채팅 puts it in the composer; a
+   * The composer owns the focus by the chat view's rules: the user's flip to 채팅 puts it in the composer; a
    * composition in the composer survives rows arriving.
    */
   'chat-compose-focus': async ({ browser }) => {
@@ -2981,7 +2981,7 @@ const FLOWS = {
     return problems
   },
 
-  // ---------------------------------------------------------------- the answer cards (chat view phase 4)
+  // ---------------------------------------------------------------- the answer cards
 
   /**
    * 허용: scrolled to the top of a long session, a card pushed is in view without scrolling and the focus
@@ -3231,7 +3231,7 @@ const FLOWS = {
   },
 
   /**
-   * (2026-11-19, the owner's "the card took no choice after 터미널 → 채팅") a question card, flipped to 터미널 and back
+   * A question card, flipped to 터미널 and back
    * three times: main hands its hold back on each flip, so back in 채팅 the question is the terminal's dialog, read
    * from its screen (2.1.328's, a rule over "4. Chat about this") as a card that answers it: Markdown is ↓ then Enter
    */
@@ -3349,9 +3349,9 @@ const FLOWS = {
     return problems
   },
 
-  // ---------------------------------------------------------------- the review of phase 4
+  // ---------------------------------------------------------------- answer card edge cases
 
-  /** I1: a 300-line command — 허용 and 항상 허용 wait (and say why) until the box was scrolled to its end; 거부 never waits */
+  /** a 300-line command — 허용 and 항상 허용 wait (and say why) until the box was scrolled to its end; 거부 never waits */
   'chat-ask-gate': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3407,7 +3407,7 @@ const FLOWS = {
     return problems
   },
 
-  /** I2: a press too soon after the card is painted, or after the window comes back, answers nothing; nor one begun on another card */
+  /** a press too soon after the card is painted, or after the window comes back, answers nothing; nor one begun on another card */
   'chat-ask-guard': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3449,7 +3449,7 @@ const FLOWS = {
     return problems
   },
 
-  /** C1, C2: the whole path wraps (its file name on the card); a diff line's far tail wraps into the box; nothing scrolls sideways */
+  /** the whole path wraps (its file name on the card); a diff line's far tail wraps into the box; nothing scrolls sideways */
   'chat-ask-wrap': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3504,7 +3504,7 @@ const FLOWS = {
     return problems
   },
 
-  /** C3, C4, M2–M5, M13: each fact on a line of its own, the request's own text exact; an overwrite said as one */
+  /** each fact on a line of its own, the request's own text exact; an overwrite said as one */
   'chat-ask-facts': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3536,7 +3536,7 @@ const FLOWS = {
     return problems
   },
 
-  /** I3, the page's side: refused as hidden (the window was swapping) → the buttons stay, 다시 눌러 주세요; pressed again → answered */
+  /** the page's side: refused as hidden (the window was swapping) → the buttons stay, 다시 눌러 주세요; pressed again → answered */
   'chat-ask-retry': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3561,7 +3561,7 @@ const FLOWS = {
     return problems
   },
 
-  /** M7, M8, M9: an open card is never hidden behind a read-only one; the composer's note follows the card; one live region */
+  /** an open card is never hidden behind a read-only one; the composer's note follows the card; one live region */
   'chat-ask-order': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -3600,7 +3600,7 @@ const FLOWS = {
   },
 
   /**
-   * 7-48 (Task 5.2): the shown chat session's hidden terminal gets its real size. Shown as chat at load
+   * The shown chat session's hidden terminal gets its real size. Shown as chat at load
    * and after a reload: fitted (not xterm's 80 columns), never focused, hidden again, no chat.redraw, and
    * the composer sends over the prompt row. A background session switched to in chat: one chat.redraw,
    * never a second. Its flip to 터미널: the same terminals.resize calls as a session switch. A page
@@ -3776,7 +3776,7 @@ const FLOWS = {
   },
 
   /**
-   * Density (phase 5): 보기 정도 in the header by keyboard (↓ opens on the checked level, ↓ ↑ Home End wrap, Esc and
+   * Density: 보기 정도 in the header by keyboard (↓ opens on the checked level, ↓ ↑ Home End wrap, Esc and
    * Tab close with the focus back, Enter picks), the choice remembered across a reload, the chosen level on the
    * quiet grey; 생각 포함 shows the thinking rows; 전부 opens rows without reopening one the user closed; over
    * chat-long each switch keeps the rows in view where they were (within 2px), settled within 300 ms, ≤ 300 rows in
@@ -3955,7 +3955,7 @@ const FLOWS = {
   },
 
   /**
-   * The turn summary (phase 5): a foot per finished turn (its time, 도구 n회, 파일 n개 바꿈) whose 복사 writes the turn's
+   * The turn summary: a foot per finished turn (its time, 도구 n회, 파일 n개 바꿈) whose 복사 writes the turn's
    * answer and takes over its rows' own; a turn with no foot keeps its row's. No GET /pokedex at load (the feet there
    * are history); a turn that ends live while the chat is watched: the start read when the session goes to work, the
    * end read 1.5 s after its end, 8걸음 then and not before; a second turn with no new start: no steps, no read; a
@@ -3996,7 +3996,7 @@ const FLOWS = {
       await sleep(2000)
       if (dex.n) no(`GET /pokedex read ${dex.n} time(s) at load (no turn was watched)`)
       if (await page.locator('.chat-steps').count()) no('a step count at load')
-      // the lab turn: its foot says its time and its five calls (it changed no file), and its answer has no copy of its own
+      // the reference turn: its foot says its time and its five calls (it changed no file), and its answer has no copy of its own
       const ends = items.filter(i => i.kind === 'turn-end')
       const lab = ends[ends.length - 1]
       const answer = items.filter(i => i.kind === 'text').pop()
@@ -4080,7 +4080,7 @@ const FLOWS = {
   },
 
   /**
-   * Wild Pokémon (phase 5, Task 5.7): the conversation's meetings come from the game's state the page already has (the
+   * Wild Pokémon: the conversation's meetings come from the game's state the page already has (the
    * snapshot), each where it happened, none animating at load. A pokedex message with a new catch of the shown session
    * adds one row with `appear` (its picture's animation running; under reduced motion none); another session's catch
    * and a level-up add none. A reload shows them all, none with `appear`. 업무 모드: no .chat-wild, ever.
@@ -4190,7 +4190,7 @@ const FLOWS = {
   },
 
   /**
-   * Keyboard only, names, reduced motion (phase 6, Task 6.4), over chat-changes with the panel open (the header's
+   * Keyboard only, names, reduced motion, over chat-changes with the panel open (the header's
    * density and changes controls, diff chips, the foot's copy, the composer, the panel's edge, tree and buttons):
    * from a fresh load Tab walks every control in visual order (header → list → composer → panel), never to <body>
    * after the first stop and never into a hidden terminal; every stop has a name; Esc closes the density menu and
@@ -4257,7 +4257,7 @@ const FLOWS = {
         const after = await id()
         if (after !== before) bad(`Esc from find did not give the focus back to ${where} (${before} → ${after})`)
       }
-      // the page's storage after the walk (privacy, Task 6.5): only the known keys; the chat's a word or a number; the
+      // the page's storage after the walk (privacy): only the known keys; the chat's a word or a number; the
       // carry's chatModes ids and words; no conversation text anywhere
       const store = await page.evaluate(() => Object.fromEntries(Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])))
       const KNOWN = new Set(['spawn-box-sort', 'spawn-carry', 'spawn-changes-open', 'spawn-changes-w', 'spawn-chat-density', 'spawn-dex-viewed', 'spawn-list-mode', 'spawn-rank-npc', 'spawn-seen-version', 'spawn-session-cast', 'spawn-side-hidden', 'spawn-side-w', 'spawn-term-font', 'spawn-text-size'])
@@ -4303,7 +4303,7 @@ const FLOWS = {
   },
 
   /**
-   * The budgets of a long session, page side (phase 6, Task 6.1): a 5,000-item reset (the page keeps 4,000, 더 이전
+   * The budgets of a long session, page side: a 5,000-item reset (the page keeps 4,000, 더 이전
    * 대화는 터미널에서 보세요 at the top) → the first rows painted ≤ 300 ms after the flip to 채팅; 30 steps of 400 px, the
    * work per step ≤ 16 ms on average (fail > 50); 기본 → 전부 settled ≤ 300 ms with ≤ 300 rows in the page; find's
    * Enter to a hit about 3,000 rows up placed and painted ≤ 200 ms. Each number printed.
@@ -4420,7 +4420,7 @@ const FLOWS = {
   },
 
   /**
-   * Many busy sessions (2026-11-19, "the terminal stutters"): twelve sessions, three chat panes side by side, every
+   * Many busy sessions (the terminal must not stutter): twelve sessions, three chat panes side by side, every
    * terminal streaming Claude Code-like output (a spinner line redrawn and a line of text) 20 times a second for
    * TERM_LOAD_S seconds (default 20). Prints the main thread's long tasks (PerformanceObserver 'longtask': count, total
    * ms, longest) and the renderer's script and task time (CDP Performance.getMetrics ScriptDuration / TaskDuration),
@@ -4515,7 +4515,7 @@ const FLOWS = {
   },
 
   /**
-   * An hour of streaming in the page (phase 6, Task 6.1): 20,000 pushes into the shown chat (answers with links and
+   * An hour of streaming in the page: 20,000 pushes into the shown chat (answers with links and
    * their cards, tool rows running then done, live bubbles that come and go, turn ends, wild meetings), in batches as
    * main sends them. The page's JS heap after a forced gc grows ≤ 40 MB, its DOM nodes stay ≤ 1.2× where they were,
    * the live blob: URLs ≤ 64, and the event listeners do not grow (CDP HeapProfiler.collectGarbage,
@@ -4600,7 +4600,7 @@ const FLOWS = {
   },
 
   /**
-   * Find in the conversation (phase 5, Task 5.8). In the chat: Ctrl+F opens the bar (role search, its controls named and
+   * Find in the conversation. In the chat: Ctrl+F opens the bar (role search, its controls named and
    * ≥ 22px, not a drag region, at the terminal's find place) with the focus in its field; typing is searched after
    * 120 ms and never mid-composition; the matches are painted (CSS.highlights 'chat-find' / 'chat-find-now', grey
    * rules); Enter and Shift+Enter move; a hit in a closed read group opens the group; a flip to 터미널 and back keeps
@@ -4759,7 +4759,7 @@ const FLOWS = {
       if (s.open) no('Esc did not close the bar')
       if (s.all || s.now) no('highlights left after Esc')
       if (!s.inComposer) no(`after Esc the focus is not back in the composer (${await page.evaluate(() => document.activeElement?.outerHTML.slice(0, 80))})`)
-      // (the final review M7) 설정 open on top: Ctrl+F does nothing for the chat (no bar opens under the dialog)
+      // 설정 open on top: Ctrl+F does nothing for the chat (no bar opens under the dialog)
       await page.locator('.w-head .w-icon[aria-label="설정"]').click()
       await page.waitForSelector('.set-modal', { timeout: 5000 })
       await page.keyboard.press('Control+f')
@@ -4831,7 +4831,7 @@ const FLOWS = {
   },
 
   /**
-   * Link previews off (phase 5, Task 5.10): with 링크 미리보기 off (the default), or on while 채팅으로 보기 is off, the whole
+   * Link previews off: with 링크 미리보기 off (the default), or on while 채팅으로 보기 is off, the whole
    * chat-link conversation scrolled through from its end to its start makes no chat.preview call, draws no card and
    * makes no blob: URL, and the page makes no request of any kind beyond the harness's own server.
    */
@@ -4876,7 +4876,7 @@ const FLOWS = {
   },
 
   /**
-   * Link previews on (phase 5, Task 5.10). chat-link: chat.preview only for links of rows drawn (never one that was not,
+   * Link previews on. chat-link: chat.preview only for links of rows drawn (never one that was not,
    * never a user's, a tool's, code's, a stopped answer's or a fourth link), once each; the MDN card under its paragraph
    * (named 링크 미리보기: …, its URL in its title, the link's own host, its picture from a blob: URL, 104×68, ≤ 480px
    * wide), a click opens the URL through the app; up at the never-a-card turn: three cards, one through a redirect
@@ -4928,10 +4928,10 @@ const FLOWS = {
       }
       const atLoad = await check('at load')
       if (!atLoad.includes(MDN)) no(`at load no call for the MDN link (${JSON.stringify(atLoad)})`)
-      // (the final review's M2) each ask names the view it is for (main asks the worker only for an open view's links)
+      // each ask names the view it is for (main asks the worker only for an open view's links)
       const ids = (await callsOf(page, 'chat.preview')).map(c => c.args[0]?.id)
       if (!ids.length || ids.some(x => typeof x !== 'string' || !x)) no(`a chat.preview call without the view's id: ${JSON.stringify(ids)}`)
-      // (the final review's I1) the drawn search link with a query string is never asked for
+      // the drawn search link with a query string is never asked for
       const w0 = await witness(page)
       if (w0.seen.includes('https://rivers.example/search?q=nile') && atLoad.includes('https://rivers.example/search?q=nile')) no('chat.preview for the link with a query string')
       const mdn = (await cards(page)).find(c => c.url === MDN)
@@ -5038,7 +5038,7 @@ const FLOWS = {
   },
 
   /**
-   * The 변경 사항 panel (phase 5): the header button (its counts, pressed, toggles, remembered), a diff block's +N −N
+   * The 변경 사항 panel: the header button (its counts, pressed, toggles, remembered), a diff block's +N −N
    * opens the panel at that file and scrolls that edit into view, the tree's keys (↑↓, ← →, Home End, Enter), the
    * edge's drag, keys and double-click, the width remembered across a reload; the chat pane ends where the panel starts.
    */
@@ -5306,7 +5306,7 @@ const FLOWS = {
       if (await page.locator('.chat-changes').count()) bad('the panel is there in terminal mode')
       if (await page.locator('.w-chat-tools, .w-chg').count()) bad('chat tools in the header in terminal mode')
       if (await page.locator('.widget.side-hidden').count()) bad('the left panel stayed folded in terminal mode')
-      // a load in chat: the terminal fitted warm under the chat (Task 5.2), first with the panel closed (what it does
+      // a load in chat: the terminal fitted warm under the chat, first with the panel closed (what it does
       // without the panel), then with it open and the left panel folded for it: the same resizes, the shown size last
       const loadInChat = async open => {
         await page.evaluate(o => { localStorage.setItem('spawn-changes-open', o ? '1' : '0'); sessionStorage.setItem('harness-keep-storage', '1') }, open)
@@ -5392,7 +5392,7 @@ const FLOWS = {
       for (const [surface, size] of [['session', [1440, 900]], ['session', [1100, 720]], ['session-work', [1440, 900]], ['session-work', [1100, 720]], ['session-mac', [1440, 900]]]) {
         const base = join(dir, `${surface}-${size[0]}x${size[1]}.png`)
         if (!existsSync(base)) { bad(`no baseline ${base} (make it from a build of this version with features.json chatView false)`); continue }
-        // Another take only for the two known frame-noise signatures (re-review m-12; NOISE_AREAS: the blinking
+        // Another take only for the two known frame-noise signatures (NOISE_AREAS: the blinking
         // caret's cell, a corner of the instruction field), measured in each take's own page. Any other
         // difference fails the surface at once: it cannot pass by retrying. A take that is noise is printed
         // too, so a noise that grows is seen. Up to five takes; one must equal 1.4.0's pixel for pixel.
@@ -5688,12 +5688,12 @@ function chatShot(base, name, armed = {}) {
   // the 변경 사항 panel's answers (chat:changes, chat:change-file) for the conversations that have an index
   const found = name ? chatFixture.changes(name) : null
   const changes = found ? { [first.id]: found } : {}
-  // link preview cards (phase 5): what chat.preview answers (chat-link-long: a made-up card for any rivers.example link)
+  // link preview cards: what chat.preview answers (chat-link-long: a made-up card for any rivers.example link)
   const previews = (name && chatFixture.previews(name)) || {}
   return { terminals, chat, chatAgent, changes, previews, previewAll: name === 'chat-link-long', chatModes: name ? { [first.sessionId]: 'chat' } : {} }
 }
 
-// ---------------------------------------------------------------- the composer (chat view phase 3)
+// ---------------------------------------------------------------- the composer
 
 const firstTerm = page => page.evaluate(() => window.__SHOT__.terminals[0].id)
 /** A fixture screen written into the terminal's real xterm (fake-bridge.js __SCREEN__): what termText() reads */
@@ -5704,7 +5704,7 @@ const callsOf = async (page, fn) => (await calls(page)).filter(c => c.fn === fn)
 const chatStatus = (over = {}) => ({ state: 'idle', since: null, label: null, banner: null, note: null, version: '2.1.323', hasOlder: false, empty: false, ...over })
 const pushStatus = async (page, id, over) => { await page.evaluate(([i, st]) => window.__CHAT_PUSH__(i, [{ op: 'status', status: st }]), [id, chatStatus(over)]); await sleep(150) }
 
-// ---------------------------------------------------------------- the turn summary (chat view phase 5)
+// ---------------------------------------------------------------- the turn summary
 
 /**
  * GET /pokedex answered by the harness (the turn summary's step reads, src/chat/steps.ts): the first terminal's
@@ -5725,7 +5725,7 @@ async function routeDex(page, steps = [10, 18]) {
 }
 
 /**
- * A turn that ends live (chatFixture.mjs footLive, the lab's second turn): the session goes to work (idle →
+ * A turn that ends live (chatFixture.mjs footLive, the reference design's second turn): the session goes to work (idle →
  * working: the start read), then the turn's lines and its turn_duration arrive with the session idle again.
  */
 async function footTurn(page) {
@@ -5750,7 +5750,7 @@ async function footShot(page) {
   else await page.waitForSelector('.chat .chat-steps', { timeout: 6000 })
   await sleep(300)
 }
-// ---------------------------------------------------------------- link preview cards (chat view phase 5)
+// ---------------------------------------------------------------- link preview cards
 
 /**
  * The chat's list scrolled step by step to its top or bottom (each step a real scroll, so the virtual list mounts the
@@ -5774,7 +5774,7 @@ async function scrollChatTo(page, where, step = 500, until = null) {
   return false
 }
 
-/** The chat-link surface: the lab answer's MDN card in the middle of the list (the list's own scroll only) */
+/** The chat-link surface: the reference answer's MDN card in the middle of the list (the list's own scroll only) */
 async function linkShot(page) {
   await page.waitForSelector('.chat .chat-og img', { timeout: 10_000 })
   await page.evaluate(() => {
@@ -5814,7 +5814,7 @@ function previewWitness() {
 
 const COMPOSER = '.chat-composer textarea.chat-input:not(.chat-input-twin)'
 const composerField = page => page.locator(COMPOSER)
-/** The answer cards (phase 4): a status with these cards (waiting unless said), and a card button by its exact name */
+/** The answer cards: a status with these cards (waiting unless said), and a card button by its exact name */
 const pushAsks = (page, id, asks, state = 'waiting') => pushStatus(page, id, { state, since: fixture.NOW, asks })
 const askButton = (page, name) => page.locator('.chat-answer button').getByText(name, { exact: true })
 /** Long enough for a card to take a pointer press (src/chat/answer.ts ARM_MS 800, after paint) */
@@ -5877,7 +5877,7 @@ async function composePending(page) {
   await page.keyboard.press('Enter')
 }
 
-// ---------------------------------------------------------------- the 변경 사항 panel (chat view phase 5)
+// ---------------------------------------------------------------- the 변경 사항 panel
 
 /** The panel open, the file whose name in the tree is `name` chosen by a click */
 async function changesFile(page, name) {
@@ -5963,7 +5963,7 @@ async function startServer() {
     SPAWN_REGISTRY_DIR: join(HOME, 'registry'),
     SPAWN_PORT: String(PORT),
     SPAWN_UI_DIR: DIST,
-    // Not the owner's: the server reads 프롬프트 숨기기 from the app's settings file, and ~/.claude
+    // Not the real user's: the server reads 프롬프트 숨기기 from the app's settings file, and ~/.claude
     SPAWN_SETTINGS_FILE: join(HOME, 'settings.json'),
     CLAUDE_CONFIG_DIR: join(HOME, 'claude'),
   }
@@ -6091,7 +6091,7 @@ async function fitProblems(page) {
         if (child.scrollWidth > child.clientWidth + 0.5) bad.push(`${name(child)} cuts its text: ${child.scrollWidth}px in ${child.clientWidth}px ("${child.textContent.trim().slice(0, 20)}")`)
       }
     }
-    // The side box's pointer to the composer (chat view): its words whole, wrapped not cut (Phase 6 en / ja)
+    // The side box's pointer to the composer (chat view): its words whole, wrapped not cut (en / ja)
     for (const el of document.querySelectorAll('.w-input-pointer > span')) {
       const r = el.getBoundingClientRect()
       if (!r.width) continue
@@ -6107,13 +6107,13 @@ async function fitProblems(page) {
       const cs = getComputedStyle(el)
       if (cs.display !== 'none' && el.offsetParent && r.width < parseFloat(cs.height) - 0.5) bad.push(`${name(el)} squeezed to ${r.width.toFixed(1)}px wide`)
     }
-    // The answer cards (chat view phase 4, review C1, C2): nothing of what a card asks is cut or out of
+    // The answer cards: nothing of what a card asks is cut or out of
     // sight sideways — the whole path, every diff line, the command, the facts, the title
     for (const el of document.querySelectorAll('.chat-card-file, .chat-card-cmd, .chat-card-lines, .chat-card-fact, .chat-card-title')) {
       if (!el.getBoundingClientRect().width) continue
       if (el.scrollWidth > el.clientWidth + 0.5) bad.push(`${name(el)} hides ${el.scrollWidth - el.clientWidth}px of its text sideways`)
     }
-    // The instruction box is one box (the lab's widget): its field is not a bordered box drawn
+    // The instruction box is one box (the reference design's widget): its field is not a bordered box drawn
     // inside another bordered box (a card around it)
     const boxed = el => {
       const cs = getComputedStyle(el)

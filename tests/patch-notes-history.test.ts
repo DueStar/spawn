@@ -1,4 +1,4 @@
-/** The patch notes history (2026-11-19): every release kept, grouped by minor version; the body scrolls */
+/** The patch notes history: every release kept, grouped by minor version; the body scrolls */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'

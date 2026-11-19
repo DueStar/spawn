@@ -1,5 +1,5 @@
 {
- "_about": "buildRows of Phase 2 (before Task 5.5), dayLabel = ISO date; the default density must give exactly these (changes.jsonl left out: its outside path is written with forward slashes, which the fixture guard does not take)",
+ "_about": "buildRows at the default density (before thinking rows and turn feet), dayLabel = ISO date; the default density must give exactly these (changes.jsonl left out: its outside path is written with forward slashes, which the fixture guard does not take)",
  "rows": {
   "tools.jsonl": [
    {

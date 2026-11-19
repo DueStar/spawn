@@ -1,5 +1,5 @@
 /**
- * A wild Pokémon met in the flow (Phase 5, the lab's `.wild`, calm-lab app.css 264–274, app.js 401): the 34px
+ * A wild Pokémon met in the flow: the 34px
  * picture, 야생의 {name}{iga} 나타났다, →, then the ball and 잡았다 · Lv.n (with a hairline 새로 등록 for a first of its
  * species) or 놓쳤다. A shiny one says 색이 다른; a rare-or-above one names its tier in the tier's colour. A screen
  * reader hears it as one sentence (role="note"); the drawn line is hidden from it.

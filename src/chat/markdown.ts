@@ -1,5 +1,5 @@
 /**
- * Safe markdown for the chat view (Phase 2): the assistant's prose becomes a small
+ * Safe markdown for the chat view: the assistant's prose becomes a small
  * typed tree that src/components/chat/Markdown.tsx turns into React elements.
  * There is no HTML path anywhere: raw HTML (`<div>`, `<img …>`, `<script>`) stays
  * literal text, entities are not decoded, an image `![alt](url)` is a link whose

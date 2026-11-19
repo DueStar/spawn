@@ -1,8 +1,8 @@
 'use strict'
 
 /**
- * chatInput.cjs — what the chat composer types into a Claude Code terminal (the chat view,
- * Phase 3), and what may be on that terminal's prompt row. Pure: no IO, no clock.
+ * chatInput.cjs — what the chat composer types into a Claude Code terminal (the chat view),
+ * and what may be on that terminal's prompt row. Pure: no IO, no clock.
  *
  * The user's text is sanitised (sanitize): no control character and no escape sequence can
  * ride along, so nothing can smuggle an Enter, a Ctrl+C or an early end of the paste. It goes
@@ -24,9 +24,9 @@
 
 const ENTER = '\r'
 const ESC = '\x1b'
-/** Shift+Tab: Claude Code's key for the next permission mode (the chat's mode menu, 2026-11-17) */
+/** Shift+Tab: Claude Code's key for the next permission mode (the chat's mode menu) */
 const SHIFT_TAB = '\x1b[Z'
-/** ↑ / ↓: a terminal dialog's mark moved from the chat's dialog card (2026-11-17) */
+/** ↑ / ↓: a terminal dialog's mark moved from the chat's dialog card */
 const ARROW_UP = '\x1b[A'
 const ARROW_DOWN = '\x1b[B'
 /** Ctrl+E (the caret to its line's end) and Backspace: words left on the prompt row cleared from the chat */
@@ -90,7 +90,7 @@ const LONG_CHARS = 200
  * Claude Code's "quick escape": a `\` right before the cursor turns Enter into a new line, so a
  * text ending in `\` (a Windows folder: `C:\Users\me\`) would never be submitted. One space after
  * it, inside what is typed, keeps the Enter an Enter; Claude Code trims the prompt, so the model
- * gets the same text. (Confirmed on a real session in the Phase 3 trial; nothing is refused for it.)
+ * gets the same text. (Confirmed on a real session; nothing is refused for it.)
  */
 const endGuard = (s) => (s.endsWith('\\') ? ' ' : '')
 
@@ -178,7 +178,7 @@ function tokens(data) {
 /**
  * Whether keyboard data changes anything on the prompt row or in a dialog: anything but the
  * terminal's own reports and the cursor moving. (A send in flight is spoilt by real input only;
- * Phase 4: a hold is released by real input only.)
+ * a hold is released by real input only.)
  */
 function isRealInput(data) {
   return tokens(String(data ?? '')).some(tok => tok !== 'report' && tok !== 'move')

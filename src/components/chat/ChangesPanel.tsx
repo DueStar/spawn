@@ -1,5 +1,5 @@
 /**
- * 변경 사항 (the chat view, Phase 5; the lab's `.changes`, app.css 417–440, app.js 490–501): every file this
+ * 변경 사항 (the chat view): every file this
  * conversation changed, as a tree with +N −N, and the selected file's edits, one section per edit, in the
  * order they were made. It sits at the right of the chat's own area (Widget.tsx), only while the chat is
  * shown; the terminal's box never changes because of it.
@@ -11,7 +11,7 @@
  * hold, one cut by a cap and one whose line changed since are said, never drawn as empty. Totals are sums
  * of edits and say so. Files changed by commands are not in the record: the foot says so, always.
  *
- * Also the header's button (the lab's `.chg`): the panel icon and the conversation's +N −N.
+ * Also the header's button: the panel icon and the conversation's +N −N.
  */
 
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
@@ -28,7 +28,7 @@ import { ChevIcon, XIcon } from './ChatIcons'
 const svg = (size: number, body: React.ReactNode) => (
   <svg className="ico" width={size} height={size} viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{body}</svg>
 )
-/** A window with a panel on its right (the lab's panelR) */
+/** A window with a panel on its right */
 export const PanelRightIcon = ({ size = 14 }: { size?: number }) => svg(size, <><rect x="2.5" y="3" width="11" height="10" rx="2" /><path d="M9.5 3v10" /></>)
 
 const clock = (at: number) => new Date(at).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })
@@ -382,7 +382,7 @@ export const ChangesPanel: React.FC<ChangesPanelProps> = ({ id, width, max, onWi
         {scanning ? <span>{t('변경 사항을 모으는 중…')}</span> : summary && !empty && <span>{t('파일 {n}개 · 수정 {m}번', { n: summary.files, m: summary.edits })}</span>}
         {summary?.state === 'partial' && <span className="chat-ch-partial">{t('기록이 너무 길어서 앞부분의 변경은 다 모으지 못했어요')}</span>}
       </div>
-      {/* (the record deleted while the view was open: said, and nothing of it kept — Phase 6 drill) */}
+      {/* (the record deleted while the view was open: said, and nothing of it kept) */}
       {empty && <p className="chat-ch-empty">{summary?.state === 'gone' ? t('세션 기록 파일을 찾지 못했어요') : t('이 대화에서 바뀐 파일이 아직 없어요')}</p>}
       {!empty && tree.length > 0 && <Tree tree={tree} selected={name} onSelect={pick} />}
       <div className="chat-ch-diff" ref={scroller}>

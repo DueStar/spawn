@@ -19,7 +19,7 @@ function errWord(err) {
 }
 
 /**
- * A `claude --version` line as a log line may name it (the final review's M8): its version number only (digits and
+ * A `claude --version` line as a log line may name it: its version number only (digits and
  * dots, as `2.1.325`), or 'unknown'; never the rest of the line as the binary printed it.
  * @param {unknown} v  @returns {string}
  */

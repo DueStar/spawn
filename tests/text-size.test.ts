@@ -13,7 +13,7 @@ import { DEFAULT_STEP, nextStep, OLD_TERM_KEY, readInitialStep, stepFromTermPx, 
 const ROOT = join(__dirname, '..')
 const src = (p: string) => readFileSync(join(ROOT, p), 'utf8')
 
-// (2026-11-17: the steps are percents of 100%, 80–130 by 10; 작게 / 보통 / 크게 / 아주 크게 until then)
+// (the steps are percents of 100%, 80–130 by 10; named steps 작게 / 보통 / 크게 / 아주 크게 before)
 describe('the steps', () => {
   it('six percents, their labels and sizes', () => {
     expect([...TEXT_STEPS]).toEqual(['80', '90', '100', '110', '120', '130'])
@@ -135,7 +135,7 @@ describe('the text-size control (source checks)', () => {
     }
   })
 
-  // (2026-11-17: the steps are shown as percents, the same in every language; no step names to translate)
+  // (the steps are shown as percents, the same in every language; no step names to translate)
   it('the control and 설정 show the step as its percent, never a name', () => {
     for (const f of ['src/components/TextSizeControl.tsx', 'src/components/SettingsView.tsx']) {
       expect(src(f), f).toContain('textStepLabel(')

@@ -104,7 +104,7 @@ describe('the canary', () => {
     expect(s.status().banner).toBeNull()
   })
 
-  // (the owner's session, 2026-11-17: the banner came, and 다시 읽기 showed the answer; it had landed late)
+  // (seen in a real session: the banner came, and 다시 읽기 showed the answer; it had landed late)
   it('the answer lands after the 3 s: the canary banner goes by itself', async () => {
     const s = await promptSubmitted()
     const answer = 'An answer written down a little late, long enough to be matched.'
@@ -150,7 +150,7 @@ describe('the canary', () => {
     expect(t.status().banner).toBeNull()
   })
 
-  it('a turn with only tools: a thinking line alone (an item since Phase 5) is not the turn in the transcript', async () => {
+  it('a turn with only tools: a thinking line alone (an item of its own) is not the turn in the transcript', async () => {
     const t = await promptSubmitted()
     const thinking = JSON.stringify({
       parentUuid: null, isSidechain: false, thinkingDurationMs: 500, message: { model: 'm', id: 'msg_fixture98', type: 'message', role: 'assistant', content: [{ type: 'thinking', thinking: '' }], stop_reason: 'end_turn' },
@@ -192,7 +192,7 @@ describe('missing and stalled', () => {
   })
 
   // Claude Code writes the prompt only after every UserPromptSubmit hook is done; another plugin's
-  // hook took 12 s (claude-mem, 2026-11-17) while spawn's own arrived at once
+  // hook took 12 s (claude-mem) while spawn's own arrived at once
   it('the prompt lands 12 s after its hook (a slow hook of another plugin): no banner', async () => {
     const s = await promptSubmitted()
     await s.run(12_000)
@@ -260,7 +260,7 @@ describe('the file itself', () => {
     const odds = (from: number, n: number) => Array.from({ length: n }, (_, i) => odd(from + i)).join('')
     const said = (n: number) => JSON.stringify({ type: 'user', uuid: SID(700 + n), message: { role: 'user', content: `line ${n}` } }) + '\n'
     const saids = (from: number, n: number) => Array.from({ length: n }, (_, i) => said(from + i)).join('')
-    // the ratio counts only once 20 kept lines were seen (review M8): 5 basic lines + 9 unknown, no banner yet
+    // the ratio counts only once 20 kept lines were seen: 5 basic lines + 9 unknown, no banner yet
     writeFileSync(s.transcript(SID(901)), fixture('basic.jsonl') + odds(10, 9))
     s.lens.setTerminals([term(SID(901))])
     s.lens.open(SID(901))
@@ -312,7 +312,7 @@ describe('versions', () => {
     expect(s.status().version).toBe('2.1.200')
   })
 
-  // a long session resumed across updates (the owner's Translation tab, 2026-11-17): its early lines by 2.1.319, the
+  // a long session resumed across updates (seen in a real session): its early lines by 2.1.319, the
   // rest by 2.1.325; the banner said "2.1.325 hasn't been checked" for good
   it('older lines first, then lines by a checked version: no banner, the checked version shown', async () => {
     const s = setup()
@@ -342,7 +342,7 @@ describe('versions', () => {
   })
 })
 
-describe('versions: one log line per version newly seen in a transcript (Phase 6, Task 6.2)', () => {
+describe('versions: one log line per version newly seen in a transcript', () => {
   it('its number and verdict only, once however many lines and sessions carry it; another version, one more line', async () => {
     const logs: { level: string; msg: string }[] = []
     const s = setup({ log: (level: string, msg: string) => logs.push({ level, msg }) })
@@ -462,7 +462,7 @@ describe('sub-agents', () => {
   })
 })
 
-describe('Phase 6 trial: the host\'s version changes while views are open', () => {
+describe('the host\'s version changes while views are open', () => {
   it('setVersion to a newer one: every open view gets the quiet note; back in range: the note goes (unless a transcript line is newer)', async () => {
     const s = setup({ version: '2.1.325 (Claude Code)' })
     writeFileSync(s.transcript(SID(901)), fixture('basic.jsonl'))

@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatHooks.cjs — the chat view's own Claude Code hooks (Phase 2, the
+ * chatHooks.cjs — the chat view's own Claude Code hooks (the
  * read-only lens): which events, the entries for the generated session
  * settings file, and the endpoint they reach.
  *
@@ -18,7 +18,7 @@
  * as soon as the body is read — before parsing, before anything else — and
  * only then hands the hook on, inside try/catch. It answers while draining
  * too (the feature turned off with sessions still running that have the
- * entries). Phase 4 holds two routes only (PermissionRequest, AskUserQuestion),
+ * entries). It holds two routes only (PermissionRequest, AskUserQuestion),
  * and only through the hold registry (chatHolds.cjs), which answers each one
  * once or hands it back with "no decision". Nothing here goes through server/.
  */
@@ -53,10 +53,10 @@ function chatHookEntries({ port, token, id, holds = false }) {
   const group = (event) => ({ hooks: [{ type: 'http', url: url(event), timeout: event === 'MessageDisplay' ? 3 : 5 }] })
   const entries = Object.fromEntries(CHAT_HOOK_EVENTS.map(event => [event, group(event)]))
   if (holds === true) {
-    // Phase 4: the permission request is held (its entry outlasts the hold: chatHolds.cjs entryTimeoutS),
+    // the permission request is held (its entry outlasts the hold: chatHolds.cjs entryTimeoutS),
     // and AskUserQuestion's PreToolUse gets a group of its own (every other tool's PreToolUse keeps 5 s)
-    // (on a route of its own, `PermissionHold`: a session launched with Phase 2's 5 s entry is never held,
-    // whatever the registry does later; review M1)
+    // (on a route of its own, `PermissionHold`: a session launched with the 5 s entry is never held,
+    // whatever the registry does later)
     entries.PermissionRequest = { hooks: [{ type: 'http', url: url('PermissionHold'), timeout: entryTimeoutS('permission') }] }
     entries.PreToolUse = [group('PreToolUse'), { matcher: 'AskUserQuestion', hooks: [{ type: 'http', url: url('AskUserQuestion'), timeout: entryTimeoutS('question') }] }]
   }
@@ -66,10 +66,10 @@ function chatHookEntries({ port, token, id, holds = false }) {
 const EVENTS = new Set(CHAT_HOOK_EVENTS)
 
 /**
- * The held routes (Phase 4), written only into the entries of a session launched with holds: a
+ * The held routes, written only into the entries of a session launched with holds: a
  * PermissionRequest (`PermissionHold`) and AskUserQuestion's PreToolUse (`AskUserQuestion`). Routes,
  * not events of Claude Code's: the body is handed on as the event it is (ROUTE_EVENT). The plain
- * `/PermissionRequest` route (Phase 2's 5 s entry) is always answered at once.
+ * `/PermissionRequest` route (the 5 s entry) is always answered at once.
  */
 const HOLD_ROUTES = Object.freeze({ PermissionHold: 'permission', AskUserQuestion: 'question' })
 const ROUTE_EVENT = Object.freeze({ PermissionHold: 'PermissionRequest', AskUserQuestion: 'PreToolUse' })

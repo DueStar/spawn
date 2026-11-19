@@ -32,20 +32,20 @@ const LOOK = 24
 const SOLID = /^\s*─{20,}\s*$/
 const DASHED = /╌{20,}/
 /**
- * the box's top rule with a label in it: a prompt recalled with ↑ at its left ("─── History 33/33 ───…"; the Phase 3
- * trial), a named session's name (/rename, --name) at its right ("───…─── Spawn ─"; the owner's session after 1.5.1),
+ * the box's top rule with a label in it: a prompt recalled with ↑ at its left ("─── History 33/33 ───…"), a named
+ * session's name (/rename, --name) at its right ("───…─── Spawn ─"; seen on a real session),
  * or both; still at least 20 rule characters in all (topLabelled)
  */
 const TOP_LABELLED = /^\s*─{2,}(?: [^─╌❯]+? ─+)+\s*$/
 const topLabelled = (l: string) => TOP_LABELLED.test(l) && (l.match(/─/g)?.length ?? 0) >= 20
-// The prompt and selection mark is ❯, or a plain > where Claude Code draws it so (the owner's own app, 1.5.3's log:
-// ">" and a no-break space under a named session's rule, where the trial copies drew ❯). A > counts as the
+// The prompt and selection mark is ❯, or a plain > where Claude Code draws it so (seen in a real log:
+// ">" and a no-break space under a named session's rule, where other sessions drew ❯). A > counts as the
 // prompt only with that no-break space after it; either counts as a menu's selection mark
 /** a numbered menu line with the selection mark (a dialog), anywhere on its line */
 const MENU = /^\s*[❯>]\s*\d+\.\s/
 /** the same, indented: never a prompt Claude Code echoed (those start at the first column) */
 const MENU_INDENTED = /^\s+[❯>]\s*\d+\.\s/
-// (Claude Code 2.1.325 draws the mark with a no-break space after it: seen in the Phase 3 trial)
+// (Claude Code 2.1.325 draws the mark with a no-break space after it: seen on a real session)
 const PROMPT = /^(?:❯(?:[  ]|$)|>(?: |$))/
 const INDENT = /^[  ]{2}/
 /** bash mode's mark (a `!` command typed or pasted): the row reads as `!` + its text, as the composer sent it */
@@ -58,7 +58,7 @@ const FOOTER_MAX = 4
 const COMMAND_FOOTER_MAX = 12
 /**
  * while a subagent runs (`"tui": "fullscreen"`), the agents panel under the footer: a blank line, then indented lines,
- * the first a status glyph ("  ● main", "  ◯ general-purpose  …"), no selection mark (the owner's session after 1.5.1)
+ * the first a status glyph ("  ● main", "  ◯ general-purpose  …"), no selection mark (seen on a real session)
  */
 const PANEL_MAX = 12
 const PANEL_FIRST = /^\s+[^\p{L}\p{N}\s❯]/u
@@ -73,7 +73,7 @@ function agentsPanel(footer: string[]): boolean {
 }
 
 /**
- * The shape of a screen's last lines for spawn.log (1.5.3: the owner's sends refused with no way to see why): every
+ * The shape of a screen's last lines for spawn.log (so a refused send can be diagnosed): every
  * letter and digit masked as `a`, spaces shown as `·`, a run of 8 or more of one character folded (`─×120`), each
  * line at most 160 characters. Never any text; the box's rules, marks and indentation stay.
  */
@@ -202,7 +202,7 @@ const IMAGE = /\[Image #\d+\]/g
  * (something else is on the row, e.g. a suggestion the paste was appended to), `blocked` (a
  * dialog: never press Enter into it). `before`: the row's text when the send was asked for (a
  * suggestion, the first-run placeholder): while the row still shows exactly that, Claude Code has
- * not drawn the paste yet (`pending`; the Phase 3 trial saw it 30 ms after the paste).
+ * not drawn the paste yet (`pending`; seen on a real session 30 ms after the paste).
  */
 export function echoState(screen: string | null, expect: EchoExpect, before?: string | null): EchoState {
   const v = promptRow(screen)
@@ -233,7 +233,7 @@ export function suggestionOf(row: RowVerdict): string | null {
 }
 
 /**
- * The permission mode Claude Code's footer shows under the prompt box (2026-11-17, for the chat's mode menu):
+ * The permission mode Claude Code's footer shows under the prompt box (for the chat's mode menu):
  * `⏸ manual mode on` (default), `⏵⏵ accept edits on`, `⏸ plan mode on`, `⏵⏵ auto mode on`, `⏵⏵ bypass permissions
  * on` (seen on 2.1.32x). A footer naming none of them is the default mode (older versions drew nothing for it).
  * No box, a dialog, too little: null (the mode cannot be read, so nothing is pressed).

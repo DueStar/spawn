@@ -120,7 +120,7 @@ describe('send and submit', () => {
   })
 
   it('1.6.2: a suggestion read by its dim cells is typed over, whatever the ledger says; typed text is prompt-busy', async () => {
-    // the owner's case: a key the ledger could not follow (a Korean syllable after Enter, /model, Esc) left it dirty
+    // the case seen: a key the ledger could not follow (a Korean syllable after Enter, /model, Esc) left it dirty
     const s = await setup()
     s.host.onInput(C1, '다', 'keyboard')
     expect(s.host.inputState(C1)).toBe('dirty')
@@ -241,7 +241,7 @@ describe('send and submit', () => {
     const s = await setup()
     const id = s.sendId()
     await s.host.send({ id: C1, sendId: id, text: 'hello', images: [], screen: 'empty' })
-    // (the page's own wait: 1.5 s of echo + 150 ms before Enter; main waits twice that and a second; review m8)
+    // (the page's own wait: 1.5 s of echo + 150 ms before Enter; main waits twice that and a second)
     await wait(4000)
     expect(s.host.busy(C1)).toBe(true)
     await wait(400)
@@ -387,7 +387,7 @@ describe('the IPC', () => {
   })
 })
 
-describe('images (Task 3.5)', () => {
+describe('images', () => {
   const PNG = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00])
   const root = (space = '') => join(mkdtempSync(join(tmpdir(), 'spawn-img-host-')), space, 'spawn-chat-0a1b2c3d')
 
@@ -438,7 +438,7 @@ describe('images (Task 3.5)', () => {
   })
 })
 
-describe('the review of Phase 3: the send path in main (fixed)', () => {
+describe('the composer\'s review: the send path in main (fixed)', () => {
   it('I-3: terminal ↑ then Enter, the reader hears the prompt: the next send over a greyed suggestion goes', async () => {
     const s = await setup()
     s.kb('\x1b[A')
@@ -579,7 +579,7 @@ describe('the review of Phase 3: the send path in main (fixed)', () => {
   })
 })
 
-// 2026-11-19, the owner's log: a question dismissed with Esc in the terminal sent no hook; the reader still said a
+// A question dismissed with Esc in the terminal sent no hook; the reader still said a
 // question was open and main refused every chat send for minutes ("chat send refused (waiting)")
 describe('a stale wait the page sees no dialog for', () => {
   it('asking (or a waiting status) said more than 3 s ago, the page reading the prompt box and no dialog: the send goes', async () => {

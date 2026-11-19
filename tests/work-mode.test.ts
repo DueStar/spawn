@@ -329,7 +329,7 @@ describe('the chat view in 업무 모드', () => {
     expect(css).toMatch(/\.chat-pic\.empty \{[^}]*width: 96px; height: 96px;/)
   })
 
-  // Phase 5: the game's words in the chat (the turn summary's steps, later the wild rows) live apart, in
+  // the game's words in the chat (the turn summary's steps, later the wild rows) live apart, in
   // src/locales/chatGame.ts, and only parts drawn outside 업무 모드 use them
   it('chatGame.ts\'s words are used only behind a 업무 모드 guard (the foot\'s steps span); chat.ts has none of them', async () => {
     const game = (await import('../src/locales/chatGame')).default
@@ -354,7 +354,7 @@ describe('the chat view in 업무 모드', () => {
       .filter(f => { const s = strip(readFileSync(f, 'utf8')); return keys.some(k => s.includes(`'${k}'`)) })
       .map(f => f.slice(SRC.length + 1).replace(/\\/g, '/'))
     expect(users).toEqual(['components/chat/TurnFoot.tsx', 'components/chat/WildRow.tsx'])
-    // the wild row (Task 5.7): ChatView gives it no entries in 업무 모드, and it draws nothing there itself, before any word
+    // the wild row: ChatView gives it no entries in 업무 모드, and it draws nothing there itself, before any word
     const wild = strip(readFileSync(join(SRC, 'components', 'chat', 'WildRow.tsx'), 'utf8'))
     const guard = wild.indexOf('if (workMode) return null')
     expect(guard).toBeGreaterThan(0)
@@ -371,7 +371,7 @@ describe('the chat view in 업무 모드', () => {
   })
 })
 
-describe('the chat composer in 업무 모드 (Phase 3)', () => {
+describe('the chat composer in 업무 모드', () => {
   it('its own placeholder, 에이전트에게 지시하기…, in every language; the control row says 컨텍스트 through the side panel\'s barLabel', async () => {
     const chat = (await import('../src/locales/chat')).default
     expect(chat.en['에이전트에게 지시하기…']).toBe('Give the agent an instruction…')

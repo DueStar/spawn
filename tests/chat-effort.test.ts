@@ -1,5 +1,5 @@
 /**
- * The effort menu (2026-11-19): the control row offers Claude Code's effort levels next to the model, the
+ * The effort menu: the control row offers Claude Code's effort levels next to the model, the
  * composer sends `/effort <level>`, and the level the status line names is shown.
  */
 
@@ -41,7 +41,7 @@ describe('the effort control', () => {
   })
 })
 
-describe('the update button, downloaded vs one to get (2026-11-19)', () => {
+describe('the update button, downloaded vs one to get', () => {
   it('shows a restart arrow and 재시작 once downloaded, the plain down arrow before', () => {
     const w = readFileSync(join(__dirname, '..', 'src', 'Widget.tsx'), 'utf8')
     expect(w).toContain("update.status === 'ready' ? <><RestartIcon size={12} /><span className=\"w-update-word\">{t('재시작')}</span></> : <UpdateIcon size={12} />")
@@ -50,7 +50,7 @@ describe('the update button, downloaded vs one to get (2026-11-19)', () => {
   })
 })
 
-describe('the effort menu while Claude works (2026-11-19)', () => {
+describe('the effort menu while Claude works', () => {
   it('stays open to clicks: only a card or an ended session stops it (/effort is immediate)', () => {
     const working = { ...actions, modelWhy: '일이 끝나면 바꿀 수 있어요', effortWhy: null }
     const row = React.createElement(ControlRow, { control: control('high'), mode: null, actions: working })

@@ -1,6 +1,5 @@
 /**
- * The composer's / menu (2026-11-19, the owner's report: typing / showed no command menu, and /rc's choices showed only
- * in the terminal): which draft opens it, how it filters, what a pick puts in the draft, its keys, its look, and the
+ * The composer's / menu (typing / used to show no command menu, and /rc's choices showed only in the terminal): which draft opens it, how it filters, what a pick puts in the draft, its keys, its look, and the
  * dialog card's 취소 and link for a panel a command opened.
  */
 
@@ -37,7 +36,7 @@ describe('slashAt: the draft that opens the menu', () => {
 })
 
 describe('filterCommands', () => {
-  it('Claude Code\'s own commands, with the ones the owner named', () => {
+  it('Claude Code\'s own commands, with the common ones', () => {
     const all = names([...BUILTIN_COMMANDS])
     for (const n of ['model', 'effort', 'clear', 'compact', 'resume', 'rename', 'remote-control', 'mcp', 'init', 'status', 'help', 'config', 'memory', 'permissions', 'doctor', 'login', 'logout', 'exit', 'usage']) expect(all, n).toContain(n)
     expect(BUILTIN_COMMANDS.find(c => c.name === 'remote-control')!.aliases).toContain('rc')

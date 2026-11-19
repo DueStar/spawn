@@ -1,5 +1,5 @@
 /**
- * What the Phase 3 trial on a real session (Claude Code 2.1.325, Windows) showed that the
+ * What a trial of the composer on a real session (Claude Code 2.1.325, Windows) showed that the
  * hand-written fixtures had guessed wrong. Each fixture here is a real screen's shape, redacted by
  * hand (tests/fixtures/chat/screens/real-*.txt).
  */

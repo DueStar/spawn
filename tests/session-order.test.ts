@@ -35,7 +35,7 @@ describe('the left panel by what each session does', () => {
   })
 })
 
-describe('the session used last on top of its group (2026-11-19)', () => {
+describe('the session used last on top of its group', () => {
   it('inside each group the last used first; the groups stay stacked', () => {
     const r = rows(['a', 'idle'], ['b', 'idle'], ['w1', 'working'], ['w2', 'working'], ['n', 'needs-you'])
     expect(statusOrder(r, times({}), times({ a: 50, b: 90, w1: 10, w2: 40 }))).toEqual(['n', 'w2', 'w1', 'b', 'a'])

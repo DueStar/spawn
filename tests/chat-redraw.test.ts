@@ -1,5 +1,5 @@
 /**
- * The hidden terminal's size (7-48, Task 5.2), main's half: one redraw nudge for a terminal whose
+ * The hidden terminal's size, main's half: one redraw nudge for a terminal whose
  * chat is shown and whose xterm replayed before it fitted. `terminals.redrawForChat` resizes the pty
  * one row and, 150 ms later, back; it writes nothing. `chatHost.redraw` refuses unless the chat is
  * on, the terminal is a running armed Claude Code, its chat is the shown view of a visible window
@@ -363,10 +363,10 @@ describe('source guards: the nudge only resizes, and only chatHost.redraw asks f
     expect(preload).toMatch(/redraw: \(id\) => ipcRenderer\.invoke\('chat:redraw', String\(id\)\)/)
   })
 
-  it('the Phase 3 and 4 send and answer rules are not where the nudge lives', () => {
+  it('the send and answer rules are not where the nudge lives', () => {
     const host = read('electron', 'chatHost.cjs')
     for (const fn of ['submit', 'interrupt', 'answer']) expect(bodyOf(host, fn), fn).not.toContain('redraw')
-    // send: only the final review's M1 refusal (no send for 1 s after a nudge), which reads the time and refuses; the
+    // send: only the refusal (no send for 1 s after a nudge), which reads the time and refuses; the
     // nudge itself is never asked for from a send
     const send = bodyOf(host, 'send')
     expect(send.split('\n').filter(l => /redraw/i.test(l)).map(l => l.trim())).toEqual([

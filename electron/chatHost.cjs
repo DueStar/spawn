@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatHost.cjs — the chat view's lifecycle in the main process (Phase 2, the
+ * chatHost.cjs — the chat view's lifecycle in the main process (the
  * read-only lens). main.cjs builds it only when the features.json switch
  * (CHAT_VIEW) is on, and enables it only when 설정 › 세션 › 채팅으로 보기 is on.
  *
@@ -23,7 +23,7 @@
  * The host numbers the updates per terminal itself (rev), so a restarted
  * worker's updates follow on.
  *
- * The composer (Phase 3) sends in two calls with one id. `send` checks the
+ * The composer sends in two calls with one id. `send` checks the
  * session and the page's reading of the prompt row against the input ledger
  * (chatInput.cjs) and types the text without Enter; `submit` presses Enter
  * once, only when the page saw the echo and nothing changed meanwhile (no
@@ -31,7 +31,7 @@
  * one Esc. These three are the only places the chat writes to a terminal
  * (terminals.typeForChat). A send id is accepted once; nothing is retried.
  *
- * The buttons (Phase 4) answer held hooks (chatHolds.cjs), only for a Claude
+ * The buttons answer held hooks (chatHolds.cjs), only for a Claude
  * Code in the verified range. The endpoint opens a hold; the worker binds or
  * passes it and later says when its call settled; the page answers it through
  * `chat:answer`, accepted only for an open hold of the terminal whose chat is
@@ -84,7 +84,7 @@ function createChatHost({
   imageRoot = null, makeImageStore = createImageStore,
   // the hold times (chatHolds.cjs HOLD; a development build may shorten them, never lengthen them)
   holdLimits = HOLD,
-  // link previews (Phase 5): whether 설정 has them on (채팅으로 보기 and 링크 미리보기; asked at every request), and the
+  // link previews: whether 설정 has them on (채팅으로 보기 and 링크 미리보기; asked at every request), and the
   // policy for the worker (allowLoopback: the test switch, which main sets only in a development build)
   previewsOn = () => false, preview: previewOpts = {},
   // the / menu's commands and skills (chatCommands.cjs; tests pass their own reader)
@@ -108,9 +108,9 @@ function createChatHost({
   const revs = new Map()      // terminal id → the last rev sent
   const statuses = new Map()  // terminal id → the last status sent
   const waitingAt = new Map() // terminal id → when its status last turned to waiting
-  // Phase 4: the held requests (only while armed for a verified Claude Code), what the page shows
+  // the held requests (only while armed for a verified Claude Code), what the page shows
   let holds = null
-  let holdsOpen = false       // new holds may open (the verified version); off, the open ones stay answerable (M6)
+  let holdsOpen = false       // new holds may open (the verified version); off, the open ones stay answerable
   let visibleId = null       // the terminal whose chat is the shown view (chat:visible), or none
   let visibleFrom = null      // the page (its webContents id) that said so: only it, or its going, clears it
   let windowVisible = true    // the app window is shown and not minimised (main.cjs)
@@ -170,7 +170,7 @@ function createChatHost({
       else if (m.t === 'prompt' && typeof m.id === 'string') draft(m.id, { via: 'prompt' })
       // a question or a plan to approve is open in this terminal (its dialog takes Enter and Esc), or none is
       else if (m.t === 'asking' && typeof m.id === 'string') { if (m.on === true) { const c = inputOf(m.id); if (!c.asking) c.askingAt = now(); c.asking = true } else if (inputs.has(m.id)) inputs.get(m.id).asking = false }
-      // Phase 4: what a held request is, and when its call settled
+      // what a held request is, and when its call settled
       else if (m.t === 'hold-bind') onBind(m)
       else if (m.t === 'hold-pass' && typeof m.holdId === 'string') holds?.pass(m.holdId, typeof m.why === 'string' ? m.why.slice(0, 40) : 'passed')
       else if (m.t === 'hold-resolved' && Array.isArray(m.holdIds)) for (const h of m.holdIds) if (typeof h === 'string') holds?.release(h, 'settled')
@@ -246,12 +246,12 @@ function createChatHost({
    */
   function onHook(event, body, at, id, holdId) {
     const extra = typeof holdId === 'string' ? { id, hold: holdId } : (typeof id === 'string' ? { id } : {})
-    // raw bytes (review M13: main never parses a body, which can hold a file's text): moved, not copied
+    // raw bytes (main never parses a body, which can hold a file's text): moved, not copied
     const ok = body instanceof Uint8Array ? post({ t: 'hook', event, raw: body, at, ...extra }, [body.buffer]) : post({ t: 'hook', event, body, at, ...extra })
     if (!ok && typeof holdId === 'string') holds?.release(holdId, 'worker')
   }
 
-  // ---- the buttons (Phase 4) -------------------------------------------------
+  // ---- the buttons -------------------------------------------------
 
   /** The registry, made when armed for a verified Claude Code (its transitions go to the worker's cards) */
   function makeHolds() {
@@ -282,7 +282,7 @@ function createChatHost({
   /**
    * chat:visible: the terminal whose chat is the shown view (or none); a question of any other goes back.
    * `from` is the page that says it (its webContents id): a page saying "none" never clears what another
-   * page shows (review I3: the widget and the window swap, the old one goes after the new one spoke).
+   * page shows (the widget and the window swap, the old one goes after the new one spoke).
    */
   function visible(p, from) {
     const id = typeof p?.id === 'string' && p.id ? p.id : null
@@ -316,7 +316,7 @@ function createChatHost({
     const option = Number.isInteger(p?.option) ? p.option : undefined
     // (several questions / a multi-select: each question's picked option indices; plain integers only, bounded)
     const picks = Array.isArray(p?.picks) && p.picks.length <= 4 && p.picks.every(x => Array.isArray(x) && x.length <= 6 && x.every(Number.isInteger)) ? p.picks.map(x => [...x]) : undefined
-    // (2026-11-19: each question's own words, its "Other" row — a string or null per question; the registry checks them)
+    // (each question's own words, its "Other" row — a string or null per question; the registry checks them)
     const other = Array.isArray(p?.other) && p.other.length <= 4 && p.other.every(x => x === null || typeof x === 'string') ? [...p.other] : undefined
     // (only the page that shows that chat answers for it)
     const shown = from === undefined || visibleFrom === null || from === visibleFrom ? visibleId : null
@@ -329,7 +329,7 @@ function createChatHost({
   /** Quitting (before the sessions are ended): every held request answered "no decision" */
   function releaseHolds(why = 'quit') { holds?.releaseAll(why) }
 
-  // ---- the hidden terminal's size (7-48) ---------------------------------------------------------
+  // ---- the hidden terminal's size ----------------------------------------------------------------
   //
   // A session shown as chat whose hidden xterm replayed before it fitted: the page asks once, and the
   // pty gets one row less and its size again (terminals.cjs redrawForChat), so Claude Code draws its
@@ -339,7 +339,7 @@ function createChatHost({
 
   const REDRAW_MS = 10_000
   // after a nudge, Claude Code repaints its screen: for this long no chat send starts in that terminal (a screen read
-  // taken mid-repaint can say `empty` over a row that holds a draft; the final review's M1). Refused as `screen`
+  // taken mid-repaint can say `empty` over a row that holds a draft). Refused as `screen`
   // ("try again"), never queued or retried here.
   const REDRAW_SETTLE_MS = 1000
   const redrawAt = new Map()     // terminal id → when it was last nudged
@@ -364,7 +364,7 @@ function createChatHost({
     return { ok: true }
   }
 
-  // ---- link previews (Phase 5) -------------------------------------------------------------------
+  // ---- link previews -------------------------------------------------------------------
   //
   // Fetched by the worker (linkPreview.cjs over linkFetch.cjs), never here and never by the page. chat:preview answers
   // { ok: false } at once, with no worker message, unless the chat is on and 설정 has previews on; the URL is checked
@@ -393,7 +393,7 @@ function createChatHost({
       const u = new URL(raw)
       if (u.protocol !== 'http:' && u.protocol !== 'https:') return null
     } catch { return null }
-    // (the final review's I1: an address that could carry data out — a query string, userinfo, a port, a long or
+    // (an address that could carry data out — a query string, userinfo, a port, a long or
     // data-like path — never reaches the worker, whatever the page asked; linkShape.cjs, the page's own rule)
     if (!previewShape(raw, { allowLoopback: previewOpts?.allowLoopback === true }).ok) return null
     return raw
@@ -418,7 +418,7 @@ function createChatHost({
   /**
    * chat:preview: one link's card for the view of terminal `id`, from the worker, or { ok: false } (no reason: every
    * failure is silent). Only for a view the page has open; the worker answers only for a link written in a finished
-   * answer of that view (the final review's M2: "only links Claude wrote" is not the page's word alone).
+   * answer of that view ("only links Claude wrote" is not the page's word alone).
    */
   async function preview(p) {
     if (!previewsNow()) return { ok: false }
@@ -502,11 +502,11 @@ function createChatHost({
 
   /** The state for a version: armed (the endpoint and the worker up), or not (they stay for armed sessions still running) */
   async function apply(version, g) {
-    // the buttons' holds only for a Claude Code in the verified range (a newer one keeps Phase 2's passive cards)
+    // the buttons' holds only for a Claude Code in the verified range (a newer one keeps the passive cards)
     const verdict = versionVerdict(version)
     const holding = verdict === 'ok'
     if (!holding && holds) {
-      // (the final review's M6) updated past the verified range mid-run: the cards open now belong to sessions armed
+      // updated past the verified range mid-run: the cards open now belong to sessions armed
       // under the verified version and keep working until answered or released; only new holds stop (the endpoint
       // hands every new one back at once). An older or unreadable version lets them all go, as before.
       holdsOpen = false
@@ -521,14 +521,14 @@ function createChatHost({
     // (new holds open only while the version is the verified one: holdsOpen)
     if (!endpoint) endpoint = makeEndpoint({ onHook, onArrive, log, raw: true, holds: () => (holdsOpen ? holds : null) })
     endpoint.setDraining(false)
-    // (a port that cannot be had, or a listen that never answers: never left starting — Phase 6 drill)
+    // (a port that cannot be had, or a listen that never answers: never left starting)
     const listening = endpoint.listen()
     const { port, token } = await Promise.race([listening, sleep(LISTEN_MS, null).then(() => { throw Object.assign(new Error('listen timed out'), { code: 'ETIMEDOUT' }) })])
     endpointListened = true
     if (g !== gen) { endpoint.setDraining(true); checkDrain(); return }
     if (holding) { if (!holds) holds = makeHolds(); holdsOpen = true }
     if (!worker) startWorker(version)
-    // (a worker already running heard of another version: its open views' note follows — Phase 6 trial)
+    // (a worker already running heard of another version: its open views' note follows)
     else if (workerVersion !== version) { workerVersion = version; post({ t: 'version', version }) }
     // each session's entries name its terminal (a hook says which terminal it is about as it arrives)
     st = { on: true, hooks: (id) => chatHookEntries({ port, token, id, holds: holding }), version }
@@ -655,7 +655,7 @@ function createChatHost({
     checkDrain()
   }
 
-  // ---- the composer (Phase 3) ------------------------------------------------
+  // ---- the composer ------------------------------------------------
   //
   // Per terminal, the ledger of its prompt row (chatInput.cjs nextDraft) and the one send in flight.
   // `permSeq` counts that terminal's PermissionRequest hooks as they arrive (the endpoint's onArrive,
@@ -769,7 +769,7 @@ function createChatHost({
     const lensWaits = statuses.get(id)?.state === 'waiting'
     const asking = !!c && c.asking
     if (!lensWaits && !asking) return false
-    // (2026-11-19: a question dismissed with Esc in the terminal sent no hook, and the chat refused every send for
+    // (a question dismissed with Esc in the terminal sent no hook, and the chat refused every send for
     // minutes. The page read the screen just now: its prompt box, and no dialog over it. A wait the lens has said
     // for STALE_WAIT_MS that the screen does not show is stale; a dialog draws within a moment of its hook)
     if (noDialog !== true) return true
@@ -931,7 +931,7 @@ function createChatHost({
   }
 
   /**
-   * The chat's mode menu (2026-11-17): one Shift+Tab, Claude Code's own key for the next permission mode. The page
+   * The chat's mode menu: one Shift+Tab, Claude Code's own key for the next permission mode. The page
    * reads the footer between presses (src/chat/modeSwitch.ts). Never while a dialog waits (Shift+Tab answers some),
    * nor while a send is being typed; at most one every 80 ms. The prompt row is not touched, so the ledger stays.
    */
@@ -950,7 +950,7 @@ function createChatHost({
   }
 
   /**
-   * The chat's dialog card (2026-11-17): a dialog Claude Code draws that no hold covers (a `/model` confirmation,
+   * The chat's dialog card: a dialog Claude Code draws that no hold covers (a `/model` confirmation,
    * the folder trust, a plan's choices) is read from the screen by the page (src/chat/dialog.ts), which moves its
    * mark one key at a time and checks the screen between keys. Here only the keys: ↑, ↓, Enter, Esc, or one line
    * of words pasted (an option that takes them). Also Ctrl+E and up to 4000 Backspaces at once: words left on the
@@ -1076,7 +1076,7 @@ function createChatHost({
   }
 
   /**
-   * Why a send from the chat did not go, in spawn.log (1.5.3: the owner's sends were refused and nothing said why).
+   * Why a send from the chat did not go, in spawn.log (so a refused send can be diagnosed).
    * The page's own refusal for its screen comes with the shape it read (masked there and again here: never any text);
    * at most one line every 30 s per terminal.
    */
@@ -1104,15 +1104,15 @@ function createChatHost({
     // a page that lost an update: the view again as it is (reload is the banner's 다시 읽기)
     ipcMain.handle('chat:resync', guard((id) => resync(idOf(id))))
     ipcMain.handle('chat:agent', guard((arg) => request('agent', { id: idOf(arg?.id), toolId: idOf(arg?.toolId) }, { ok: false })))
-    // the changes panel (Phase 5): the worker's change index; a file's edits read again from the transcript
+    // the changes panel: the worker's change index; a file's edits read again from the transcript
     ipcMain.handle('chat:changes', guard((id) => request('changes', { id: idOf(id) }, { ok: false })))
-    // "전체 보기" (2026-11-17): an item read again whole from the transcript, in place of "see the terminal"
+    // "전체 보기": an item read again whole from the transcript, in place of "see the terminal"
     ipcMain.handle('chat:full', guard((arg) => request('full', { id: idOf(arg?.id), itemId: String(arg?.itemId ?? '').slice(0, 200) }, { ok: false, reason: 'gone' })))
     ipcMain.handle('chat:change-file', guard((arg) => request('change-file', {
       id: idOf(arg?.id), file: String(arg?.file ?? '').slice(0, 4096),
       ...(typeof arg?.before === 'number' && Number.isFinite(arg.before) ? { before: arg.before } : {}),
     }, { ok: false, reason: 'gone' })))
-    // the composer (Phase 3): plain values only, checked again in send / submit / interrupt
+    // the composer: plain values only, checked again in send / submit / interrupt
     ipcMain.handle('chat:send', guard(async (arg) => refused('send', await send(arg && typeof arg === 'object' ? arg : {}))))
     ipcMain.handle('chat:submit', guard(async (arg) => refused('submit', await submit(arg && typeof arg === 'object' ? arg : {}))))
     ipcMain.on('chat:diag', guard((arg) => diag(arg && typeof arg === 'object' ? arg : {})))
@@ -1124,12 +1124,12 @@ function createChatHost({
     ipcMain.handle('chat:files', guard((arg) => files(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:commands', guard((arg) => commands(arg && typeof arg === 'object' ? arg : {})))
     ipcMain.handle('chat:stranded', guard((id) => stranded(idOf(id))))
-    // the buttons (Phase 4): which chat is shown, and an answer (checked and built here, never by the page)
+    // the buttons: which chat is shown, and an answer (checked and built here, never by the page)
     ipcMain.on('chat:visible', guard((arg, e) => visible(arg && typeof arg === 'object' ? arg : {}, e?.sender?.id)))
     ipcMain.handle('chat:answer', guard((arg, e) => answer(arg && typeof arg === 'object' ? arg : {}, e?.sender?.id)))
-    // 7-48: one resize nudge for the shown chat's hidden terminal (checked here; never a write)
+    // one resize nudge for the shown chat's hidden terminal (checked here; never a write)
     ipcMain.handle('chat:redraw', guard((id, e) => redraw(idOf(id), e?.sender?.id)))
-    // link previews (Phase 5): { ok: false } at once unless on; fetched by the worker only
+    // link previews: { ok: false } at once unless on; fetched by the worker only
     ipcMain.handle('chat:preview', guard((arg) => preview(arg && typeof arg === 'object' ? arg : {})))
   }
 

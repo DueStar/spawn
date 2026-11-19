@@ -1,5 +1,5 @@
 /**
- * How much of the conversation the chat view draws (Phase 5): 기본 (tools in one line; failures and
+ * How much of the conversation the chat view draws: 기본 (tools in one line; failures and
  * questions always shown), 생각 포함 (also the thinking before each answer: src/chat/rows.ts makes its rows),
  * 전부 (every file read and every output opened). One level for the whole app, remembered as one word
  * (`spawn-chat-density`), like the text size. The virtual list's estimate for a row it has not measured

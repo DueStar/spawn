@@ -1,5 +1,5 @@
 /**
- * The hidden terminal's size (7-48). A session shown as chat mounts its terminal hidden, so xterm
+ * The hidden terminal's size. A session shown as chat mounts its terminal hidden, so xterm
  * writes the replay at its own 80×24 while the pty keeps its real size: nothing makes Claude Code
  * redraw, and the composer reads a garbled prompt row ("확인하지 못했어요", safe but stuck).
  *

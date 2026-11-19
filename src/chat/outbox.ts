@@ -1,12 +1,12 @@
 /**
- * The chat composer's outbox (Phase 3): a provisional bubble for each message sent from this
+ * The chat composer's outbox: a provisional bubble for each message sent from this
  * page, until the session transcript's own user line replaces it (or Claude Code's queue strip
  * shows it while it holds the prompt). A bubble the record does not confirm within 8 s says so
  * ("기록에서 아직 보이지 않아요 · 터미널로 보기") and stays: never silently gone, never a lie.
  *
  * It also keeps the thumbnails of images sent from this composer in this run (the page's own
  * blob URLs, at most 30 per terminal), moved to the user line they became. Older messages keep
- * Phase 2's `이미지 n` chip: no image bytes ever come back from main.
+ * the plain `이미지 n` chip: no image bytes ever come back from main.
  */
 
 import { onChatForget } from './lensMode'

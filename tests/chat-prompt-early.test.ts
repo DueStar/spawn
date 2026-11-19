@@ -1,5 +1,5 @@
 /**
- * The prompt shown at once (the owner's "the chat is slow to show what I sent", 2026-11-19). Measured on
+ * The prompt shown at once (so a sent prompt shows immediately). Measured on
  * Claude Code 2.1.328: UserPromptSubmit reaches spawn's HTTP hook 0.13 s after Enter, but the prompt's own
  * transcript line waits for every UserPromptSubmit hook (another plugin's 6 s hook held it 6.4 s; claude-mem:
  * 12 s). The lens shows the prompt from its hook (electron/chatLens.cjs showPrompt) in the same update as

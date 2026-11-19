@@ -1,7 +1,7 @@
 /**
- * Terminal dialogs read from the screen and answered from the chat (src/chat/dialog.ts; 2026-11-17): the real
+ * Terminal dialogs read from the screen and answered from the chat (src/chat/dialog.ts): the real
  * screens of 2.1.32x (a permission, the folder trust, a question, a plan) and the `/model` confirmation as the
- * owner's log showed its shape.
+ * a real log showed its shape.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -64,7 +64,7 @@ describe('parseDialog', () => {
     expect(parseDialog('1. one\n2. two\n3. three')).toBeNull()
     expect(parseDialog(null)).toBeNull()
   })
-  // 2026-11-19 (the owner's "the card no longer takes a choice after 터미널 → 채팅"): Claude Code 2.1.328 draws a rule
+  // (the card took no choice after 터미널 → 채팅) Claude Code 2.1.328 draws a rule
   // and "N. Chat about this" under a question's options (its binary: a divider, then `${n}. Chat about this`). The rule
   // broke the run of options, so a question handed back to the terminal never got its card from the screen
   it('a 2.1.328 question: the rule before "Chat about this" does not break the options; Type something takes words', () => {
@@ -143,7 +143,7 @@ describe('answerDialog', () => {
 })
 
 /**
- * A panel's plain rows (2026-11-19, the owner's /rc): the /remote-control panel as the 2.1.328 binary draws it —
+ * A panel's plain rows (/remote-control, alias /rc): the /remote-control panel as the 2.1.328 binary draws it —
  * RECONSTRUCTED from the binary's strings and layout (title, the sentence with the session's link, the rows
  * Disconnect · Show QR code (its dim line) · Continue, the last one focused, no key hints), not a captured screen.
  */

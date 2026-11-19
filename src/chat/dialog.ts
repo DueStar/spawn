@@ -1,7 +1,7 @@
 /**
  * A dialog Claude Code draws in the terminal that no card of the chat holds (a `/model` confirmation, the folder
  * trust question, a permission or a question its hooks could not hold, a plan's choices): read from the screen,
- * shown in the chat as a card, answered from it (2026-11-17, the owner's call: nothing of a chat session needs the
+ * shown in the chat as a card, answered from it (nothing of a chat session should need the
  * terminal). Its shape (seen on 2.1.32x): a title and body, the numbered options with the selection mark (❯ or >)
  * on one, an option's description indented under it, then a hint line (Enter to confirm · Esc to cancel).
  *
@@ -14,7 +14,7 @@ import { isBoxLine } from './boxTable'
 
 export interface DialogOption { n: number; label: string; desc: string[]; free: boolean }
 /**
- * `numbered`: options drawn `1.`, `2.` … (false: a panel's plain rows, one marked — /remote-control's, 2026-11-19);
+ * `numbered`: options drawn `1.`, `2.` … (false: a panel's plain rows, one marked — e.g. /remote-control's);
  * `links`: the URLs in the title and body, whole even where the terminal wrapped them (a panel's point may be its link)
  */
 export interface Dialog { title: string; body: string[]; options: DialogOption[]; selected: number; hints: string[]; esc: boolean; numbered: boolean; links: string[] }
@@ -48,7 +48,7 @@ function numbered(lines: string[]): Dialog | null {
       want--
       continue
     }
-    // (2026-11-19: a question of 2.1.328 draws a rule over its last row, "N. Chat about this": one rule, there only)
+    // (a question of Claude Code 2.1.328 draws a rule over its last row, "N. Chat about this": one rule, there only)
     if (idx.length === 1 && i === last - 1 && RULE.test(lines[i])) continue
     // between options only a description (indented deeper) or a blank line
     if (lines[i].trim() && !/^\s{4,}/.test(lines[i])) break
@@ -142,7 +142,7 @@ const HINT = /\b(?:esc|enter|tab|space|ctrl\+\S+|shift\+\S+|to (?:select|navigat
 const indentOf = (l: string) => l.length - l.replace(/^[\s ]+/, '').length
 
 /**
- * A panel's list of plain rows (2026-11-19: /remote-control's "Disconnect this session · Show QR code · Continue"; the
+ * A panel's list of plain rows (e.g. /remote-control's "Disconnect this session · Show QR code · Continue"; the
  * same shape in other panels): at least two rows at one column, exactly one marked ❯ (or >) two columns to the left of
  * its label, a row's dim line (deeper) under it, blank lines only under the marked row; a title and body above, closed
  * by a rule (every dialog of Claude Code's draws one over itself); under the rows nothing but key hints. Never the

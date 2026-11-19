@@ -11,7 +11,7 @@
  * Fullscreen is the display's work area filled, not macOS's own full screen (a Space of
  * its own) and not its zoom (which toggles to a frame macOS keeps itself): the bounds
  * before are remembered here and put back for the window mode. A Mac has no in-app
- * full-screen button (the owner's decision: the page's window buttons give way to the
+ * full-screen button (by design: the page's window buttons give way to the
  * traffic lights). The fill comes from the saved mode: macOS's zoom (a double-click on
  * the title area, Window › Zoom) or its own full screen (the green button) is heard as
  * the fullscreen mode (maximize / enter-full-screen in main.cjs), and a window opened in

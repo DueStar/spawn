@@ -115,7 +115,7 @@ describe('the item builder: commands and a compaction summary', () => {
     const { buildRows } = await import('../src/chat/rows')
     const rows = buildRows([{ id: 'n', order: 1, at: null, kind: 'notice', notice: 'summary' }] as any, { dayLabel: () => '' })
     expect(rows.map(r => r.row)).toEqual(['notice'])
-    // (the notice's words moved to src/chat/find.ts NOTICE_WORDS in Phase 5: find searches them as the row says them)
+    // (the notice's words moved to src/chat/find.ts NOTICE_WORDS: find searches them as the row says them)
     const src = (await import('node:fs')).readFileSync(new URL('../src/chat/find.ts', import.meta.url), 'utf8')
     expect(src).toMatch(/summary: '대화가 요약되어 이어졌어요'/)
     expect((await import('node:fs')).readFileSync(new URL('../src/components/ChatView.tsx', import.meta.url), 'utf8')).toMatch(/noticeText\(item\)/)
@@ -187,7 +187,7 @@ describe('the page\'s minor ones', () => {
     expect(groupOpenKey('toolu_fixture01')).not.toBe('toolu_fixture01')
     const fs = require('node:fs') as typeof import('node:fs')
     expect(fs.readFileSync(require.resolve('../src/components/chat/ToolGroup.tsx'), 'utf8')).toMatch(/useRowOpen\(groupOpenKey\(groupKey\), initialOpen\(density \?\? 'default', 'group'\)\)/)
-    // (Phase 5: closed until the user opens it, unless the density is 전부)
+    // (closed until opened, unless the density is 전부)
     expect(fs.readFileSync(require.resolve('../src/components/chat/ToolRow.tsx'), 'utf8')).toMatch(/useRowOpen\(item\.id, initialOpen\(ctx\.density \?\? 'default', 'tool'\)\)/)
   })
 

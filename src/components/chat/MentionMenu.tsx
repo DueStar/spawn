@@ -1,5 +1,5 @@
 /**
- * The composer's @ menu (the lab's `.menu` with `data-menu="mention"`): file names from the
+ * The composer's @ menu: file names from the
  * session's own folder (main reads names only: electron/chatFiles.cjs), at most 8. The
  * textarea keeps the focus: ↑ ↓ move, Enter or Tab puts `@path ` into the draft, Esc closes
  * the menu only (src/chat/composerKeys.ts). A click picks too.

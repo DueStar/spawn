@@ -1,7 +1,7 @@
 'use strict'
 /**
- * chatFull.cjs — one item of the chat read again whole from the session's transcript (2026-11-17, the owner's call:
- * nothing of a chat session should need the terminal). The chat's items are capped (an answer at 200 000
+ * chatFull.cjs — one item of the chat read again whole from the session's transcript, so
+ * nothing of a chat session needs the terminal. The chat's items are capped (an answer at 200 000
  * characters, a command's output at 200 lines); "전체 보기" asks for the rest here instead of "see the terminal".
  *
  * An item's `order` is its line's offset in the transcript. A text, a user message or a thinking block is read from

@@ -481,11 +481,11 @@ export const ResumePicker: React.FC<{
 }> = ({ onPick, onClose, openIds, monFor }) => {
   const [items, setItems] = useState<PastSession[] | null>(null)
   const [warn, setWarn] = useState<PastSession | null>(null)
-  // deleting (2026-11-17): the row asks once; a deleted one can be put back from the bar under the list
+  // deleting: the row asks once; a deleted one can be put back from the bar under the list
   const [asking, setAsking] = useState<string | null>(null)
   const [deleted, setDeleted] = useState<PastSession | null>(null)
   const [trashNote, setTrashNote] = useState<string | null>(null)
-  // (2026-11-19) the conversations a /clear left behind, folded under 이전 대화 n개 (they read like the one after them)
+  // the conversations a /clear left behind, folded under 이전 대화 n개 (they read like the one after them)
   const [showOld, setShowOld] = useState(false)
   // a row being deleted while its just-closed Claude Code ends (main waits for it, up to 30 s)
   const [waiting, setWaiting] = useState<string | null>(null)

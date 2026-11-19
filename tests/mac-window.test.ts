@@ -284,7 +284,7 @@ describe('the chat view on a Mac', () => {
     expect(widget).toMatch(/<div className="w-term-body"[^]*?<div className="w-chat-pane">/)
   })
 
-  it('(Phase 6) the Phase 5 controls take a press on a Mac: the header\'s chat tools, the panel, its edge and find are no-drag; ⌘F reaches find through appShortcut; its tooltip names the key through modCombo', () => {
+  it('the chat controls take a press on a Mac: the header\'s chat tools, the panel, its edge and find are no-drag; ⌘F reaches find through appShortcut; its tooltip names the key through modCombo', () => {
     const chat = readFileSync(join(ROOT, 'src/styles/chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const app = readFileSync(join(ROOT, 'src/styles/widget-expanded.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const rule = (css: string, sel: string) => css.match(new RegExp(`(?:^|[}\\s])${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{([^}]*)\\}`))?.[1] ?? ''

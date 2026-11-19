@@ -1,5 +1,5 @@
 /**
- * The / menu's reader in main (electron/chatCommands.cjs, 2026-11-19): the project's and the user's commands and
+ * The / menu's reader in main (electron/chatCommands.cjs): the project's and the user's commands and
  * skills, and the enabled plugins', from their front matter only; and the host's chat:commands (an armed Claude Code
  * session's own folder, never one the page names).
  */

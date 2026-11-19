@@ -35,7 +35,7 @@ describe('promptRow', () => {
     }
   })
 
-  // bash mode reads as `!` + its text since the composer's shell mode (2026-11-17): someone's text on the row, so a
+  // bash mode reads as `!` + its text since the composer's shell mode: someone's text on the row, so a
   // normal send refuses it (prompt-busy, or a mismatch never entered) and a shell send can see its own echo
   it('bash mode is a row whose text starts with !', () => {
     expect(promptRow(screen('bash-mode'))).toEqual({ kind: 'text', text: '!ls' })

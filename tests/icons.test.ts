@@ -1,5 +1,5 @@
 /**
- * The icon system (2026-11-17): Phosphor, one weight (bold), drawn at 12 / 14 / 16. Every icon the app and the chat
+ * The icon system: Phosphor, one weight (bold), drawn at 12 / 14 / 16. Every icon the app and the chat
  * export renders at a step, with the same weight; no icon file draws its own strokes but the window buttons.
  */
 import { readFileSync } from 'node:fs'

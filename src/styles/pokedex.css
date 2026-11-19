@@ -70,7 +70,7 @@
 .w-view-switch button.on { background: var(--sel-bg); color: var(--ink); }
 /* Icons only (a narrow bar): the gap after them is the spacer's; every px goes to the window buttons */
 .w-view-switch.w-view-icons { margin-right: 2px; }
-/* The pane under 도감 / 박스 / 기록 / 랭킹: the page's own background (calm: --bg, as the lab) */
+/* The pane under 도감 / 박스 / 기록 / 랭킹: the page's own background (calm: --bg) */
 .w-dex-body { flex: 1; min-height: 0; display: flex; background: var(--bg); }
 
 /* ---------- "New": a caught Pokémon whose entry was never opened ---------- */
@@ -208,7 +208,7 @@
 .dex-card-art img { max-height: 130px; max-width: 90%; }
 .dex-card-art img.silhouette { filter: brightness(0) invert(0.32); }
 .dex-card-no { font-size: var(--t-meta); color: var(--ink-3); margin-top: 6px; font-variant-numeric: tabular-nums; }
-/* The name at a fixed 16px (a heading, as the lab) */
+/* The name at a fixed 16px (a heading) */
 .dex-card-name { display: flex; align-items: center; gap: 4px; flex-wrap: wrap; font-size: 16px; font-weight: var(--w-head); letter-spacing: -0.02em; }
 .dex-card-name .w-toast-tier { font-size: 11px; margin-left: 6px; }
 /* The SV icon beside a name in the detail cards */
@@ -391,7 +391,7 @@
 .today-day { position: sticky; top: 0; z-index: 1; margin: 6px 0 0; padding: 8px 0 4px; font-size: var(--t-meta); font-weight: var(--w-name); color: var(--ink-3); background: var(--bg); }
 .today-day:first-child { margin-top: 0; }
 .today-row { display: flex; align-items: center; gap: 12px; min-height: 60px; box-sizing: border-box; padding: 12px 0; border-radius: 0; }
-/* (2026-11-19, the owner: a little roomier, and the level-up row as tall as the others: every row at least 60px) */
+/* a little roomier, and the level-up row as tall as the others: every row at least 60px */
 /* a very faint line between entries */
 .today-row + .today-row { border-top: 1px solid rgba(255, 255, 255, 0.045); }
 /* one line at every text step ("오후 02:12", "02:12 PM"): the column grows with the text */
@@ -433,7 +433,7 @@
 .w-ask-term .term-view { position: absolute; inset: 6px 4px 4px 8px; }
 .w-ask-hint { font-size: var(--t-meta); color: var(--ink-3); }
 /* Window mode: the question opens inside the asking session's row */
-/* (a hairline box with the amber edge of the lab's waiting card) */
+/* (a hairline box with the amber edge of the waiting card) */
 .w-row-ask { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; padding: 8px 10px; border-radius: var(--r-m); background: none; border: 1px solid color-mix(in srgb, var(--amber) 38%, transparent); cursor: default; }
 .w-row-ask-what { font-size: var(--t-ui); font-weight: var(--w-mono); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: 'Monaspace Neon Var', 'Monaspace Neon', 'Pretendard Variable', 'Apple SD Gothic Neo', 'SF Mono', Menlo, monospace; }
 /* A Mac: Menlo (on every Mac) before the proportional faces, as in the terminal (src/termFont.ts) */

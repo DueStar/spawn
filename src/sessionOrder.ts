@@ -1,12 +1,12 @@
 /**
- * The left panel's order by what each session is doing (2026-11-17, the owner's call), when 자동 정렬 is on:
+ * The left panel's order by what each session is doing, when 자동 정렬 is on:
  *
  *   1. 확인 필요 (waiting on the user): always on top
  *   2. working: below them
  *   3. resting: below the working ones
  *   4. ended: at the bottom
  *
- * (2026-11-19, the owner: "the session I used last always on top") inside each group the session the user last
+ * Inside each group the session the user last
  * used — showed, picked or typed in, not merely the one Claude last touched — comes first, newest first. Sessions
  * not used since that record began follow, by the 1.7.0 rule: 확인 필요 the newest first, working in the order they
  * started, resting the latest to rest first. Ties keep the list's own order.

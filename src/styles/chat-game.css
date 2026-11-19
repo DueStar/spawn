@@ -1,16 +1,16 @@
-/* src/styles/chat-game.css — the game's lively bits in the chat view (Phase 5), on the 차분하게 2 tokens: the turn
-   summary's step count (the paw glyph, the lab's `.turn-foot .steps`, calm-lab app.css 661) and the wild Pokémon met
-   in the flow (the lab's `.wild`, app.css 264–274). Imported by src/components/ChatView.tsx. None of it is drawn in
+/* src/styles/chat-game.css — the game's lively bits in the chat view, on the 차분하게 2 tokens: the turn
+   summary's step count (the paw glyph) and the wild Pokémon met
+   in the flow. Imported by src/components/ChatView.tsx. None of it is drawn in
    업무 모드 (the components leave it out), and chat.css keeps its "nothing animates" rule: the allowed animations
-   (a wild Pokémon met while the view is open, Decision 12; the working Pokémon's hop and halo, the owner's call of
-   2026-11-17) live here and stop under prefers-reduced-motion. */
+   (a wild Pokémon met while the view is open; the working Pokémon's hop and halo)
+   live here and stop under prefers-reduced-motion. */
 
 /* the step count: the paw glyph and {n}걸음, in the foot's own quiet colour */
 .chat-steps { display: inline-flex; align-items: center; gap: 4px; }
 .chat-steps svg { flex: none; }
 
-/* a wild Pokémon, in passing: the picture, the meeting, → the ball and the result; a hairline tag, no fill */
-/* (2026-11-19, the owner: told apart from the conversation, never stressed) a quiet box: a hairline, a faint fill,
+/* a wild Pokémon, in passing: the picture, the meeting, → the ball and the result */
+/* a quiet box, told apart from the conversation without drawing attention: a hairline, a faint fill,
    everything a step dimmer than the talk around it */
 .chat-wild { display: flex; align-items: center; width: fit-content; max-width: 100%; box-sizing: border-box; min-height: 34px; padding: 3px 12px 3px 8px; margin: 4px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.015); opacity: 0.72; }
 .chat-wild-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
@@ -23,7 +23,7 @@
 /* a rare-or-above one's tier: the dot and the word in the tier's colour (tokens.css .tier-*) */
 .chat-wild-tier { display: inline-flex; align-items: center; gap: 4px; color: var(--tier); white-space: nowrap; }
 
-/* met while watching: the picture comes in once (the lab's wildIn) */
+/* met while watching: the picture comes in once */
 .chat-wild.appear .chat-wild-mon { animation: chat-wild-in .5s cubic-bezier(.2, .8, .2, 1) both; }
 @keyframes chat-wild-in { from { transform: translateY(6px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
@@ -31,7 +31,7 @@
 }
 
 /* the working Pokémon (the line under the conversation, its time ticking): a 2px hop and a faint halo breathing on
-   the same beat, the owner's micro-interaction of 2026-11-17; still for anyone who asks for less motion */
+   the same beat; still for anyone who asks for less motion */
 .chat-status.working .chat-pic.head { position: relative; }
 .chat-status.working .chat-pic.head::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 70%); pointer-events: none; animation: chat-halo 1.6s ease-in-out infinite; }
 .chat-status.working .chat-pic.head > * { position: relative; animation: chat-hop 1.6s ease-in-out infinite; }
@@ -41,7 +41,7 @@
   .chat-status.working .chat-pic.head::before { animation: none; }
   .chat-status.working .chat-pic.head > * { animation: none; }
 }
-/* the sub-agents at work (AgentPanel.tsx, 2026-11-19, the owner's ask for smooth, natural micro-interactions): the
+/* the sub-agents at work (AgentPanel.tsx; small, smooth micro-interactions): the
 strip unfolds and folds, a chip rises in once and, finished, fades after its 끝남, a running one's dot breathes on the
 working Pokémon's beat, and the panel slides in once; all still for anyone who asks less motion */
 .chat-agents { transition: grid-template-rows .26s cubic-bezier(.2, .7, .2, 1), opacity .2s ease; }

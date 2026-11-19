@@ -1,5 +1,5 @@
 /**
- * The review of Phase 3 (the composer), the minor findings that live in the components: each
+ * The composer's review findings that live in the components: each
  * pinned by what the component renders or does (react-dom/server, node environment), or by its
  * source where only a browser could act it out (the harness flows act them out too).
  */
@@ -61,7 +61,7 @@ describe('m6: an unconfirmed bubble does not float for good', () => {
 
 describe('I-5: the side panel while a chat send is in flight', () => {
   const widget = src('Widget.tsx')
-  // (the side box that said why is gone: removed 2026-11-16 at the owner's request)
+  // (the side box that said why is gone)
   it('a pending /rename refused as busy stays pending (never typed into that send)', () => {
     // (1.6.2: and refused as typing, tests/rename-pending.test.ts)
     expect(widget).toMatch(/res\.reason === 'busy' \|\| res\.reason === 'typing'\) && !pendingRename\.current\.has\(id\)\) pendingRename\.current\.set\(id, name\)/)
@@ -76,7 +76,7 @@ describe('m2 and m11: the composer', () => {
   })
   it('m11: a mention picked or text inserted is the browser\'s own edit (undo keeps working), the value set only as a fallback', () => {
     expect(composer).toContain("document.execCommand('insertText', false, s)")
-    // (since 2026-11-17 a picked file leaves the text for a badge: the typed `@query` is taken out the same way)
+    // (a picked file leaves the text for a badge: the typed `@query` is taken out the same way)
     expect(composer).toMatch(/replaceRange\(el, mention\.start, caret, ''\)/)
   })
   it('m7: a send whose page went away is said once as the composer opens', () => {

@@ -1,6 +1,6 @@
 /**
- * SystemPage (?system) — spawn's design system on one page (2026-11-17, the owner's ask: "모든 컴포넌트들을 정리하고
- * 시스템화 시켜서 한 페이지안에" — to look at and try every component, and to show it in the portfolio).
+ * SystemPage (?system) — spawn's design system on one page — to look at and try every
+ * component in one place.
  *
  *   기초      colours, type (at every text size), radii and the icon set, read from the live tokens
  *   컨트롤    buttons, the switch, segmented toggles, the text-size control

@@ -34,7 +34,7 @@ const toolById = (items: any[], id: string) => items.find(i => i.id === id)
 describe('basic.jsonl', () => {
   it('one user message, its (empty) thinking, one answer with the table, one turn end of 13909 ms; nothing from the bookkeeping', () => {
     const { items } = build('basic.jsonl')
-    // (Phase 5: the thinking block is an item too; the 기본 density draws no row for it)
+    // (the thinking block is an item too; the 기본 density draws no row for it)
     expect(kinds(items)).toEqual(['user', 'thinking', 'text', 'turn-end'])
     expect(items[0].text).toMatch(/^Without using any tools/)
     expect(items[0].images).toBe(0)
@@ -88,7 +88,7 @@ describe('tools.jsonl', () => {
 
   it('the whole tool input never travels: no old/new strings, no file content', () => {
     const json = JSON.stringify(items)
-    // no edit strings in a row's input (the diff block of Task 5 shows the change instead)
+    // no edit strings in a row's input (the diff block shows the change instead)
     for (const it of items.filter(i => i.kind === 'tool')) expect(JSON.stringify(it.input)).not.toContain('module.exports')
     expect(json).not.toContain('old_string')
     expect(json).not.toContain('originalFile')
@@ -218,7 +218,7 @@ describe('toolInput', () => {
   })
 })
 
-// Phase 5 (Task 5.5): thinking blocks become items (shown from 생각 포함); Claude Code 2.1.32x writes them empty
+// thinking blocks become items (shown from 생각 포함); Claude Code 2.1.32x writes them empty
 describe('thinking.jsonl', () => {
   const { items } = build('thinking.jsonl')
   const thinking = items.filter(i => i.kind === 'thinking')
@@ -276,7 +276,6 @@ describe('the event model', () => {
   })
 })
 
-// The review of Tasks 1–10 (review-1-10.md)
 describe('review fixes', () => {
   const userLine = (text: string) => ({ type: 'user', uuid: 'u1', timestamp: '2026-11-14T12:00:00Z', message: { role: 'user', content: text } })
 

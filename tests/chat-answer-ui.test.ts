@@ -1,5 +1,5 @@
 /**
- * The answer surface (Phase 4, Task 4.6): the keys a card hears (only inside it, never an answer by
+ * The answer surface: the keys a card hears (only inside it, never an answer by
  * a key of its own: a click, or Enter / Space on its focused button), what a card shows of a command
  * (control and direction characters made visible), the guard against a click that was aimed at
  * something else, and the source rules: no global key, no focus taken, outside the virtual list,

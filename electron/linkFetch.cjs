@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * linkFetch.cjs — the link-preview fetcher (Phase 5): the policy and the transport, pure over an injected
+ * linkFetch.cjs — the link-preview fetcher: the policy and the transport, pure over an injected
  * `resolve`, `request` and `timers`. It runs in the chat worker (linkPreview.cjs hosts it), never in the page
  * and never in the main process's own thread. Previews are opt-in; this module is only ever handed a URL
  * once the user has turned them on.
@@ -323,7 +323,7 @@ async function resolveAllowed(host, opts = {}) {
   const list = got.list
   if (!Array.isArray(list) || list.length === 0 || list.length > LINK_CAPS.answers) return no('dns')
   // (an IPv6-only network with NAT64/DNS64 answers every name with 64:ff9b::/96 addresses: still refused — the block
-  // is not loosened — but said as its own kind, so the log can name the reason once; the final review's M9)
+  // is not loosened — but said as its own kind, so the log can name the reason once)
   const nat64 = list.every((a) => a && typeof a.address === 'string' && net.isIP(a.address) === 6 && isNat64(a.address))
   for (const a of list) {
     const address = a && a.address
@@ -902,9 +902,9 @@ function hostLabel(hostname) {
  * description gives null. Its og:image / twitter:image resolved against the final page URL and fetched under
  * every rule again; kept only as a still PNG / JPEG / WebP within the caps. Every failure is silent (null or no
  * image); deps.note(why) hears the kind of a refusal (a word, never the URL).
- * A link whose address could carry data (a query string, userinfo, a port, a long or data-like path: linkShape.cjs,
- * the final review's I1) is refused before any lookup. `deps.signal` aborting (previews off, the view closed) stops
- * it at once: no further request, redirect hop or image request (I2).
+ * A link whose address could carry data (a query string, userinfo, a port, a long or data-like path: linkShape.cjs)
+ * is refused before any lookup. `deps.signal` aborting (previews off, the view closed) stops
+ * it at once: no further request, redirect hop or image request.
  * deps: { resolve, request, timers, allowLoopback, caps, note, signal }
  */
 async function previewOf(url, deps = {}) {

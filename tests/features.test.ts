@@ -1,4 +1,4 @@
-// The other-AI-tools switch (Codex CLI and friends, hidden 2026-11-13): one value in
+// The other-AI-tools switch (Codex CLI and friends, hidden by default): one value in
 // electron/features.json, read by the main process and the page alike.
 
 import { createRequire } from 'node:module'
@@ -59,8 +59,8 @@ describe('the default follows the switch', () => {
   })
 })
 
-// The chat view (Phase 2, a preview): its own switch in the same file, on for the
-// owner's test build (Task 18), and a 설정 switch that stays off by default. Both must be on for any of it.
+// The chat view: its own switch in the same file, on for the
+// test build, and a 설정 switch that stays off by default. Both must be on for any of it.
 describe('the chat view switch', () => {
   it('is on in features.json for the test build (the 설정 switch stays off by default)', () => {
     expect(require('../electron/features.json').chatView).toBe(true)
@@ -79,7 +79,7 @@ describe('the chat view switch', () => {
   })
 })
 
-// review M21: in the app, the page follows main's switch (a build made with VITE_SPAWN_CHAT_VIEW set
+// In the app, the page follows main's switch (a build made with VITE_SPAWN_CHAT_VIEW set
 // cannot show a 설정 row main does not serve), and nothing calls chat:* while it is off
 describe('the page follows main\'s chat view switch', () => {
   it('main\'s answer wins over the build\'s; without one (a plain browser, the harness) the build\'s', async () => {

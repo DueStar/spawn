@@ -1,6 +1,6 @@
 /**
- * Icons — one icon system (2026-11-17, the owner's call: icons from Phosphor, one weight, a few sizes; before this
- * the app's own 16-grid drawings at 1.5 and the chat's at 1.4, drawn at 11–16px, read thick here and thin there).
+ * Icons — one icon system: icons from Phosphor, one weight, a few sizes (mixed stroke widths drawn at
+ * 11–16px read thick here and thin there).
  *
  *   weight  bold everywhere (24/256 of the size: 1.5px at 16, 1.3px at 14, 1.1px at 12)
  *   sizes   16 a button's icon · 14 an icon inside a line of text · 12 a small caret or ×
@@ -107,7 +107,7 @@ export const SearchIcon = ph(MagnifyingGlass)
 export const PlusIcon = ph(Plus)
 /** An arrow down onto a line: an update to take (the update button) */
 export const UpdateIcon = ph(ArrowLineDown)
-/** An update downloaded: restart to apply it (2026-11-19: told apart from 'one to get') */
+/** An update downloaded: restart to apply it (told apart from 'one to get') */
 export const RestartIcon = ph(ArrowClockwise)
 /** 설정 */
 export const GearIcon = ph(Gear)

@@ -1,6 +1,6 @@
 'use strict'
 /**
- * sessionTrash.cjs — a session deleted from spawn (2026-11-17, the owner's ask "세션을 아예 지우는 것도 여기서"):
+ * sessionTrash.cjs — a session deleted from spawn's resume list:
  * its Claude Code transcript (`<claude>/projects/<project>/<id>.jsonl`) and its sub-agents' folder (`<id>/`) are
  * moved, not deleted, into `<spawnHome>/trash/<YYYY-MM-DD>/<project>/`, with a note of where they came from, so a
  * slip can be undone (restore). Day folders older than KEEP_DAYS are deleted when the app starts. A session whose
@@ -57,8 +57,8 @@ function trashSession({ claudeDir, spawnHome, id, running = () => false, now = D
 }
 
 /**
- * Deleting from the resume list (2026-11-19, "right after closing a session it still looks running, so I can't
- * delete it"). `open(id)`: open in one of the app's tabs (never moved). `running(id)`: its Claude Code process still
+ * Deleting from the resume list, including a session whose tab was
+ * just closed. `open(id)`: open in one of the app's tabs (never moved). `running(id)`: its Claude Code process still
  * runs (async: history.cjs runningCheck). `closing(id)`: the app closed its tab a moment ago, so that process is on
  * its way out (SessionEnd hooks, Windows' teardown): it is waited for, polling every `pollMs` for at most `waitMs`,
  * and then moved. Running anywhere else (another terminal's live session): refused, as before.

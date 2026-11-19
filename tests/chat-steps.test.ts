@@ -1,5 +1,5 @@
 /**
- * Steps in the turn summary (Phase 5, Task 5.6): src/chat/steps.ts. Two reads of the game server's existing
+ * Steps in the turn summary: src/chat/steps.ts. Two reads of the game server's existing
  * read-only GET /pokedex bracket a turn: a start sample when the session goes to work, an end sample 1.5 s after a
  * turn end that arrived live, taken only while the session is not working again. The count is shown only when the
  * bracket is exact (an unused start of the same session, the same Pokémon at both reads, no other turn end between);

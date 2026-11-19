@@ -93,7 +93,7 @@ describe('rows from the keyboard and for screen readers (final review I2)', () =
     expect(w).toContain('if (e.target !== e.currentTarget || !r.terminal) return')
     expect(w).toContain('rowKeyAction(e.key, e.nativeEvent.isComposing)')
     // the mouse goes through the same open()
-    // (2026-11-17: Ctrl+click opens the session in a tab of its own; a plain click as before. 2026-11-19: the rows
+    // (Ctrl+click opens the session in a tab of its own; a plain click as before. The rows
     // reorder by the browser's own drag, which ends without a click, so no click guard)
     expect(w).toContain('openInTab(r.sessionId); return } open() }}')
   })
@@ -137,7 +137,7 @@ describe('the session header', () => {
 
 describe('the session tab row is gone', () => {
   const src = (...p: string[]) => join(__dirname, '..', 'src', ...p)
-  // (2026-11-17: the owner asked for tabs again — up to three, in the session header, src/sessionTabs.ts; the old
+  // (tabs came back — up to three, in the session header, src/sessionTabs.ts; the old
   // tab row with its glint stays gone)
   it('no SessionTabs component, no glint; the tabs live in the session header', () => {
     const widget = readFileSync(src('Widget.tsx'), 'utf8')

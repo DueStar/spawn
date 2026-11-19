@@ -1,5 +1,5 @@
 /**
- * The page's half of a chat send (Phase 3; the plan's "send, step by step"). Main types the
+ * The page's half of a chat send. Main types the
  * text without Enter (chat.send) and presses Enter only on a submit whose echo the page saw
  * (chat.submit); this is everything in between:
  *
@@ -87,8 +87,8 @@ export async function sendDraft(draft: { id: string; text: string; images: Outbo
   const row = promptRow(rowScreen, dim)
   // (the screen shows the prompt box and no dialog over it: main may let a stale wait go)
   const noDialog = row.kind !== 'unknown' && parseDialog(rowScreen) === null
-  // (a card open for this session (Phase 4): it is answered first; Enter here never answers it)
-  // (2026-11-19: a wait whose dialog the screen no longer shows — a question dismissed with Esc in the terminal, no
+  // (a card open for this session: it is answered first; Enter here never answers it)
+  // (a wait whose dialog the screen no longer shows — a question dismissed with Esc in the terminal, no
   // hook after it — never holds the composer: only a card still answerable here, or a dialog on the screen, does)
   const asks = d.status?.asks ?? []
   const waits = d.status?.state === 'waiting' || asks.length > 0

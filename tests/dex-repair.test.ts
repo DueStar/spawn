@@ -1,5 +1,5 @@
 /**
- * The Pokédex's own errors, mended on load and after a sync (server/pokedex.js repairDex, 2026-11-19): a starter of an
+ * The Pokédex's own errors, mended on load and after a sync (server/pokedex.js repairDex): a starter of an
  * earlier start of the game with no Pokémon of its line here leaves caught and seen; a caught record without a ball
  * gets one; this trainer's starter and anything with a Pokémon here stay.
  */

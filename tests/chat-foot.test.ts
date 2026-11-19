@@ -1,5 +1,5 @@
 /**
- * The turn summary (Phase 5, Task 5.6): src/chat/rows.ts `foot` rows (a finished turn's time, its tool calls and
+ * The turn summary: src/chat/rows.ts `foot` rows (a finished turn's time, its tool calls and
  * changed files only when the turn's start is loaded, the answer's text for its copy) and
  * src/components/chat/TurnFoot.tsx (time · 도구 n회 · 파일 n개 바꿈 · the step count when the ledger knows it and the
  * view is not in 업무 모드 · 복사). A turn with no turn_duration (running, interrupted) has no foot, and its text rows
@@ -182,7 +182,7 @@ describe('a turn whose start is not loaded: no counts, no copy taken', () => {
 })
 
 describe('the existing rows around feet', () => {
-  it('feet in every density, and nothing else changes in 기본 (the Phase 2 rows with the feet taken out)', () => {
+  it('feet in every density, and nothing else changes in 기본 (the pre-density rows with the feet taken out)', () => {
     const all = items('turns.jsonl')
     for (const density of ['default', 'thinking', 'all'] as const) expect(feet(buildRows(all, { dayLabel, density }))).toHaveLength(2)
   })
@@ -267,7 +267,7 @@ describe('the view: the per-row copy moves into the foot', () => {
     expect(src).toMatch(/footCopies\(rows\)/)
     expect(src).toMatch(/case 'foot': return <TurnFoot row=\{row\} name=\{who\.name\} \/>/)
     expect(src).toMatch(/<TextRow item=\{row\.item\} copy=\{!noCopy\} \/>/)
-    // the copy button itself is unchanged (re-review m-7)
+    // the copy button itself is unchanged
     expect(src).toMatch(/\{copy && <div className="chat-text-acts"><CopyButton text=\{item\.text\} label=\{t\('답 복사'\)\} cut=\{item\.truncated === true\} \/><\/div>\}/)
   })
 
@@ -300,7 +300,7 @@ describe('the words and the look', () => {
     expect(Object.keys(chatGame.ja).sort()).toEqual(Object.keys(chatGame.en).sort())
   })
 
-  it('the foot in chat.css (the lab\'s .turn-foot, no animation); the step count in chat-game.css', () => {
+  it('the foot in chat.css (.turn-foot, no animation); the step count in chat-game.css', () => {
     const css = read('src', 'styles', 'chat.css').replace(/\/\*[\s\S]*?\*\//g, '')
     expect(css).toMatch(/\.chat-foot \{[^}]*display: flex;[^}]*flex-wrap: wrap;[^}]*gap: 4px 12px;[^}]*font-size: var\(--t-meta\);[^}]*color: var\(--ink-3\);/)
     expect(css).toMatch(/\.chat-foot \.chat-copy \{[^}]*margin-left: auto;/)

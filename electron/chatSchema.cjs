@@ -2,7 +2,7 @@
 
 /**
  * chatSchema.cjs — what a line of a Claude Code session transcript is, and
- * whether it has the shape the chat lens relies on (the chat view, Phase 2).
+ * whether it has the shape the chat lens relies on (the chat view).
  *
  * The transcript (~/.claude/projects/<project>/<session>.jsonl) is Claude
  * Code's own internal format: one JSON object per line, mostly bookkeeping

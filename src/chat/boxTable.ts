@@ -1,6 +1,6 @@
 /**
- * Tables Claude Code draws in the terminal (2026-11-19, the owner's report: a table Claude wrote showed up in the chat
- * as raw special characters). Claude Code 2.1.32x renders a markdown table on the screen with box-drawing lines:
+ * Tables Claude Code draws in the terminal (otherwise a table Claude wrote shows up in the chat
+ * as raw box-drawing characters). Claude Code 2.1.32x renders a markdown table on the screen with box-drawing lines:
  *
  *   ┌──────┬───────┐
  *   │ Name │ Value │      a header row (a cell's words may wrap onto more lines of the same row)

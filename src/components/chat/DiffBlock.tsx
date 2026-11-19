@@ -1,5 +1,5 @@
 /**
- * A file edit in the chat view (the lab's `.edit`): a head with the file (a button that
+ * A file edit in the chat view: a head with the file (a button that
  * opens it in the code editor at its first changed line), +N −N, and the kind word for a
  * new file; then the first 8 lines of the change, the rest behind "{n}줄 더 보기". Lines
  * the lens did not send (over its cap) are named on a last line: "{n}줄은 터미널에서 보세요".
@@ -21,7 +21,7 @@ export const DIFF_PREVIEW = 8
 
 type Line = DiffLine | { t: 'gap' }
 
-/** A window with a panel on its right (the lab's panelR), small, after the counts */
+/** A window with a panel on its right, small, after the counts */
 const PanelGlyph = () => (
   <svg className="ico" width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="2.5" y="3" width="11" height="10" rx="2" /><path d="M9.5 3v10" /></svg>
 )
@@ -36,7 +36,7 @@ export const DiffBlock: React.FC<{ item: ToolItem; diff: Diff }> = ({ item, diff
   const shown = all ? lines : lines.slice(0, DIFF_PREVIEW)
   const more = real - shown.filter(l => l.t !== 'gap').length
   const firstLine = diff.hunks[0]?.newStart || undefined
-  // a new markdown file, whole: shown as the document it is (변경 shows the added lines); 2026-11-17
+  // a new markdown file, whole: shown as the document it is (변경 shows the added lines)
   const docText = diff.kind === 'create' && isMarkdownFile(diff.file) && !diff.truncated && !diff.hidden && real > 0
     ? lines.filter((l): l is DiffLine => l.t === '+').map(l => l.text).join('\n') : null
   const [asDiff, setAsDiff] = useState(false)
@@ -52,7 +52,7 @@ export const DiffBlock: React.FC<{ item: ToolItem; diff: Diff }> = ({ item, diff
           : <button type="button" className="chat-diff-file" title={t('코드 편집기에서 열기 (없으면 폴더에서 보기)')} onClick={() => onPath(diff.file, firstLine)}>{diff.file}</button>}
         {/* a line or the block was cut by the lens (a minified file, a very long line): the counts are whole */}
         {diff.truncated && <span className="chat-diff-cut" title={t('줄이 너무 길어서 일부만 보여요. 전체는 터미널에서 보세요')}>{t('잘림')}</span>}
-        {/* the counts open the 변경 사항 panel at this edit (Phase 5; the file name keeps opening the editor) */}
+        {/* the counts open the 변경 사항 panel at this edit (the file name keeps opening the editor) */}
         {openChanges ? (
           <button type="button" className="chat-counts chat-counts-btn" title={t('변경 사항 보기')} aria-label={`+${diff.added} −${diff.removed} · ${t('변경 사항 보기')}`}
             onClick={() => openChanges({ file: diff.file, toolId: item.id })}>

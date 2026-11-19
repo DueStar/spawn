@@ -1,5 +1,5 @@
 /**
- * en / ja completeness of the chat view (Phase 6, Task 6.3):
+ * en / ja completeness of the chat view:
  *
  * - every Korean literal the chat code hands to t( / tSense( is a key of a locale (chat.ts, chatGame.ts, or an older one)
  * - chat.ts and chatGame.ts: the same keys in en and ja, none empty, none left in Korean (a key with no Hangul, e.g.

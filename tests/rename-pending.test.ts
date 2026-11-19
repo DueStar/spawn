@@ -1,7 +1,7 @@
 /**
  * 1.6.2: a session name changed in the app becomes Claude Code's own (/rename), typed with Enter. On 1.6.1 a rename
- * left pending while Claude worked was typed the moment the turn ended — into the middle of what the owner was
- * writing ("…다른 세션 갔/rename Spawn (New)다"), whose half was then sent. And a shell tab's rename was typed into
+ * left pending while Claude worked was typed the moment the turn ended — into the middle of what was being
+ * written ("…다른 세션 갔/rename Spawn (New)다"), whose half was then sent. And a shell tab's rename was typed into
  * PowerShell. Now: Claude Code sessions only, only when the page reads an empty prompt row (or only a dim
  * suggestion: src/chat/promptRow.ts renameReady), and main refuses it within 1.5 s of a key (`typing`); refused, it
  * stays pending.

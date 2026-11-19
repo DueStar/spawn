@@ -155,7 +155,7 @@ describe('UI fonts on a Mac (.is-mac rules)', () => {
   it('the app text: the same bundled faces first as on Windows; behind them the system face before any CJK face', () => {
     const mac = familyOf(css('widget.css'), '.is-mac .widget')
     const win = familyOf(css('widget.css'), '.widget')
-    // the faces the owner chose (shipped in public/fonts): first, in the same order, on both
+    // the chosen faces (shipped in public/fonts): first, in the same order, on both
     expect(mac.slice(0, 4)).toEqual(['W Uncut', 'Uncut Sans Variable', 'W Pretendard', 'Pretendard Variable'])
     expect(mac.slice(0, 4)).toEqual(win.slice(0, 4))
     expect(mac.indexOf('system-ui')).toBeGreaterThan(3)
@@ -175,7 +175,7 @@ describe('UI fonts on a Mac (.is-mac rules)', () => {
   })
 })
 
-// The chat view's 설정 switch (Phase 2, a preview): stored off, shown only behind the
+// The chat view's 설정 switch: stored off, shown only behind the
 // features.json switch (electron/features.cjs CHAT_VIEW / src/features.ts)
 describe('the chat view setting', () => {
   it('is off by default; only a real boolean is kept', () => {
@@ -211,7 +211,7 @@ describe('the chat view setting', () => {
     expect(line.trim()).toMatch(/^\{CHAT_VIEW && <Toggle label=\{t\('채팅으로 보기'\)\}.*\/>\}$/)
   })
 
-  it('link previews (Phase 5): off by default, only a real boolean kept, the page has the same default', async () => {
+  it('link previews: off by default, only a real boolean kept, the page has the same default', async () => {
     expect(DEFAULTS.session.linkPreviews).toBe(false)
     expect(sanitize(null).session.linkPreviews).toBe(false)
     for (const v of ['yes', 1, 'true', null, {}]) expect(sanitize({ session: { linkPreviews: v } }).session.linkPreviews).toBe(false)

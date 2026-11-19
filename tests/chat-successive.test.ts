@@ -1,6 +1,5 @@
 /**
- * Several choices in a row (2026-11-19, the owner's report: "when I must choose several times in a row, I can choose
- * only once"). Two causes, both fixed:
+ * Several choices in a row (only the first of several successive choices could be made from the chat). Two causes, both fixed:
  *
  * 1. The screen was read for a dialog only when every card was passed to the terminal. A card answered and still
  *    waiting on Claude Code (its tool running), or one that timed out (main handed it back), kept the next dialog —
@@ -63,7 +62,7 @@ describe('the answer surface: the next card after an answer', () => {
   })
 })
 
-// 2026-11-19: every question offers its own answer, as Claude Code's dialog does (its "Other" row)
+// Every question offers its own answer, as Claude Code's dialog does (its "Other" row)
 describe('the question card: 직접 입력', () => {
   const render = (card: AskCard) => renderToStaticMarkup(React.createElement(AnswerSurface, {
     id: 't', who: { name: 'Pika', kind: 'pokemon' } as never, onTerminal() {}, answer: async () => ({ ok: true as const }), asks: [card],

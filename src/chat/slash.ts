@@ -1,5 +1,5 @@
 /**
- * The composer's / menu (2026-11-19, the owner's report: typing / showed no command menu). A draft that is one token
+ * The composer's / menu. A draft that is one token
  * starting with / and the caret in it opens a menu of Claude Code's commands, filtered by the letters after the /
  * (a prefix of the name or of an alias). Picking one fills `/name ` and never sends. The list: Claude Code's own
  * commands (below, read from the 2.1.328 binary: name, aliases, its own one-line description), then the user's and

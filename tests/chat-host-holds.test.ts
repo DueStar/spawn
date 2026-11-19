@@ -1,5 +1,5 @@
 /**
- * electron/chatHost.cjs with holds (Phase 4, Task 4.5): the registry wired to the reader and the
+ * electron/chatHost.cjs with holds: the registry wired to the reader and the
  * page. A question is answered only while its chat is the visible view; any real key in that
  * session's terminal hands everything back to it; off, a worker that exits, quitting and a version
  * out of the verified range all answer "no decision". A fake worker, a fake endpoint around the
@@ -247,7 +247,7 @@ describe('the composer while a card is open', () => {
 })
 
 describe('only for the verified range', () => {
-  it('a newer Claude Code: no holds; the entries are Phase 2\'s (no matcher, PermissionRequest at 5 s)', async () => {
+  it('a newer Claude Code: no holds; the passive entries (no matcher, PermissionRequest at 5 s)', async () => {
     const s = await setup('2.3.0 (Claude Code)')
     expect(s.endpoints[0].opts.holds()).toBeNull()
     const st = s.host.state()

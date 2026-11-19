@@ -116,7 +116,7 @@ const en: Record<string, string> = {
   '시작 시 {tray}로 최소화': 'Start minimized to the {tray}',
   '창을 띄우지 않고 시작해요. {tray}의 몬스터볼로 열 수 있어요': 'Starts without a window. Open it from the Poké Ball in the {tray}',
   '앱을 보고 있지 않을 때 세션이 일을 마치거나 확인이 필요하면 알림을 띄우고 Dock 아이콘을 튀겨요': 'When the app is not in front and a session finishes or needs you, show a notification and bounce the Dock icon',
-  // 설정 › 세션 › 채팅 보기란? (Phase 6)
+  // 설정 › 세션 › 채팅 보기란?
   '채팅 보기란?': 'What is the chat view?',
   '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요': 'The session still runs in the terminal; the chat shows the same session as a conversation.',
   '보낸 말은 터미널 입력란에 그대로 들어가요. 확실하지 않으면 보내지 않고 알려 줘요': "What you send goes into the terminal's prompt. When the app isn't sure, it doesn't send and tells you.",
@@ -241,7 +241,7 @@ const ja: Record<string, string> = {
   '시작 시 {tray}로 최소화': '起動時に{tray}へ最小化',
   '창을 띄우지 않고 시작해요. {tray}의 몬스터볼로 열 수 있어요': 'ウィンドウを表示せずに起動します。{tray}のモンスターボールから開けます',
   '앱을 보고 있지 않을 때 세션이 일을 마치거나 확인이 필요하면 알림을 띄우고 Dock 아이콘을 튀겨요': 'アプリを見ていないときにセッションが作業を終えたり確認が必要になったりすると、通知を出してDockアイコンを弾ませます',
-  // 설정 › 세션 › 채팅 보기란? (Phase 6)
+  // 설정 › 세션 › 채팅 보기란?
   '채팅 보기란?': 'チャット表示とは?',
   '세션은 그대로 터미널에서 돌아가고, 채팅은 같은 세션을 대화로 보여 줘요': 'セッションはそのままターミナルで動き、チャットは同じセッションを会話として表示します。',
   '보낸 말은 터미널 입력란에 그대로 들어가요. 확실하지 않으면 보내지 않고 알려 줘요': '送った内容はターミナルの入力欄に入ります。確かでないときは送らずにお知らせします。',

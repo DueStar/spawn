@@ -2,7 +2,7 @@
  * The 변경 사항 panel's width and when the left panel folds for it (src/changesWidth.ts):
  * 260–560px (320 by default, 288 in a window under 1200 with nothing remembered), the
  * conversation never under 400px, the left panel folded to the rail while the three do not
- * fit (300 + 320 + 620 = the lab's 1240), and no panel at all in a window too narrow even
+ * fit (300 + 320 + 620 = 1240), and no panel at all in a window too narrow even
  * folded. Remembered in page storage, which may throw.
  */
 
@@ -38,7 +38,7 @@ describe('clampChangesWidth', () => {
 describe('autoFold', () => {
   const at = (winW: number, over: Partial<Parameters<typeof autoFold>[0]> = {}) =>
     autoFold({ winW, sideW: 300, chW: 320, open: true, chat: true, userHidden: false, ...over })
-  it('folds below 300 + 320 + 620 = 1240 (the lab\'s narrow), not at it', () => {
+  it('folds below 300 + 320 + 620 = 1240, not at it', () => {
     expect(at(1239)).toBe(true)
     expect(at(1240)).toBe(false)
     expect(at(1100)).toBe(true)
@@ -109,7 +109,7 @@ describe('remembered', () => {
   })
 })
 
-describe('(Phase 6) the Mac: the left panel at its 300px minimum', () => {
+describe('the Mac: the left panel at its 300px minimum', () => {
   it('at 960 wide the panel opens, the left panel folding to the rail for it; under 716 it cannot open at all', () => {
     expect(canOpen({ winW: 960 })).toBe(true)
     expect(autoFold({ winW: 960, sideW: 300, chW: CH_TIGHT, open: true, chat: true, userHidden: false })).toBe(true)

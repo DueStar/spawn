@@ -1,5 +1,5 @@
 /**
- * The chat's mode menu (2026-11-17): Claude Code changes its permission mode with Shift+Tab, one step of its cycle
+ * The chat's mode menu: Claude Code changes its permission mode with Shift+Tab, one step of its cycle
  * at a time, and draws the mode in its footer (promptRow.ts footerMode). So: read the footer, press once, wait until
  * the footer shows the next mode, and again, until the chosen mode is there. Back at the mode it started from
  * without meeting it: that mode is not in this session's cycle (auto or bypass needs the session launched for it).

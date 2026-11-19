@@ -117,7 +117,7 @@ describe('createTail', () => {
     const fd = openSync(file, 'r+')
     writeSync(fd, Buffer.from('{"type":"user","n":9'), 0, 20, 0) // same length, other bytes
     closeSync(fd)
-    // nothing new to show yet: no read at all (review M11); the guard speaks at the next growth
+    // nothing new to show yet: no read at all; the guard speaks at the next growth
     expect((await t2.readNew({ keep })).lines).toEqual([])
     appendFileSync(file, '{"type":"user","n":20}\n')
     expect((await t2.readNew({ keep })).rewritten).toBe(true)

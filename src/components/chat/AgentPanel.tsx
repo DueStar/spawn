@@ -1,6 +1,5 @@
 /**
- * The sub-agents beside the conversation (2026-11-19, the owner: "the terminal shows what a sub-agent is doing;
- * the chat should too"):
+ * The sub-agents beside the conversation (the terminal shows what a sub-agent is doing; so does the chat):
  *
  * - AgentStrip — above the composer, one quiet chip per sub-agent at work (background ones too, until they report
  *   back): what it was asked, its latest tool, how long. A chip that finishes says 끝남 a moment, then leaves; the

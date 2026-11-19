@@ -49,7 +49,7 @@ export function prependAnchor(oldHeights: number[], newHeights: number[], added:
 /**
  * A per-row map (the list's measured heights, its ref callbacks) kept the size of the rows: once it holds more than
  * `slack` keys beyond the rows, every key that is neither a row now nor mounted (`keep`) goes. A streaming bubble's
- * `live:<id>` key and every row a reload or a density change dropped go with them (the final review's M4: an all-day
+ * `live:<id>` key and every row a reload or a density change dropped go with them (so an all-day
  * session never grows it without bound). Returns how many went.
  */
 export function pruneToRows<V>(map: Map<string, V>, rows: readonly { key: string }[], keep: { has(key: string): boolean }, slack = 64): number {
@@ -60,7 +60,7 @@ export function pruneToRows<V>(map: Map<string, V>, rows: readonly { key: string
   return n
 }
 
-/** The view is at the bottom: no more than `slack` px left below (the lab's 160) */
+/** The view is at the bottom: no more than `slack` px left below */
 export function atBottom(scrollTop: number, scrollHeight: number, clientHeight: number, slack = 160): boolean {
   return scrollHeight - scrollTop - clientHeight <= slack
 }

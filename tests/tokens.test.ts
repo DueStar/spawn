@@ -34,7 +34,7 @@ function resolve(name: string, depth = 0): string {
   return v
 }
 
-// WCAG relative luminance and contrast ratio, as calm-lab/lab.js ratio()
+// WCAG relative luminance and contrast ratio
 function rgb(c: string): number[] {
   if (c.startsWith('#')) {
     const n = c.length === 4 ? c.replace(/#(.)(.)(.)/, '#$1$1$2$2$3$3') : c
@@ -73,7 +73,7 @@ describe('tokens.css', () => {
     expect(root['--bar-h']).toBe('2px')
   })
 
-  // (2026-11-17: percents of 100%, each size the 100% one scaled and rounded, never under 9px)
+  // (percents of 100%, each size the 100% one scaled and rounded, never under 9px)
   it('holds the text steps exactly (100% on :root, 80–130% by 10)', () => {
     const pick = (o: Record<string, string>) => Object.fromEntries(TYPE.map(k => [k, o[k]]))
     const base = [10, 11, 12, 12, 13, 12, 14, 15, 12]
@@ -140,7 +140,7 @@ describe('tokens.css', () => {
     for (const m of css.matchAll(/([^{}]*\.chat-ch[^{}]*)\{([^}]*)\}/g)) expect(m[2], m[1]).not.toMatch(/--accent/)
   })
 
-  it('find in the conversation (Phase 5): grey highlights over prose, bubbles, code and diff rows keep the text readable', () => {
+  it('find in the conversation: grey highlights over prose, bubbles, code and diff rows keep the text readable', () => {
     expect(root['--find-bg']).toBe('rgba(255, 255, 255, 0.12)')
     expect(root['--find-now-bg']).toBe('rgba(255, 255, 255, 0.28)')
     const over = (tint: string, bg: string) => {
@@ -167,7 +167,7 @@ describe('tokens.css', () => {
     }
   })
 
-  it('a link preview card (Phase 5): its title 4.5:1, its description and site line 3:1, at rest and hovered; hairline, no fill, no yellow', () => {
+  it('a link preview card: its title 4.5:1, its description and site line 3:1, at rest and hovered; hairline, no fill, no yellow', () => {
     const over = (tint: string, bg: string) => {
       const m = tint.match(/^rgba\((\d+),\s*(\d+),\s*(\d+),\s*([\d.]+)\)$/)!
       const [r, g, b, a] = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])]
@@ -186,13 +186,13 @@ describe('tokens.css', () => {
     expect(rule('.chat-og-title')).toMatch(/color:\s*var\(--ink\)/)
     expect(rule('.chat-og-desc')).toMatch(/color:\s*var\(--ink-2\)/)
     expect(rule('.chat-og-site')).toMatch(/color:\s*var\(--ink-3\)/)
-    // a hairline box, the lab's sizes
+    // a hairline box
     expect(rule('.chat-prose a.chat-og')).toMatch(/border:\s*1px solid var\(--line\)/)
     expect(rule('.chat-prose a.chat-og')).toMatch(/max-width:\s*480px/)
     for (const m of chat.matchAll(/([^{}]*\.chat-og[^{}]*)\{([^}]*)\}/g)) expect(m[2], m[1]).not.toMatch(/--accent/)
   })
 
-  it('(Phase 6) the turn summary, the thinking rows, the new-version note and the 채팅 보기 help: only the three greys, on surfaces that hold them', () => {
+  it('the turn summary, the thinking rows, the new-version note and the 채팅 보기 help: only the three greys, on surfaces that hold them', () => {
     const chat = readFileSync(join(ROOT, 'src', 'styles', 'chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const app = readFileSync(join(ROOT, 'src', 'styles', 'widget-expanded.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const colours = (css: string, sel: RegExp) => [...css.matchAll(/([^{}]*)\{([^}]*)\}/g)].filter(m => sel.test(m[1])).flatMap(m => [...m[2].matchAll(/(?:^|;)\s*color:\s*var\((--[\w-]+)\)/g)].map(x => x[1]))
@@ -278,7 +278,7 @@ describe('the two pages apart from the app (toast window, status card)', () => {
   })
 })
 
-// ---------------------------------------------------------------- the guards (calm-style plan, Task 14)
+// ---------------------------------------------------------------- the guards (calm style)
 
 /** Every stylesheet but tokens.css, comments stripped */
 const SHEETS = readdirSync(join(ROOT, 'src', 'styles'))
@@ -362,9 +362,9 @@ describe('the guards: what the calm look allows', () => {
   })
 
   // (each matched exactly: .picked, not .picked-x)
-  // (.w-row-drop: the left list's insertion line, 2026-11-19 — an insert mark like .ins-before)
+  // (.w-row-drop: the left list's insertion line — an insert mark like .ins-before)
   const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-row-drop', '.w-send', '.chat-send', '.w-update', '.set-switch.on', ':focus-visible']
-  // (.w-update: the update button wears the primary colour, the owner's call of 2026-11-17)
+  // (.w-update: the update button wears the primary colour)
   it('(d) yellow only on the chosen session, the picked cell (and its drop / insert marks), send, the update button and focus rings', () => {
     let uses = 0
     for (const r of RULES) {
@@ -400,12 +400,12 @@ describe('the guards: what the calm look allows', () => {
     expect(game, 'chat-game.css').toBeTruthy()
     const rules = rulesOf(game.file, game.text)
     const moving = rules.filter(r => !r.at?.startsWith('@keyframes') && !r.at?.includes('prefers-reduced-motion') && values(r, 'animation(?:-name)?').some(v => v !== 'none'))
-    // (2026-11-17: the working Pokémon's halo and hop, the owner's micro-interaction)
-    // (2026-11-19: the sub-agents at work — a chip comes in, a finished one goes, a running one's dot breathes on the
-    // working Pokémon's beat, the panel slides in; the owner's ask for smooth, natural micro-interactions)
+    // (the working Pokémon's halo and hop)
+    // (the sub-agents at work — a chip comes in, a finished one goes, a running one's dot breathes on the
+    // working Pokémon's beat, the panel slides in)
     expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head::before', '.chat-status.working .chat-pic.head > *',
       '.chat-agent-chip', '.chat-agent-chip.gone', '.chat-agent-chip:not(.gone):not(.wait) .chat-agent-mark i', '.chat-ag-state.run i', '.chat-ag-panel'])
-    // the lab's wildIn (app.css 273–274): 0.5 s, once
+    // the wild Pokémon's entrance: 0.5 s, once
     expect(values(moving[0], 'animation')[0]).toMatch(/^chat-wild-in \.5s cubic-bezier\(\.2, \.8, \.2, 1\) both$/)
     expect([...game.text.matchAll(/@keyframes\s+([\w-]+)/g)].map(m => m[1])).toEqual(['chat-wild-in', 'chat-hop', 'chat-halo', 'chat-chip-in', 'chat-chip-out', 'chat-ag-in'])
     const stop = rules.filter(r => r.at?.includes('prefers-reduced-motion') && /animation\s*:\s*none/.test(r.body))

@@ -103,7 +103,7 @@ const en: Record<string, string> = {
   // re-review fixes: a compaction summary as a notice, an answer copied without its cut part
   '대화가 요약되어 이어졌어요': 'The conversation was summarized and continues',
   '잘린 부분은 복사되지 않았어요': "The cut part wasn't copied",
-  // the composer (Phase 3)
+  // the composer
   '에이전트에게 지시하기…': 'Give the agent an instruction…',
   '이미지 붙이기': 'Attach an image',
   '붙여넣은 이미지 {n}': 'Pasted image {n}',
@@ -147,14 +147,14 @@ const en: Record<string, string> = {
   '바꾸려면 터미널에서 해요': 'Change it in the terminal',
   '권한 모드': 'Permission mode',
   '입력란': 'Message box',
-  // the side panel's box while the chat is shown; the empty state (Phase 3)
+  // the side panel's box while the chat is shown; the empty state
   '채팅 아래 입력란에서 보내요': 'Send from the box under the chat',
   '입력란으로': 'To the input box',
   '아래 입력란에 지시를 적어 보내요. 대화가 여기에 보여요': 'Write your instruction in the box below. The conversation shows here',
-  // the @ mention (Phase 3)
+  // the @ mention
   '파일': 'Files',
   '파일 멘션': 'Mention a file',
-  // the / menu (2026-11-19)
+  // the / menu
   '맞는 명령이 없어요': 'No matching commands',
   '내 명령': 'Mine',
   '프로젝트': 'Project',
@@ -225,7 +225,7 @@ const en: Record<string, string> = {
   '명령 결과': 'Command output',
   '출력이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요': 'The output is long, so only the start is shown. See the rest in the terminal',
   '맞는 파일이 없어요': 'No matching files',
-  // the answer buttons (Phase 4)
+  // the answer buttons
   '아래 카드에서 답해 주세요': 'Answer it in the card below',
   '이 명령을 실행해도 될까요?': 'Allow this command?',
   '이 파일을 고쳐도 될까요?': 'Allow this edit?',
@@ -271,7 +271,7 @@ const en: Record<string, string> = {
   '{name}의 설명: {text}': "{name}'s description: {text}",
   '보낸 답을 {name}{iga} 처리하는 중이에요. 끝나면 보낼 수 있어요': '{name} is still working on your answer. You can send once it is done',
   '{name}{iga} 답을 기다리고 있어요. 터미널에서 먼저 답해 주세요': '{name} is waiting for your answer. Answer it in the terminal first',
-  // the 변경 사항 panel (Phase 5)
+  // the 변경 사항 panel
   '변경 사항': 'Changes',
   '변경 사항 보기': 'Show changes',
   '변경 사항 닫기': 'Close changes',
@@ -295,7 +295,7 @@ const en: Record<string, string> = {
   '변경 사항 패널 폭': 'Changes panel width',
   '파일 목록': 'Files',
   '이 수정 보기': 'Show this edit',
-  // density and thinking (Phase 5)
+  // density and thinking
   '보기 정도': 'Detail',
   '기본#density': 'Default',
   '도구는 한 줄 요약, 실패와 질문은 늘 펼침': 'Tools in one line; failures and questions always shown',
@@ -306,10 +306,10 @@ const en: Record<string, string> = {
   '생각': 'Thinking',
   '생각 · {time}': 'Thinking · {time}',
   "생각한 내용은 기록에 남지 않았어요": "The thinking itself isn't in the record",
-  // the turn summary (Phase 5; its step count's words are in chatGame.ts)
+  // the turn summary (its step count's words are in chatGame.ts)
   '도구 {n}회': '{n} tool {n|call|calls}',
   '파일 {n}개 바꿈': '{n} {n|file|files} changed',
-  // find in the conversation (Phase 5)
+  // find in the conversation
   '대화에서 찾기': 'Find in conversation',
   '찾을 말': 'Find',
   '결과 없음': 'No results',
@@ -318,9 +318,9 @@ const en: Record<string, string> = {
   '다음 결과': 'Next',
   '찾기 닫기': 'Close find',
   '불러온 대화에서만 찾아요': 'Searching only what is loaded',
-  // link preview cards (Phase 5)
+  // link preview cards
   '링크 미리보기: {title}': 'Link preview: {title}',
-  // the effort menu (2026-11-19; 자동 and 보통 come from settings)
+  // the effort menu (자동 and 보통 come from settings)
   '생각 정도': 'Effort',
   '생각 정도를 바꿨어요 · {level}': 'Effort changed · {level}',
   '낮음': 'Low',
@@ -434,7 +434,7 @@ const ja: Record<string, string> = {
   '채팅 보기를 그리지 못했어요': 'チャット表示を描画できませんでした',
   '대화가 요약되어 이어졌어요': '会話は要約されて続いています',
   '잘린 부분은 복사되지 않았어요': '省略された部分はコピーされていません',
-  // the composer (Phase 3)
+  // the composer
   '에이전트에게 지시하기…': 'エージェントに指示する…',
   '이미지 붙이기': '画像を添付',
   '붙여넣은 이미지 {n}': '貼り付けた画像 {n}',
@@ -478,14 +478,14 @@ const ja: Record<string, string> = {
   '바꾸려면 터미널에서 해요': '変更はターミナルで',
   '권한 모드': '権限モード',
   '입력란': '入力欄',
-  // the side panel's box while the chat is shown; the empty state (Phase 3)
+  // the side panel's box while the chat is shown; the empty state
   '채팅 아래 입력란에서 보내요': 'チャットの下の入力欄から送ります',
   '입력란으로': '入力欄へ',
   '아래 입력란에 지시를 적어 보내요. 대화가 여기에 보여요': '下の入力欄に指示を書いて送ってください。会話はここに表示されます',
-  // the @ mention (Phase 3)
+  // the @ mention
   '파일': 'ファイル',
   '파일 멘션': 'ファイルを指定',
-  // the / menu (2026-11-19)
+  // the / menu
   '맞는 명령이 없어요': '一致するコマンドがありません',
   '내 명령': '自分',
   '프로젝트': 'プロジェクト',
@@ -556,7 +556,7 @@ const ja: Record<string, string> = {
   '명령 결과': 'コマンドの結果',
   '출력이 길어서 앞부분만 보여요. 나머지는 터미널에서 보세요': '出力が長いため最初だけ表示しています。続きはターミナルで確認してください',
   '맞는 파일이 없어요': '一致するファイルがありません',
-  // the answer buttons (Phase 4)
+  // the answer buttons
   '아래 카드에서 답해 주세요': '下のカードで答えてください',
   '이 명령을 실행해도 될까요?': 'このコマンドを実行してもいいですか?',
   '이 파일을 고쳐도 될까요?': 'このファイルを編集してもいいですか?',
@@ -602,7 +602,7 @@ const ja: Record<string, string> = {
   '{name}의 설명: {text}': '{name}の説明: {text}',
   '보낸 답을 {name}{iga} 처리하는 중이에요. 끝나면 보낼 수 있어요': '{name}が回答を処理しています。終わると送信できます',
   '{name}{iga} 답을 기다리고 있어요. 터미널에서 먼저 답해 주세요': '{name}が回答を待っています。先にターミナルで答えてください',
-  // the 변경 사항 panel (Phase 5)
+  // the 변경 사항 panel
   '변경 사항': '変更',
   '변경 사항 보기': '変更を表示',
   '변경 사항 닫기': '変更を閉じる',
@@ -626,7 +626,7 @@ const ja: Record<string, string> = {
   '변경 사항 패널 폭': '変更パネルの幅',
   '파일 목록': 'ファイル一覧',
   '이 수정 보기': 'この編集を表示',
-  // density and thinking (Phase 5)
+  // density and thinking
   '보기 정도': '表示の詳しさ',
   '기본#density': '基本',
   '도구는 한 줄 요약, 실패와 질문은 늘 펼침': 'ツールは1行に要約、失敗と質問は常に表示',
@@ -639,7 +639,7 @@ const ja: Record<string, string> = {
   '생각한 내용은 기록에 남지 않았어요': '思考の内容は記録に残っていません',
   '도구 {n}회': 'ツール{n}回',
   '파일 {n}개 바꿈': 'ファイル{n}個を変更',
-  // find in the conversation (Phase 5)
+  // find in the conversation
   '대화에서 찾기': '会話内を検索',
   '찾을 말': '検索',
   '결과 없음': '結果なし',
@@ -649,7 +649,7 @@ const ja: Record<string, string> = {
   '찾기 닫기': '検索を閉じる',
   '불러온 대화에서만 찾아요': '読み込んだ会話だけを検索します',
   '링크 미리보기: {title}': 'リンクプレビュー:{title}',
-  // the effort menu (2026-11-19; 자동 and 보통 come from settings)
+  // the effort menu (자동 and 보통 come from settings)
   '생각 정도': '思考の深さ',
   '생각 정도를 바꿨어요 · {level}': '思考の深さを変更しました · {level}',
   '낮음': '低',

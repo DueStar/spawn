@@ -1,5 +1,5 @@
 /**
- * Guards over the whole chat view (Phase 2, the read-only lens): it sends nothing to a
+ * Guards over the whole chat view: it sends nothing to a
  * terminal and changes no setting of Claude Code, it reads no credentials, it has no
  * HTML path, and every one of its strings is in Korean, English and Japanese.
  *
@@ -37,7 +37,7 @@ describe('the chat view sends nothing and changes nothing', () => {
     for (const f of [...MAIN, ...PAGE]) {
       const src = code(read(f))
       for (const bad of [/terminals\.write/, /terminals\.send/, /sendInstruction/, /pty\.write|\.write\(/, /['"`]\/model/, /['"`]\/config/, /['"`]\/login/, /['"`]\/logout/, /['"`]\/permissions/, /settings\.json/]) {
-        // (2026-11-17, the owner's call: the control row's model menu sends `/model <alias>`, from the composer only)
+        // (the control row's model menu sends `/model <alias>`, from the composer only)
         if (f.endsWith('Composer.tsx') && String(bad) === String(/['"`]\/model/)) {
           expect([...src.matchAll(/['"`]\/model/g)].map(m => src.slice(m.index!, m.index! + 17))).toEqual(['`/model ${alias}`'])
           continue
@@ -55,8 +55,8 @@ describe('the chat view sends nothing and changes nothing', () => {
       const next = host.slice(start + 1).search(/\n  (?:async )?function /)
       return [start, next < 0 ? host.length : start + 1 + next]
     }
-    // (cycleMode: the mode menu's one Shift+Tab, 2026-11-17)
-    // (dialogKey: the dialog card's keys, 2026-11-17)
+    // (cycleMode: the mode menu's one Shift+Tab)
+    // (dialogKey: the dialog card's keys)
     const spans = ['send', 'submit', 'interrupt', 'cycleMode', 'dialogKey'].map(span)
     const at = [...host.matchAll(/typeForChat\(/g)].map(m => m.index!)
     expect(at).toHaveLength(5)
@@ -129,7 +129,7 @@ describe('the chat view sends nothing and changes nothing', () => {
   })
 })
 
-describe('the composer (Phase 3): its look and its safety', () => {
+describe('the composer: its look and its safety', () => {
   const css = read(join(ROOT, 'src', 'styles', 'chat.css')).replace(/\/\*[\s\S]*?\*\//g, '')
   const rules = [...css.matchAll(/([^{}]+)\{([^}]*)\}/g)].map(m => ({ sel: m[1].trim(), body: m[2] }))
   const COMPOSER = ['Composer.tsx', 'QueueStrip.tsx', 'ImageChips.tsx', 'Lightbox.tsx', 'ControlRow.tsx'].map(f => join(ROOT, 'src', 'components', 'chat', f))
@@ -187,7 +187,7 @@ describe('the composer (Phase 3): its look and its safety', () => {
     const src = read(join(ROOT, 'src', 'components', 'chat', 'Composer.tsx'))
     expect(src).toContain('readDim: deps ? deps.termDim : termDim')
     expect(src).toContain('cardNote(shownCard(status?.asks)), r.row)')
-    // (2026-11-17: the words quoted, and offered to be brought here or cleared — never "go to the terminal")
+    // (the words quoted, and offered to be brought here or cleared — never "go to the terminal")
     expect(src).toContain('Claude Code 입력란에 쓰던 글이 남아 있어요: “{text}”')
     expect(src).toContain("t('가져와서 이어 쓰기')")
     expect(src).toContain("t('지우고 보내기')")
@@ -195,7 +195,7 @@ describe('the composer (Phase 3): its look and its safety', () => {
   })
 })
 
-describe('the buttons (Phase 4): one place builds an answer, and it never names a settings file', () => {
+describe('the buttons: one place builds an answer, and it never names a settings file', () => {
   const walk = (dir: string, re: RegExp): string[] => (existsSync(dir) ? readdirSync(dir, { withFileTypes: true }).flatMap(d => (d.isDirectory() ? walk(join(dir, d.name), re) : re.test(d.name) ? [join(dir, d.name)] : [])) : [])
   const ELECTRON = walk(join(ROOT, 'electron'), /\.cjs$/)
   const SRC = walk(join(ROOT, 'src'), /\.tsx?$/)
@@ -240,22 +240,22 @@ describe('the buttons (Phase 4): one place builds an answer, and it never names 
   })
 })
 
-describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, three storage keys, logs without content', () => {
+describe('guards: one animation file, yellow only on send, three storage keys, logs without content', () => {
   const STYLES = join(ROOT, 'src', 'styles')
   const sheet = (f: string) => read(join(STYLES, f)).replace(/\/\*[\s\S]*?\*\//g, '')
   const rulesIn = (css: string) => [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(m => ({ sel: m[1].trim().replace(/\s+/g, ' '), body: m[2] }))
   const SHEETS = readdirSync(STYLES).filter(f => f.endsWith('.css'))
   /** The chat view's selectors (Phases 2–5): its own classes and the window's parts it added */
   const CHATTY = /\.(chat-|w-chat-|w-ch-|w-ch\b|w-chg|w-dens|dens-|find-now)/
-  /** The page files of the chat view, Phase 5's included */
+  /** The page files of the chat view */
   const PAGE5 = [...PAGE, join(ROOT, 'src', 'changesWidth.ts')]
 
   it('every animation of the chat view is in chat-game.css (its one: chat-wild-in); chat.css has none; the other sheets\' keyframes are 1.4.0\'s', () => {
     expect(sheet('chat.css')).not.toMatch(/animation|@keyframes/)
     const frames = SHEETS.flatMap(f => [...sheet(f).matchAll(/@keyframes\s+([\w-]+)/g)].map(m => `${f}: ${m[1]}`)).sort()
-    // release 1.4.0 (cff52ac) had exactly these six; Phase 5 adds chat-game.css's one
-    // (2026-11-17: the working Pokémon's hop and halo, the owner's micro-interaction, in chat-game.css too)
-    // (2026-11-19: the sub-agents at work — a chip comes in and goes, the panel slides in — in chat-game.css too)
+    // release 1.4.0 (cff52ac) had exactly these six; the chat view adds chat-game.css's one
+    // (the working Pokémon's hop and halo, in chat-game.css too)
+    // (the sub-agents at work — a chip comes in and goes, the panel slides in — in chat-game.css too)
     expect(frames).toEqual(['chat-game.css: chat-ag-in', 'chat-game.css: chat-chip-in', 'chat-game.css: chat-chip-out', 'chat-game.css: chat-halo', 'chat-game.css: chat-hop', 'chat-game.css: chat-wild-in', 'pokedex.css: wMonHop', 'toast.css: toastIn', 'toast.css: toastOut', 'widget.css: wLimitPulse', 'widget.css: wLimitShimmer', 'widget.css: wNoteIn'])
     // no rule of the chat view moves outside chat-game.css
     for (const f of SHEETS.filter(x => x !== 'chat-game.css')) {
@@ -286,9 +286,9 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     const literals = (dir: string): string[] => readdirSync(dir, { withFileTypes: true }).flatMap(d => (d.isDirectory() ? literals(join(dir, d.name))
       : /\.tsx?$/.test(d.name) ? [...read(join(dir, d.name)).matchAll(/['"`](spawn-[a-z0-9-]+)['"`]/g)].map(m => m[1]) : []))
     const all = [...new Set(literals(join(ROOT, 'src')))].sort()
-    // release 1.4.0's (cff52ac) keys, and the three of Phase 5
-    // (+ spawn-pane-fracs, 2026-11-19: the split view's dragged pane widths, Widget.tsx — not the chat view's)
-    // (+ spawn-list-order / spawn-list-used, 2026-11-19: the left list's 직접 order and last-used times, src/sessionOrder.ts)
+    // release 1.4.0's (cff52ac) keys, and the chat view's three
+    // (+ spawn-pane-fracs: the split view's dragged pane widths, Widget.tsx — not the chat view's)
+    // (+ spawn-list-order / spawn-list-used: the left list's 직접 order and last-used times, src/sessionOrder.ts)
     const OLD = ['spawn-box-sort', 'spawn-carry', 'spawn-dex-viewed', 'spawn-list-mode', 'spawn-list-order', 'spawn-list-used', 'spawn-pane-fracs', 'spawn-rank-npc', 'spawn-seen-version', 'spawn-session-cast', 'spawn-side-hidden', 'spawn-side-w', 'spawn-term-font', 'spawn-text-size']
     const NEW = ['spawn-changes-open', 'spawn-changes-w', 'spawn-chat-density']
     expect(all).toEqual([...OLD, ...NEW].sort())
@@ -315,8 +315,8 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
     ]
     // what a log line may interpolate: a fixed word (a reason, a kind, a state, an event's name, an error's code or
     // kind through errWord) or a number; never a message, a path, a URL, a host or an item's text
-    // (Phase 6: `number` and `verdict`, the lens's line for a version first seen in a transcript: digits and a fixed word)
-    // (the final review M8: an error only through errWord, a version only through versionWord; no err?.code, err?.name or
+    // (`number` and `verdict`: the lens's line for a version first seen in a transcript: digits and a fixed word)
+    // (an error only through errWord, a version only through versionWord; no err?.code, err?.name or
     // a raw `claude --version` line any more)
     const ALLOWED = new Set(['code', 'why', 'status', 'event', 'word', 'k.count', 'c.kind', 'c.state', "c.why ?? ''", 'versionWord(version)', 'number', 'verdict',
       'errWord(err)',
@@ -363,8 +363,8 @@ describe('Phase 5 guards (Task 5.11): one animation file, yellow only on send, t
       if (j.packages?.['']) delete j.packages[''].version
       return createHash('sha256').update(JSON.stringify(j)).digest('hex')
     }
-    // (2026-11-17: one dependency added on purpose, @phosphor-icons/react 2.1.10 (MIT) — the owner's icon system;
-    // anything else new still fails here; 2026-11-19: build.nsis and the nsis target, the Windows installer — no dependency)
+    // (one dependency added on purpose, @phosphor-icons/react 2.1.10 (MIT) — the icon system;
+    // anything else new still fails here; build.nsis and the nsis target, the Windows installer, add no dependency)
     expect(sha('package.json')).toBe('d4f0f830bf4ee497fe116393571e5472558e6b162eadb7f7a461e16377cf5599')
     expect(sha('package-lock.json')).toBe('bbc6b9de9af963d8b8cbdbc659d634095d1b89e030f9bbbd86f6b33c7c2a4976')
   })

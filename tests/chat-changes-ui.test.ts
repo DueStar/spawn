@@ -1,5 +1,5 @@
 /**
- * The 변경 사항 panel (Phase 5, Task 5.4): the file tree over the index's files, the gaps between a
+ * The 변경 사항 panel: the file tree over the index's files, the gaps between a
  * single edit's hunks, each edit drawn on its own and in order from what the transcript recorded (a
  * missing, cut or stale edit said so in the plan's words), the session header unchanged without the
  * chat's tools, the left panel's auto-fold never stored, and every string in ko / en / ja.
@@ -50,7 +50,7 @@ async function editsOf(index: any, file: string) {
 let index: any
 beforeAll(async () => { index = await indexed() })
 
-/** (2026-11-17: icons belong to the icon system, tests/icons.test.ts; the captures check the markup around them) */
+/** (icons belong to the icon system, tests/icons.test.ts; the captures check the markup around them) */
 const noSvg = (h: string) => h.replace(/<svg[\s\S]*?<\/svg>/g, '<svg/>')
 
 describe('fileTree', () => {
@@ -166,7 +166,7 @@ describe('SessionHeader', () => {
     sprite: '/sprites/pokemon/icon/27.png', cwd: 'C:/code/shop-web', renaming: false,
     onRenameStart() {}, onRenameCommit() {}, onRenameCancel() {}, closing: false, onClose() {}, onCloseCancel() {},
   }
-  // Captured from the component before the chat's tools were added (Task 5.4): without `chatTools` the header stays this
+  // Captured from the component before the chat's tools were added: without `chatTools` the header stays this
   const CAP_CHAT = '<div class="w-sess-head" title="C:/code/shop-web"><img class="w-sess-head-pic" src="/sprites/pokemon/icon/27.png" alt="" draggable="false"/><span class="w-sess-head-name" title="더블클릭해서 세션 이름 바꾸기">로그인 리다이렉트 고치기</span><span class="w-row-branch w-sess-head-branch" title="git 브랜치">fix/login-redirect</span><span class="w-sess-head-proj">shop-web</span><span class="w-sess-head-spacer"></span><div class="w-lens" role="group" aria-label="보기 방식"><button type="button" class="on" aria-pressed="true" title="모든 세션을 채팅으로 보기"><svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"></path></svg><span class="w-lens-word">채팅</span></button><button type="button" aria-pressed="false" title="모든 세션을 터미널로 보기"><svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1.8"></rect><path d="M4.5 6.5 6.5 8l-2 1.5M8 10h3"></path></svg><span class="w-lens-word">터미널</span></button><span class="w-lens-note" role="status"></span></div><button class="w-sess-head-close" title="세션 닫기" aria-label="세션 닫기">×</button></div>'
   const CAP_TERM = '<div class="w-sess-head" title="C:/code/shop-web"><img class="w-sess-head-pic" src="/sprites/pokemon/icon/27.png" alt="" draggable="false"/><span class="w-sess-head-name" title="더블클릭해서 세션 이름 바꾸기">로그인 리다이렉트 고치기</span><span class="w-row-branch w-sess-head-branch" title="git 브랜치">fix/login-redirect</span><span class="w-sess-head-proj">shop-web</span><span class="w-sess-head-spacer"></span><div class="w-lens" role="group" aria-label="보기 방식"><button type="button" aria-pressed="false" title="모든 세션을 채팅으로 보기"><svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"></path></svg><span class="w-lens-word">채팅</span></button><button type="button" class="on" aria-pressed="true" title="모든 세션을 터미널로 보기"><svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1.8"></rect><path d="M4.5 6.5 6.5 8l-2 1.5M8 10h3"></path></svg><span class="w-lens-word">터미널</span></button><span class="w-lens-note" role="status"></span></div><button class="w-sess-head-close" title="세션 닫기" aria-label="세션 닫기">×</button></div>'
 

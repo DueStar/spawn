@@ -1,8 +1,8 @@
 'use strict'
 
 /**
- * chatTail.cjs — one Claude Code transcript file, read for the chat lens
- * (Phase 2). A session's transcript can be hundreds of MB, so it is never
+ * chatTail.cjs — one Claude Code transcript file, read for the chat lens.
+ * A session's transcript can be hundreds of MB, so it is never
  * read whole:
  *
  *   readTail   the end first: backwards in chunks until `want` kept lines,
@@ -230,7 +230,7 @@ function createTail(file, { fs = require('fs').promises, chunk = 1 << 20, yieldE
   function state() { return { startOffset, endOffset, size } }
 
   /**
-   * The guard alone (Phase 5, an edit read again by its offset): false when the file is shorter than
+   * The guard alone (an edit read again by its offset): false when the file is shorter than
    * what was read or its head / edge bytes changed. Nothing is read past the end read so far.
    */
   function verify() {

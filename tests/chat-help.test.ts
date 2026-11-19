@@ -1,5 +1,5 @@
 /**
- * Phase 6: the new-version note made actionable (Task 6.2) and the 채팅 보기 help in 설정 › 세션 (Task 6.8).
+ * The new-version note made actionable, and the 채팅 보기 help in 설정 › 세션.
  *
  * - The note keeps its words and gains 자세히 (aria-expanded): one more line on what is off for such a version (the
  *   buttons' holds) and 설정에서 더 보기, which opens 설정 › 세션 with the help open.

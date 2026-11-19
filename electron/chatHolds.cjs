@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatHolds.cjs — the chat's held hooks (Phase 4, the answer buttons): a
+ * chatHolds.cjs — the chat's held hooks (the answer buttons): a
  * registry of the requests Claude Code is waiting on, answered from the chat
  * once or handed back to the terminal. Pure: timers, ids and the log are
  * injected; nothing here reads a body, writes a file or touches a terminal.
@@ -86,7 +86,7 @@ function permissionBody(choice, rules) {
 
 /**
  * An AskUserQuestion's answer through its held PreToolUse: the call's input as received, every field
- * of it kept (review M10: `updatedInput` replaces the input whole), with the chosen label as its
+ * of it kept (`updatedInput` replaces the input whole), with the chosen label as its
  * answer. `input` is the tool input (or, as before, its questions array alone).
  */
 function questionBody(input, label) {
@@ -102,9 +102,9 @@ function questionBody(input, label) {
 const MULTI_JOIN = ', '
 
 /**
- * Several questions at once, or a multi-select one (2026-11-17): `picked` holds each question's chosen labels, in
+ * Several questions at once, or a multi-select one: `picked` holds each question's chosen labels, in
  * the questions' order; the answer maps each question's text to its label, a multi-select's labels joined. The whole
- * input is kept (review M10). Verified shape: several questions (the record's `answers`, one entry per question);
+ * input is kept. Verified shape: several questions (the record's `answers`, one entry per question);
  * the join of a multi-select is Claude Code's own dialog's, not yet seen in a record here.
  */
 function questionsBody(input, picked) {
@@ -158,8 +158,8 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
 
   /**
    * The one way a hold ends: its state, its timer gone, at most one response. An answer that could not
-   * be written (the client went that instant: `respond` says false, or throws) is `gone`, never "sent"
-   * (review M6). Returns the state it ended in, or null when it had ended already.
+   * be written (the client went that instant: `respond` says false, or throws) is `gone`, never "sent".
+   * Returns the state it ended in, or null when it had ended already.
    */
   function finish(h, state, body, why, choice) {
     if (h.done) return null
@@ -208,10 +208,10 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
     if (h.kind === 'permission') d = { rules: cleanRules(data?.rules) ?? [] }
     else {
       const okSet = (l) => Array.isArray(l) && l.length >= 2 && l.length <= 6 && l.every(x => typeof x === 'string')
-      // (the call's whole input, when the reader sent it: the answer keeps every field of it; review M10)
+      // (the call's whole input, when the reader sent it: the answer keeps every field of it)
       const input = isObj(data?.input) ? data.input : { questions: data?.questions }
       const qs = Array.isArray(input.questions) ? input.questions : null
-      // each question's labels (several questions or a multi-select, 2026-11-17), else the one question's
+      // each question's labels (several questions or a multi-select), else the one question's
       const sets = Array.isArray(data?.sets) ? data.sets : okSet(data?.labels) ? [data.labels] : null
       if (!qs || !sets || sets.length !== qs.length || sets.length < 1 || sets.length > 4 || !sets.every(okSet)) { finish(h, 'released', null, 'shape'); return false }
       d = { questions: qs, labels: [...sets[0]], sets: sets.map(l => [...l]), multi: qs.map(q => isObj(q) && q.multiSelect === true), input }
@@ -266,7 +266,7 @@ function createHolds({ timers, log = () => {}, limits = HOLD, onChange = () => {
       if (choice === 'always' && !h.data.rules.length) return { ok: false, reason: 'not-answerable' }
       body = permissionBody(choice, h.data.rules)
     } else if (choice === 'options') {
-      // several questions or a multi-select: each question's picked options, by index — and (2026-11-19) each one's
+      // several questions or a multi-select: each question's picked options, by index — and each one's
       // own words, Claude Code's "Other" row (Type something): the words are that question's answer, after its picks
       // in a multi-select, alone in a single-select (as the terminal's dialog answers it)
       const { sets, multi } = h.data

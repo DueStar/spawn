@@ -1,5 +1,5 @@
 /**
- * The split view (2026-11-19, the owner: "not one tab at a time — two or three chats side by side"): the open session
+ * The split view (two or three chats side by side, not one tab at a time): the open session
  * tabs (src/sessionTabs.ts) shown at once, side by side, each pane with its own header, conversation and composer (or
  * its terminal). Pure: which sessions get a pane, and where each pane sits.
  *

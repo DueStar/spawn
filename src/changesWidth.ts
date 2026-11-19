@@ -1,12 +1,12 @@
 /**
- * The 변경 사항 panel's width and room (the chat view, Phase 5): dragged by its left edge between
- * 260 and 560px (320 by default; 288 in a window under 1200 with nothing remembered, as the lab's
- * `tight`), remembered per PC in page storage, as the left panel's (src/sideWidth.ts). Double-click
+ * The 변경 사항 panel's width and room (the chat view): dragged by its left edge between
+ * 260 and 560px (320 by default; 288 in a window under 1200 with nothing remembered),
+ * remembered per PC in page storage, as the left panel's (src/sideWidth.ts). Double-click
  * the edge (or Home on it) for the default.
  *
  * The conversation keeps at least CONVO_FLOOR. While the left panel, the conversation (at CONVO_FIT)
- * and the open panel do not fit side by side, the left panel folds to the rail by itself (`autoFold`,
- * the lab's `narrow` at the default widths: 300 + 320 + 620 = 1240). That fold is derived, never
+ * and the open panel do not fit side by side, the left panel folds to the rail by itself (`autoFold`;
+ * at the default widths: 300 + 320 + 620 = 1240). That fold is derived, never
  * stored: closing the panel or widening the window brings the left panel back. A window too narrow
  * even folded has no panel (`canOpen`).
  */

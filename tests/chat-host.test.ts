@@ -100,11 +100,11 @@ describe('enable', () => {
     expect(s.host.state()).toEqual({ on: true, hooks: null, reason: 'starting' })
     await p
     await s.host.ready()
-    // (each session's entries name its terminal: a function of the terminal's id; review I-4)
+    // (each session's entries name its terminal: a function of the terminal's id)
     const st = s.host.state()
     expect({ ...st, hooks: undefined }).toEqual({ on: true, hooks: undefined, version: '2.1.323 (Claude Code)' })
     const T = '11111111-1111-4111-8111-111111111111'
-    // (a version in the verified range: the buttons' holds too, Phase 4)
+    // (a version in the verified range: the buttons' holds too)
     expect(st.hooks(T)).toEqual(chatHookEntries({ port: 4321, token: 'ab'.repeat(24), id: T, holds: true }))
     expect(s.endpoints).toHaveLength(1)
     expect(s.workers).toHaveLength(1)
@@ -250,7 +250,7 @@ describe('the worker', () => {
 
   it('the endpoint is asked for raw bodies', () => {
     const src = readFileSync(join(__dirname, '..', 'electron', 'chatHost.cjs'), 'utf8')
-    // (the registry only while new holds may open: the final review's M6)
+    // (the registry only while new holds may open)
     expect(src).toContain('makeEndpoint({ onHook, onArrive, log, raw: true, holds: () => (holdsOpen ? holds : null) })')
   })
 
@@ -315,7 +315,7 @@ describe('IPC', () => {
     expect(w.posted.at(-1)).toEqual({ t: 'close', id: 'c1' })
   })
 
-  it('changes / change-file (Phase 5) are asked of the worker with plain values; no worker: { ok: false }', async () => {
+  it('changes / change-file are asked of the worker with plain values; no worker: { ok: false }', async () => {
     const s = setup()
     await s.host.enable()
     const ipc = fakeIpc()
@@ -423,7 +423,7 @@ describe('main.cjs: nothing of it unless the switches are on', () => {
   })
 })
 
-// review I6 / M22: the version gate arms from a cached verdict for the same binary at once, and
+// the version gate arms from a cached verdict for the same binary at once, and
 // re-probes in the background (never blocking a session's start); newer versions are armed with the note
 describe('the version gate, cached and re-probed', () => {
   function cacheFs(initial: string | null) {
@@ -547,7 +547,7 @@ describe('binaryStamp', () => {
   })
 })
 
-describe('the re-review (rereview.md): the version cache, the stamp, a disarmed host\'s worker', () => {
+describe('the version cache, the stamp, a disarmed host\'s worker', () => {
   function memFs(initial: Record<string, string> = {}) {
     const files = new Map<string, string>(Object.entries(initial))
     return {
@@ -642,7 +642,7 @@ describe('the real trial: a chat settings file left by an earlier run', () => {
   })
 })
 
-describe('Phase 6: every part per version verdict (ok / new / old / unknown), at enable and after a mid-run change', () => {
+describe('every part per version verdict (ok / new / old / unknown), at enable and after a mid-run change', () => {
   const T = '11111111-1111-4111-8111-111111111111'
   const VERSIONS: Record<string, string | null> = { ok: '2.1.325 (Claude Code)', new: '2.3.0 (Claude Code)', old: '2.0.9 (Claude Code)', unknown: null }
   /** What each part does for a host on `verdict` (the worker answers whatever it is asked) */
@@ -655,7 +655,7 @@ describe('Phase 6: every part per version verdict (ok / new / old / unknown), at
     if (w) w.postMessage = (m: any) => { w.posted.push(m); if (m.req) queueMicrotask(() => w.send({ t: 'reply', req: m.req, result: m.t === 'changes' ? { ok: true, summary: { v: 1, state: 'ready', files: 0, edits: 0, added: 0, removed: 0, unknown: 0 }, files: [], agentsUnread: 0 } : m.t === 'preview' ? { ok: true, card: { url: m.url, site: 'a.example', via: null, title: 'T', description: '', image: null } } : { ok: true } })) }
     const open = await ipc.call('chat:open', 'c1')
     const changes = await ipc.call('chat:changes', 'c1')
-    // (for the view just opened: main asks the worker only for an open view; the final review's M2)
+    // (for the view just opened: main asks the worker only for an open view)
     const preview = await ipc.call('chat:preview', { id: 'c1', url: 'https://a.example/' })
     return {
       hooks: st.hooks ? st.hooks(T) : null,
@@ -721,7 +721,7 @@ describe('Phase 6: every part per version verdict (ok / new / old / unknown), at
   })
 })
 
-describe('Phase 6 drills: the endpoint cannot listen, the worker goes', () => {
+describe('drills: the endpoint cannot listen, the worker goes', () => {
   it('listen fails (EADDRINUSE): not left starting — reason failed with a log line, ready() settles, nothing waits; enabling again works', async () => {
     let fail = true
     const s = setup({ extra: { makeEndpoint: ({ onHook }: any) => { const e = fakeEndpoint(); e.onHook = onHook; if (fail) e.listen = vi.fn(async () => { throw Object.assign(new Error('in use'), { code: 'EADDRINUSE' }) }); return e } } })
@@ -781,7 +781,7 @@ describe('Phase 6 drills: the endpoint cannot listen, the worker goes', () => {
   })
 })
 
-describe('Phase 6 trial: Claude Code updated past the verified range mid-run', () => {
+describe('Claude Code updated past the verified range mid-run', () => {
   it('ok → new: the running worker is told the new version (the open views\' note), once; back to ok, told again', async () => {
     let v: string | null = '2.1.325 (Claude Code)'
     let stamp = 'u|1|1'

@@ -1,5 +1,5 @@
 /**
- * What a tool row in the chat view says (Phase 2): its icon, its label (a Korean key,
+ * What a tool row in the chat view says: its icon, its label (a Korean key,
  * translated where it is drawn), the detail beside it (a file, a pattern, a command's
  * description …) and the quiet words on its right (running, waiting on the terminal,
  * rejected, stopped, how long it took). Every word is neutral, so it can show in

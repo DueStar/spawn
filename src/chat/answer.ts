@@ -1,5 +1,5 @@
 /**
- * The answer cards' pure parts (Phase 4): what a card shows of a command or a file's text, whether a
+ * The answer cards' pure parts: what a card shows of a command or a file's text, whether a
  * click on one of its buttons was meant for it, and which card the surface shows.
  *
  * A card shows what Claude Code asks exactly: no markdown, nothing cut, in logical order (the CSS keeps
@@ -80,7 +80,7 @@ export function visibleText(s: string, { ws = false }: { ws?: boolean } = {}): T
 
 /**
  * How long a card must have been on the screen — painted, with the window in front — before a pointer
- * press on it counts (review I2: a press already on its way, or the click that brings the window
+ * press on it counts (a press already on its way, or the click that brings the window
  * forward, was meant for what was there). Firefox's own dialogs wait a second.
  */
 export const ARM_MS = 800
@@ -110,7 +110,7 @@ export function clickAccepted({ detail, downAt, shownAt, wokeAt = 0 }: { detail:
 export const answerable = (card: AskCard) => card.state === 'open' && card.holdId !== null && !card.cut
 
 /**
- * The card the surface shows (review M7): the oldest one that can be answered here, else the oldest.
+ * The card the surface shows: the oldest one that can be answered here, else the oldest.
  * A read-only card (a plan, one too long, one handed back) never hides one that can be answered.
  */
 export function shownCard(asks: readonly AskCard[] | undefined | null): AskCard | null {
@@ -119,8 +119,8 @@ export function shownCard(asks: readonly AskCard[] | undefined | null): AskCard 
 }
 
 /**
- * Whether the terminal's screen is read for a dialog the chat shows as its own card (2026-11-19, the owner's report:
- * "when I must choose several times in a row, I can choose only once"): whenever no card can be answered here — none,
+ * Whether the terminal's screen is read for a dialog the chat shows as its own card (so several
+ * dialogs in a row can each be answered from the chat): whenever no card can be answered here — none,
  * or every one passed to the terminal, timed out (main handed it back: the terminal draws it now), or answered and
  * waiting for Claude Code to finish with it. Until 1.9.0 only cards passed to the terminal let it be read, so a dialog
  * that came while an answered card waited for its tool to end (the next permission its hook did not hold, a command's
@@ -134,7 +134,7 @@ export function screenDialogs(asks: readonly AskCard[] | undefined | null, sentS
 }
 
 /**
- * What the composer says about the card it waits behind (review M8): 'here' (answer it on the card
+ * What the composer says about the card it waits behind: 'here' (answer it on the card
  * above), 'sent' (the answer went; Claude Code has not finished with it), 'terminal' (it can only be
  * answered in the terminal). Null: no card.
  */

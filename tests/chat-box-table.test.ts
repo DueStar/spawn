@@ -1,6 +1,6 @@
 /**
- * Tables the terminal draws (2026-11-19, the owner's report: "since it reads the terminal's text as it is, a table Claude
- * wrote shows up as raw special characters"). Claude Code 2.1.32x draws a markdown table with box-drawing lines (its
+ * Tables the terminal draws (read as plain text, a table Claude wrote would show up as raw box-drawing
+ * characters). Claude Code 2.1.32x draws a markdown table with box-drawing lines (its
  * renderer, read from the 2.1.328 binary: top ┌─┬─┐, the header, ├─┼─┤, each row with a ├─┼─┤ line between rows,
  * bottom └─┴─┘; a cell's words wrap onto more lines of its row; the header centred). The samples below are
  * RECONSTRUCTED from that renderer, not captured screens. The transcript's own markdown tables were already parsed

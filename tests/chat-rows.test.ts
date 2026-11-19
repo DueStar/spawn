@@ -61,7 +61,7 @@ describe('buildRows over tools.jsonl', () => {
     expect(new Set(rows.map(r => r.key)).size).toBe(rows.length)
   })
 
-  it('a turn end makes only the turn\'s foot (Phase 5: tests/chat-foot.test.ts)', () => {
+  it('a turn end makes only the turn\'s foot (tests/chat-foot.test.ts)', () => {
     expect(rows.filter(r => (r as any).item?.kind === 'turn-end').map(r => r.row)).toEqual(['foot'])
   })
 })
@@ -161,7 +161,7 @@ describe('unreadAfter', () => {
     { id: 't', order: 2, at: null, kind: 'text', text: 'b' },
   ]
 
-  // the bubble is pinned at the bottom (LIVE_ORDER): new rows arrive above it (review C1, the 11–17 report)
+  // the bubble is pinned at the bottom (LIVE_ORDER): new rows arrive above it
   it('a provisional bubble never counts; its text counts once, whether it replaces the bubble in one update or two', () => {
     const live = { id: 'live:m', order: Number.MAX_SAFE_INTEGER, at: null, kind: 'live', text: 'streaming' } as ChatItem
     const answer = { id: 'n1', order: 3, at: null, kind: 'text', text: 'streaming, done' } as ChatItem

@@ -1,5 +1,5 @@
 /**
- * The composer's / menu (2026-11-19; the @ menu's look and keys: src/components/chat/MentionMenu.tsx): Claude Code's
+ * The composer's / menu (the @ menu's look and keys: src/components/chat/MentionMenu.tsx): Claude Code's
  * commands, the session's own and its skills, filtered by the letters typed after the / (src/chat/slash.ts). Each row:
  * `/name`, its aliases, its description cut to one line. The textarea keeps the focus: ↑ ↓ move, Enter or Tab puts
  * `/name ` into the draft (never sends), Esc closes the menu only. A click picks too. The list scrolls; the chosen row

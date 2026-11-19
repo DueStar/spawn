@@ -1,5 +1,5 @@
 /**
- * Markdown documents in the chat (2026-11-17): a ```markdown block, and a new .md file's diff, drawn as a document
+ * Markdown documents in the chat: a ```markdown block, and a new .md file's diff, drawn as a document
  * card (prose, 문서 / 원문), not as raw text in a code box.
  */
 import React from 'react'

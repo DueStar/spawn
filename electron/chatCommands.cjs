@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatCommands.cjs — the chat composer's / menu (2026-11-19): the commands and skills a Claude Code session can run
+ * chatCommands.cjs — the chat composer's / menu: the commands and skills a Claude Code session can run
  * besides its own (the page holds Claude Code's built-ins: src/chat/slash.ts). Read by main, for the terminal's own
  * folder (never one the page names):
  *

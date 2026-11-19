@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatFiles.cjs — the chat composer's @ mention (Phase 3): file names from the session's own
+ * chatFiles.cjs — the chat composer's @ mention: file names from the session's own
  * folder, for the menu that puts `@path` into the draft (Claude Code resolves the mention
  * itself when the prompt is sent). Read by main: the folder is the terminal's, from the
  * terminal manager, never one the page names.

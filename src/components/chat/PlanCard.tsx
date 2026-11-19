@@ -1,6 +1,6 @@
 /**
- * A plan card (Phase 4): the plan Claude Code asks to approve — its first lines here, 더 보기 for the rest in
- * place (a box of its own scroll). Since 2026-11-17 a whole plan of the main thread is answered here too:
+ * A plan card: the plan Claude Code asks to approve — its first lines here, 더 보기 for the rest in
+ * place (a box of its own scroll). A whole plan of the main thread is answered here too:
  * 승인 (the permission allowed) or 계속 계획하기 (denied: Claude plans on). Approving with edits accepted
  * automatically stays the terminal's (it would change the session's mode). A plan not shown whole, or a
  * sub-agent's: 터미널에서 답하기 only.

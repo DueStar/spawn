@@ -2,7 +2,7 @@
 
 /**
  * chatItems.cjs — Claude Code transcript lines become the chat view's items
- * (Phase 2, the read-only lens). The shapes are the event model of
+ * (the read-only lens). The shapes are the event model of
  * src/chat/types.ts (mirrored in the @typedefs below).
  *
  * A builder is stateful only for pairing: a tool row is made by its tool_use
@@ -57,7 +57,7 @@ const clean = (o) => { for (const k of Object.keys(o)) if (o[k] === undefined) d
 /**
  * A file path relative to the session folder when inside it (forward slashes),
  * else as it is. String work only, nothing read from the disk: `.` and `..` are
- * resolved by the text first (the final review's M5: C:/proj/../etc/x is outside
+ * resolved by the text first (C:/proj/../etc/x is outside
  * C:/proj, not "../etc/x" inside it); a Windows path, or any path on macOS,
  * compares without case.
  */
@@ -254,7 +254,7 @@ function commandOf(text) {
 }
 
 /**
- * A long paste is recorded wrapped (Claude Code 2.1.325, seen in the Phase 3 trial):
+ * A long paste is recorded wrapped (Claude Code 2.1.325, seen on a real session):
  * `\n\n<pasted_content id="fe19">\n…\n</pasted_content id="fe19">\n`. The user's text is what is
  * inside; a prompt that merely mentions the word (no opening tag with an id) is left as it is.
  */
@@ -413,7 +413,7 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
             if (typeof block.id === 'string' && typeof block.name === 'string') items.push(call(block, o, at))
             return
           case 'thinking': case 'redacted_thinking': {
-            // (Phase 5) shown from 생각 포함. Claude Code 2.1.32x writes the text empty (FINDINGS §1): '' then,
+            // shown from 생각 포함. Claude Code 2.1.32x writes the text empty (FINDINGS §1): '' then,
             // and the row says the content is not in the record. A redacted block's data never travels.
             // A sub-agent's thinking makes no item: its rows show only its tools and its result.
             if (parent) return
@@ -426,7 +426,7 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
               redacted: block.type === 'redacted_thinking' ? true : undefined,
               truncated: text.length < raw.length ? true : undefined,
               // thinkingDisplay "updates": a block with text is the progress note the terminal shows (the hidden
-              // thinking is written empty); the chat shows it in 기본 too (the owner's session, 2026-11-17)
+              // thinking is written empty); the chat shows it in 기본 too
               update: obj.thinkingDisplay === 'updates' && raw.trim() && block.type === 'thinking' ? true : undefined,
             }))
             return
@@ -476,7 +476,7 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
   return { line, tool: (id) => tools.get(id), forget: (id) => { tools.delete(id) } }
 }
 
-// ---- the chat's buttons (Phase 4): what a permission card shows, and the rules 항상 허용 may add
+// ---- the chat's buttons: what a permission card shows, and the rules 항상 허용 may add
 
 const RULES_MAX = 4
 const RULE_TEXT_MAX = 2000
@@ -512,7 +512,7 @@ function sessionRules(suggestions) {
 const EDIT_TOOLS = new Set(['Edit', 'Write', 'MultiEdit', 'NotebookEdit'])
 
 /**
- * The rules 항상 허용 may add for a request of `tool` (review I4): the hook's own addRules
+ * The rules 항상 허용 may add for a request of `tool`: the hook's own addRules
  * suggestions, and only when every one of them is a plain allow rule, every rule names the requesting
  * tool itself (never an edit tool), and every rule has real content — no bare tool (every call of it),
  * no lone wildcard (`*`, `:*`, an empty prefix). A suggestion that changes the mode, adds a directory or
@@ -535,7 +535,7 @@ const ruleLabel = (rules) => rules.map(r => (r.ruleContent === undefined ? r.too
 
 /**
  * The lines of a text (its last newline is not a line of its own). A CR stays in its line: the card
- * shows it as a mark, so a change of line endings is never invisible (review M12).
+ * shows it as a mark, so a change of line endings is never invisible.
  */
 function splitLines(text) {
   const all = text === '' ? [] : text.split('\n')

@@ -1,5 +1,5 @@
 /**
- * Link preview cards, the page's side (Phase 5, opt-in: 설정 › 세션 › 링크 미리보기, with 채팅으로 보기 on).
+ * Link preview cards, the page's side (opt-in: 설정 › 세션 › 링크 미리보기, with 채팅으로 보기 on).
  *
  * The page never fetches anything for a card. A mounted LinkCard asks main (`chat.preview`), main asks the chat
  * worker, which fetches under the preview policy (electron/linkFetch.cjs, linkPreview.cjs). What comes back is
@@ -8,7 +8,7 @@
  *
  *   cardLinks   which links of a finished answer get a card: link and bare-address nodes of the prose (never inline
  *               code or a code block) that pass `previewable` (no query string, no userinfo, no port, no long or
- *               data-like path: the final review's I1), the first 3 distinct URLs of the text, each card after the
+ *               data-like path), the first 3 distinct URLs of the text, each card after the
  *               top-level block holding the link's first use (keyed by the block's stable key, markdown.ts blockKeys)
  *   hostLine    the card's site line: always the link's own host (Unicode with the punycode beside when not ASCII);
  *               what the page calls itself (og:site_name) is never shown, so a page cannot make a card name another
@@ -74,7 +74,7 @@ export function looksLikeData(raw: string): boolean {
 }
 
 /**
- * Whether a link may get a card at all (the final review's I1; electron/linkShape.cjs previewShape is the same rule,
+ * Whether a link may get a card at all (electron/linkShape.cjs previewShape is the same rule,
  * checked again in main and in the worker). A card is fetched as soon as its row has been on screen a moment, with
  * nobody clicking, and the whole address goes to that site: so only a link that carries nothing a conversation could
  * have put into it. http or https, at most 2048 characters; no query string (not even an empty `?`), no userinfo,

@@ -1,5 +1,5 @@
 /**
- * electron/chatLens.cjs, Phase 4 (Task 4.4): a held request is bound to its terminal, call key and
+ * electron/chatLens.cjs, the held requests: a held request is bound to its terminal, call key and
  * the data an answer needs, or passed back; the cards that wait on the user are in the status; what
  * Claude Code did (a PostToolUse, a rejected call, Stop, a new turn) settles them. Fake timers, a temp
  * Claude folder; `onHold` collects what the lens tells main about holds.
@@ -107,7 +107,7 @@ describe('binding and passing', () => {
     expect(agent).toMatchObject({ agent: true, tool: 'PowerShell', toolId: null })
   })
 
-  // (2026-11-17: a whole plan of the main thread binds, answered from the chat with 승인 / 계속 계획하기; it passed until then)
+  // (a whole plan of the main thread binds, answered from the chat with 승인 / 계속 계획하기)
   it('a plan binds as a permission with no rules; a question as a PermissionRequest passes, with no card; an unmapped session passes', async () => {
     const { lens, holds, status, run } = setup()
     lens.hook('PermissionRequest', perm('ExitPlanMode').body, 0, 'h4', T1)
@@ -149,7 +149,7 @@ describe('binding and passing', () => {
     expect(status().asks[0]).toMatchObject({ holdId: null, state: 'terminal', cut: true })
   })
 
-  // (2026-11-17: a multi-select and two questions are answered from the chat too; they passed to the terminal until then)
+  // (a multi-select and two questions are answered from the chat too)
   it('a single-select, a multi-select and two questions all bind, each with its labels per question', async () => {
     const { lens, holds, status, run } = setup()
     lens.hook('PreToolUse', Q[0].body, 0, 'q1', T1)
@@ -169,7 +169,7 @@ describe('binding and passing', () => {
     expect(two.questions).toHaveLength(2)
   })
 
-  it('without a hold (a version out of the verified range), a request makes no card: Phase 2 as it was', async () => {
+  it('without a hold (a version out of the verified range), a request makes no card: the read-only lens as before', async () => {
     const { lens, holds, status, run } = setup()
     lens.hook('PreToolUse', pre('Bash').body, 0)
     lens.hook('PermissionRequest', perm('Bash').body, 100)

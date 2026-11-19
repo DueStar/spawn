@@ -1,7 +1,7 @@
 /**
  * The chat view's icons: the app's one icon system (src/components/Icons.tsx — Phosphor, bold, 16 / 14 / 12),
  * currentColor, so they take the row's grey. Decorative: every one is aria-hidden; the words beside them carry the
- * meaning. (Until 2026-11-17 the chat drew its own at stroke 1.4, thinner than the rest of the app.)
+ * meaning. (The chat once drew its own at stroke 1.4, thinner than the rest of the app.)
  */
 
 import React from 'react'

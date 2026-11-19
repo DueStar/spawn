@@ -1,5 +1,5 @@
 /**
- * The conversation's scroller (the lab's `.convo`): a virtual list, so a session of
+ * The conversation's scroller: a virtual list, so a session of
  * thousands of rows mounts only the rows in view (and 600px around them). Each row is
  * measured by one ResizeObserver; an unmeasured row counts as an estimate.
  *
@@ -30,7 +30,7 @@ import { DownIcon } from './ChatIcons'
 
 /** Older rows are asked for this close to the top */
 const OLDER_AT = 400
-/** Coming back down to within this of the bottom sticks again (the lab's 160) */
+/** Coming back down to within this of the bottom sticks again */
 const STICK_SLACK = 160
 
 /** Where each terminal's conversation was scrolled (kept while the page lives; let go when the session goes) */
@@ -53,7 +53,7 @@ const TOOLISH = new Set<Row['row']>(['tool', 'group'])
  * A row's ref callback (kept per key): it registers the row's element with the size observer. Made here, outside the
  * render, so it holds only what it names: made inside the render it held that render's whole scope (its rows, its
  * callbacks), and with a callback kept for every key ever drawn a long streaming session kept every rows array alive
- * (Phase 6 soak: about 1 MB a turn).
+ * (about 1 MB a turn in a soak test).
  */
 function rowRef(key: string, elements: React.MutableRefObject<Map<string, HTMLElement>>, observer: React.MutableRefObject<ResizeObserver | null>) {
   return (el: HTMLElement | null) => {

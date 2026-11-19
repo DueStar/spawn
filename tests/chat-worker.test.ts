@@ -77,7 +77,7 @@ describe('the chat worker', () => {
     // the log never carries transcript text
     for (const m of messages.filter(x => x.t === 'log')) expect(m.msg).not.toMatch(/math\.js|mul\(/)
 
-    // Phase 4: a held request is bound (the URL's terminal is the session's) or passed; hold-state moves its card
+    // a held request is bound (the URL's terminal is the session's) or passed; hold-state moves its card
     const permission = hooksOf('hooks-permission.jsonl').find(h => h.event === 'PermissionRequest')!
     const held = { ...permission.body, session_id: SID }
     worker.postMessage({ t: 'hook', event: 'PermissionRequest', raw: new Uint8Array(Buffer.from(JSON.stringify(held))), at: Date.now(), hold: 'wh1', id: SID })

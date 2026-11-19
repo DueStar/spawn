@@ -1,5 +1,5 @@
 /**
- * Link previews II (Phase 5, Task 5.10): the setting, the worker's service, main's gate, the page's cards.
+ * Link previews II: the setting, the worker's service, main's gate, the page's cards.
  *
  *   electron/linkPreview.cjs  the worker's preview service over linkFetch.cjs previewOf: the memory caches (200 cards:
  *                             success 24 h, failure 30 min; images ≤ 16 MB, least recently used first), the load (≤ 3 at
@@ -441,7 +441,7 @@ const viewDirs: string[] = []
 afterAll(() => { for (const d of viewDirs) rmSync(d, { recursive: true, force: true }) })
 /**
  * A real worker with one open view whose answer holds `url` (the worker previews only a link written in an answer of
- * the view that asks: the final review's M2). `view(init)` sends init (its userDataDir replaced) and opens the view;
+ * the view that asks). `view(init)` sends init (its userDataDir replaced) and opens the view;
  * `ask` asks for a card for that view.
  */
 function viewWorker(url: string) {
@@ -874,7 +874,7 @@ describe('the page\'s source: no fetch, no remote src, requests only from a moun
   })
 })
 
-describe('Phase 6 budget: 200 links scrolled through', () => {
+describe('budget: 200 links scrolled through', () => {
   it('the worker fetches ≤ 3 at once (≤ 1 per host) and the page keeps ≤ 120 cards, the evicted ones\' blob: URLs revoked', async () => {
     // the worker's service: a user scrolling past 200 links, a few asked at each step, each fetch answered a moment later
     const f = handFetch()

@@ -1,5 +1,5 @@
 /**
- * A long answer arriving at once (the owner's "I have to reload to see it", 2026-11-19): the
+ * A long answer arriving at once (it must show without a reload): the
  * transcript written in pieces that split a long Korean line mid-character and mid-line, a
  * huge single append, many lines at once — every message reaches the page's state through
  * the live reader (chatLens.cjs over chatTail.cjs) and the page's store, with no reload.

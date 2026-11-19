@@ -1,5 +1,5 @@
 /**
- * A permission card (Phase 4): what Claude Code asks to do, whole — the command (scrollable, never
+ * A permission card: what Claude Code asks to do, whole — the command (scrollable, never
  * cut, hidden characters shown) with the folder it runs in and, each on a line of its own, running
  * outside the sandbox (the amber "needs you" mark), in the background, a time limit; the file (its
  * whole path, wrapped) and its change (every line, wrapped), a Write over a file that is there called
@@ -108,7 +108,7 @@ export const PermissionCard: React.FC<CardProps> = ({ card, who, local, shownAt,
   const whatIds = boxes.map(b => `${what}-${b}`).concat(card.diff && !card.diff.hunks.length ? [`${what}-diff`] : [])
   const hintId = `${card.key}-hint`
   const gate = !allSeen ? t('끝까지 내려서 확인하면 허용할 수 있어요') : undefined
-  // (허용 is described by what it approves, review M9, and by why it waits)
+  // (허용 is described by what it approves, and by why it waits)
   const allowDescribedBy = [...whatIds, ...(gate ? [hintId] : [])].join(' ') || undefined
   const timeoutS = card.timeoutMs ? Math.round(card.timeoutMs / 100) / 10 : 0
   return (

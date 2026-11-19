@@ -7,17 +7,17 @@
  *   - a turn head (the session's picture once) before the first assistant item of a turn
  *   - finished reads and searches in a row are one group ("파일 3개 읽음 · 검색 2회")
  *   - a sub-agent's items nest under their Agent row and make no rows of their own
- *   - (Phase 5) a thinking item makes a row only from 생각 포함 (`density` 'thinking' / 'all'): there it
+ *   - a thinking item makes a row only from 생각 포함 (`density` 'thinking' / 'all'): there it
  *     breaks a run of reads and can begin a turn head; in 기본 it is passed over as if it were not there,
- *     so 기본 draws exactly the rows of Phase 2 (and their feet)
- *   - (Phase 5) a turn end makes the turn's foot (the turn summary) and ends the turn. A turn runs from the
+ *     so 기본 draws exactly the rows it would without thinking items (and their feet)
+ *   - a turn end makes the turn's foot (the turn summary) and ends the turn. A turn runs from the
  *     last turn end or interrupt before it; a prompt taken mid-turn (a queued one) does not split it. Its
  *     counts (main-thread tool calls, files its diffs changed) and the texts its copy takes are given only
  *     when the whole turn is among the items (`whole`): the boundary before it is loaded (or nothing is
  *     older), and none of its calls or texts is stamped before the turn began (its end − its duration: a
  *     turn that ended with no turn_duration and no interrupt is not counted into the next). Otherwise the
  *     foot says its time only: a count it cannot know is left out, never guessed.
- *   - (Phase 5) a wild Pokémon this session met (`extra`, src/chat/wild.ts) goes before the first main-thread item
+ *   - a wild Pokémon this session met (`extra`, src/chat/wild.ts) goes before the first main-thread item
  *     stamped later than it (the end when none is, before a live bubble). It ends a run of reads there (never inside a
  *     group), and makes no day line and no turn head; it is not counted as a new message (unreadAfter)
  *
@@ -209,7 +209,7 @@ export function buildRows(items: ChatItem[], opts: RowOptions): Row[] {
   return rows
 }
 
-/** The text items whose copy a foot took over (Decision 10): a whole turn's. Others keep their own 답 복사 */
+/** The text items whose copy a foot took over: a whole turn's. Others keep their own 답 복사 */
 export function footCopies(rows: Row[]): Set<string> {
   const ids = new Set<string>()
   for (const r of rows) if (r.row === 'foot' && r.whole) for (const t of r.texts) ids.add(t.id)

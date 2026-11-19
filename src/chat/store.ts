@@ -1,5 +1,5 @@
 /**
- * The page's copy of each conversation the chat view shows (Phase 2, the read-only
+ * The page's copy of each conversation the chat view shows (the read-only
  * lens). Main sends `ChatUpdate`s (src/chat/types.ts) over `chat:update`; they are
  * applied here in rev order. A gap (an update lost or out of order) leaves the copy
  * as it was and asks main to send the view again as it is (`chat.resync`, a `reset`

@@ -58,7 +58,7 @@ export const BOX_LIMIT = 1200
  * wild encounters a day) has 900 species in about five and a half months,
  * everything but the legendaries and mythicals in about eight, and the whole
  * 1025 in about two years and three months; the legendaries and mythicals are
- * what is left at the end (simulated on a real save, 2026-11-11).
+ * what is left at the end (simulated on a real save).
  */
 export const RATES = Object.freeze({
   common: 0.74,
@@ -383,8 +383,8 @@ export function createPokedex({ file, species, natures = [], balls = [], stepSpa
     return true
   }
   /**
-   * The Pokédex's own errors, mended on load and after every sync (2026-11-19, the owner: "every caught Pokémon has its
-   * ball; no record of one that is not there"). Returns whether anything changed.
+   * The Pokédex's own errors, mended on load and after every sync, so every caught
+   * Pokémon has its ball and no record names one that is not there. Returns whether anything changed.
    *  - A starter chosen before this trainer began (an earlier start of the game, before a sync joined the PCs) whose
    *    line has no Pokémon in this game: its caught and seen records go (it was never met in this game: seen only as
    *    that starter). A starter of this trainer, or one with a Pokémon of its line here, stays.

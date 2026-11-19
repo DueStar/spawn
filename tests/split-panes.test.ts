@@ -34,7 +34,7 @@ describe('paneBox / paneStyle', () => {
   })
 })
 
-describe('the panes\' widths (dragged edges, 2026-11-19)', () => {
+describe('the panes\' widths (dragged edges)', () => {
   it('keeps widths only when they fit the pane count', () => {
     expect(fracsFor([0.6, 0.4], 2)).toEqual([0.6, 0.4])
     expect(fracsFor([0.6, 0.4], 3)).toEqual(evenFracs(3))

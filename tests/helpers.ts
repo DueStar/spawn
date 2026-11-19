@@ -105,7 +105,7 @@ export function listen(httpServer: Server): Promise<number> {
  */
 export const GAME_WORDS = /포켓몬|몬스터볼|도감|박스|잡았|포획|파티|트레이너|Lv\.|\bHP\b|Pok[eé]|Poké|Pokédex|ポケモン|図鑑|ボックス|ゲット|トレーナー|モンスターボール/i
 
-// ---- the chat view's long sessions (Phase 6, Task 6.1) --------------------------------------------------------------
+// ---- the chat view's long sessions ---------------------------------------------------------------------------------
 
 /**
  * A long conversation as the page's store holds it: `count` items in turns (a prompt, a thinking block, reads that

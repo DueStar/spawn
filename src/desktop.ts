@@ -137,11 +137,11 @@ interface spawnBridge {
     visible(id: string | null): void
     /** An answer card's choice: main checks it and builds what is sent (never the page) */
     answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][]; other?: (string | null)[] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
-    /** 7-48: one resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
+    /** One resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */
     redraw(id: string): Promise<{ ok: true } | { ok: false; reason: RedrawRefusal }>
     /** spawn.log only (1.5.3): a send the page refused for its screen, with the screen's masked shape */
     diag?(p: { id: string; why: string; shape: string }): void
-    /** Link previews (Phase 5): one link's card for the view of terminal `id`, fetched by the chat worker under the preview
+    /** Link previews: one link's card for the view of terminal `id`, fetched by the chat worker under the preview
      *  policy; { ok: false } at once while off, and for a link that is not in that view's answers */
     preview(p: { id: string; url: string }): Promise<{ ok: true; card: LinkCardData } | { ok: false; again?: true }>
   }

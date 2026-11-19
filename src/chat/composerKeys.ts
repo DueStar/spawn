@@ -1,5 +1,5 @@
 /**
- * What a key does in the chat composer (Phase 3), as a pure decision the composer's
+ * What a key does in the chat composer, as a pure decision the composer's
  * onKeyDown acts on. While an IME composes (Korean, Japanese, Chinese: the browser's
  * `isComposing`, `keyCode 229`, or between compositionstart and compositionend) every key
  * belongs to the IME: Enter never sends half a syllable, Esc never stops the work,
@@ -50,7 +50,7 @@ export function keyAction(e: KeyLike, s: KeyState): KeyAction {
 }
 
 /**
- * A key inside an answer card (Phase 4), heard only by the card's own onKeyDown (the focus is in the
+ * A key inside an answer card, heard only by the card's own onKeyDown (the focus is in the
  * card): the arrows move between its buttons. Nothing here answers: an answer is a click, or Enter /
  * Space on the focused button itself (the button's own behaviour). No digit shortcut, no global key.
  */

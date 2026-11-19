@@ -1,7 +1,7 @@
 /**
- * A thinking block in the chat view (the lab's `.think`, shown from 생각 포함): a left hairline, `생각 · {time}`
- * quiet above, then what was thought in the quiet grey. Claude Code 2.1.32x writes the thinking itself empty
- * (FINDINGS §1), and a redacted block holds none: the row then says it is not in the record, never a guess.
+ * A thinking block in the chat view (shown from 생각 포함): a left hairline, `생각 · {time}`
+ * quiet above, then what was thought in the quiet grey. Claude Code 2.1.32x writes the thinking itself empty,
+ * and a redacted block holds none: the row then says it is not in the record, never a guess.
  * A later Claude Code that writes the text gets it shown, as prose.
  */
 

@@ -1,6 +1,6 @@
 /**
- * Failure drills (Phase 6, Task 6.6). Each is simulated here; nothing touches the owner's machine (no sleep, no clock
- * change, no full disk). The endpoint's and the worker's drills are in tests/chat-host.test.ts ("Phase 6 drills").
+ * Failure drills. Each is simulated here; nothing touches the real machine (no sleep, no clock
+ * change, no full disk). The endpoint's and the worker's drills are in tests/chat-host.test.ts ("drills").
  *
  * - A full disk for the composer's images: the refusal says so (`io` → 이미지를 저장하지 못했어요), no partial file is left,
  *   the session's counts are not spent, and the next image saves once there is room.
@@ -175,7 +175,7 @@ describe('drill: the transcript deleted — the panel\'s words', () => {
   })
 })
 
-describe('drill (the Phase 6 trial): a refusal note never stays beside an image that did attach', () => {
+describe('drill: a refusal note never stays beside an image that did attach', () => {
   it('every image refusal is marked image; a successful attach clears only such a note', () => {
     const src = readFileSync(join(ROOT, 'src', 'components', 'chat', 'Composer.tsx'), 'utf8')
     const fn = src.slice(src.indexOf('function imageNote('), src.indexOf('\n}\n', src.indexOf('function imageNote(')))

@@ -132,7 +132,7 @@ function processStartTimes(pids, { platform = process.platform, execFile = requi
 }
 
 /**
- * The running sessions, checked (2026-11-19, "a session just closed still shows 실행 중"): a registry record counts
+ * The running sessions, checked (so a session just closed never shows as running): a registry record counts
  * only while its pid is alive AND belongs to the process that wrote it. A Claude Code ended by force (a closed tab,
  * taskkill) never removes its file, and Windows soon hands its pid to another program: process.kill(pid, 0) alone
  * said "running" for ever. The start-time check costs one PowerShell call, so its verdict is kept per pid and start
@@ -185,7 +185,7 @@ function readSessionLinks(userDataDir) {
 }
 
 /**
- * Transcripts a /clear superseded in an app terminal (2026-11-19, two "Spawn" in 이어하기): the terminal's own first
+ * Transcripts a /clear superseded in an app terminal (so one name never shows twice in 이어하기): the terminal's own first
  * conversation and every one before its current, once the current one has a transcript (until then reopening still
  * falls back to the terminal's own one, terminals.cjs create). Claude Code copies the custom title on /clear, so
  * these read exactly like the conversation that followed them. `has(id)`: whether a conversation has a transcript.
@@ -205,7 +205,7 @@ function supersededIds(links, has) {
 /**
  * The app's own names (설정: a tab renamed in the app; `titles` by tab id) for the listed rows. A name belongs to the
  * tab, so it goes with the conversation the tab has now (after a /clear, another id), and never on a transcript a
- * /clear superseded (2026-11-19: the tab's first transcript kept reading "Spawn" next to the conversation that
+ * /clear superseded (the tab's first transcript kept reading "Spawn" next to the conversation that
  * followed it). A conversation's own app name wins over its tab's.
  * @returns {Map<string, string>} id -> name
  */

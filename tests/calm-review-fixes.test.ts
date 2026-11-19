@@ -1,5 +1,5 @@
 /**
- * The calm style's final review (C1, M3, M4, M6): source and CSS checks that the controls keep
+ * The calm style's fixes: source and CSS checks that the controls keep
  * main's hit areas, the usage labels are never cut, hover and chosen differ in the segmented
  * controls, and the dead code is gone. The sizes themselves are measured in a real page by
  * `node tests/visual/shots.mjs --flow hit-areas` (floors from main, 0dbb6c9).
@@ -22,7 +22,7 @@ describe('C1: hit areas not smaller than on main', () => {
     expect(decls(css('pokedex.css'), '.w-signin')).toMatch(/padding: 3px 10px/)
   })
   // 1.6.1: an icon button the header's size (26 × 26, its words in the tooltip), so the profile beside it never shrinks;
-  // filled with the primary colour since 2026-11-17 (no border: the fill is its edge)
+  // filled with the primary colour (no border: the fill is its edge)
   it('the update button: a 26 × 26 icon in the primary colour, never shrinking', () => {
     expect(decls(css('widget.css'), '.w-update')).toMatch(/flex: none; width: 22px; height: 22px;[^}]*background: var\(--accent\)/)
   })

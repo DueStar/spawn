@@ -1,5 +1,5 @@
 /**
- * The resume list (이어하기), 2026-11-19: no two identical "Spawn" rows after a /clear, twins told apart, and a session
+ * The resume list (이어하기): no two identical "Spawn" rows after a /clear, twins told apart, and a session
  * just closed is "닫는 중" (deleting it waits for its end), while a registry file whose pid Windows reused for another
  * program no longer reads as running.
  */

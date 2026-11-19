@@ -1,5 +1,5 @@
 /**
- * What the Phase 3 trial showed in the lens (Claude Code 2.1.325): a permission refused with Esc
+ * What a real-session trial of the composer showed in the lens (Claude Code 2.1.325): a permission refused with Esc
  * in the terminal of a session whose chat was not shown. No hook follows that refusal (no
  * PostToolUse, no Stop), and the transcript lines that close the turn (the rejected result, the
  * "[Request interrupted…]" notice, the turn's duration) were read only later, as history, when the

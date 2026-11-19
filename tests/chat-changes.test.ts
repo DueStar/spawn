@@ -1,8 +1,8 @@
 /**
- * electron/chatChanges.cjs — the change index of a conversation (Phase 5, Task 5.3): counts and byte
+ * electron/chatChanges.cjs — the change index of a conversation: counts and byte
  * offsets only, built by a forward scan of the whole transcript (and the sub-agents' own files) and by
  * the lens's live lines; each edit re-read from its line when asked, checked by its tool id, rebuilt with
- * Phase 2's buildDiff, never merged; no disk read of a project file. Fake timers; a temp Claude folder.
+ * chatItems' buildDiff, never merged; no disk read of a project file. Fake timers; a temp Claude folder.
  */
 
 import fs, { appendFileSync, closeSync, copyFileSync, mkdirSync, mkdtempSync, openSync, readFileSync, rmSync, writeFileSync, writeSync } from 'node:fs'

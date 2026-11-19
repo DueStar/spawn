@@ -1,5 +1,5 @@
 /**
- * Steps in the turn summary (Phase 5, Decision 11): how far the session's Pokémon walked during one turn,
+ * Steps in the turn summary: how far the session's Pokémon walked during one turn,
  * shown only when it can be known exactly.
  *
  * The game server publishes steps without a broadcast, so the page's own game state would be stale. Two

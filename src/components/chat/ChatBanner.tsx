@@ -1,5 +1,5 @@
 /**
- * "이 세션을 채팅으로 읽지 못하고 있어요" (the lab's `.banner`): whenever the lens is in
+ * "이 세션을 채팅으로 읽지 못하고 있어요": whenever the lens is in
  * doubt — the record's shape, the canary, a missing or stalled or rewritten record, an
  * unchecked version, an unclear mapping, a stopped reader — the view says so, why, and
  * offers the terminal (and 다시 읽기). Wrong or stale is the worst failure, so every

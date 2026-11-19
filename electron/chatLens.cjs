@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatLens.cjs — the chat view's core (Phase 2, the read-only lens). It runs
+ * chatLens.cjs — the chat view's core (the read-only lens). It runs
  * inside the chat worker (chatWorker.cjs), never in the main process.
  *
  * For every armed Claude Code terminal it knows which conversation runs in it
@@ -144,7 +144,7 @@ const CLOSE_AFTER_MS = 60_000
 const TAIL_WANT = 150
 const CANARY_MS = 3000
 // Claude Code writes a prompt only once every UserPromptSubmit hook is done, and another plugin's hook can take
-// many seconds (claude-mem: 12 s, 2026-11-17) while spawn's own arrives at once: the wait allows for them
+// many seconds (claude-mem: 12 s) while spawn's own arrives at once: the wait allows for them
 const MISSING_MS = 15_000
 const STALL_MS = 30_000
 const AGENT_ITEMS = 200
@@ -157,13 +157,13 @@ const STICKY = new Set(['schema', 'rewrite', 'version', 'mapping', 'worker'])
 /** The permission modes hook bodies name (src/chat/types.ts PermissionMode); any other value shows as unknown (null) */
 const PERMISSION_MODES = new Set(['default', 'acceptEdits', 'plan', 'auto', 'bypassPermissions', 'dontAsk'])
 
-// ---- the chat's buttons (Phase 4): what a card shows, whole or not at all ----
+// ---- the chat's buttons: what a card shows, whole or not at all ----
 
 /** The most a card shows of each part; past it the card is answered in the terminal (never cut and answered) */
 const CARD = Object.freeze({ command: 20_000, file: 2_000, url: 2_000, args: 4_000, question: 1_000, label: 200, description: 1_000, header: 100, json: 65_536 })
 
 /**
- * The input keys each tool's card shows (review C3). A key outside its tool's list makes the card
+ * The input keys each tool's card shows. A key outside its tool's list makes the card
  * read-only (`why: 'fields'`): what 허용 approves is never more than the card shows. Any other tool
  * (MCP, unknown) shows its whole input as JSON.
  */
@@ -210,7 +210,7 @@ function cardInput(tool, input, cwd) {
         if (typeof input.description !== 'string') cut('fields')
         else if (d) out.input.description = d
       }
-      // the folder the command runs in (review M13): the hook's own cwd, else the session's
+      // the folder the command runs in: the hook's own cwd, else the session's
       if (typeof cwd === 'string' && cwd) { const c = whole(cwd, CARD.file); if (c) out.cwd = c }
       if (flag('dangerouslyDisableSandbox')) out.sandboxOff = true
       if (flag('run_in_background')) out.background = true
@@ -246,7 +246,7 @@ function cardInput(tool, input, cwd) {
 
 const NETWORK_PATH = /^(?:\\\\|\/\/)/
 /**
- * Whether a Write would replace a file that is there (review C4), by the session folder's rules
+ * Whether a Write would replace a file that is there, by the session folder's rules
  * (chatFiles.cjs): a network or device path is never touched, a link is not followed. 'none': no such
  * file; 'file': a plain file is there (the card says it is overwritten); 'unsure': anything else (a
  * folder, a link, a path that cannot be resolved, an error but "not found") — the card is read-only.
@@ -267,7 +267,7 @@ function fileThere(file, cwd, fsx) {
 
 /**
  * A question card's questions (the first also as `question`, as before), and whether it can be answered from the
- * chat: 1–4 questions (2026-11-17; one until then), each with 2–6 options of unique labels, single or multi-select,
+ * chat: 1–4 questions (one until then), each with 2–6 options of unique labels, single or multi-select,
  * every word fitting the card, the question texts unique (the answer is keyed by them).
  */
 function questionCard(input) {
@@ -321,7 +321,7 @@ function createLens({
   onPrompt: promptSignal = () => {},
   // a question or a plan to approve open in a terminal, or none any more (the composer's Enter, chatHost.cjs)
   onAsking: askingSignal = () => {},
-  // Phase 4: what a held request is (hold-bind / hold-pass) and when its call settled (hold-resolved), to main
+  // what a held request is (hold-bind / hold-pass) and when its call settled (hold-resolved), to main
   onHold: holdSignal = () => {},
   watch = (file, onChange) => {
     try { const w = fs.watch(file, { persistent: false }, onChange); w.on('error', () => {}); return w } catch { return null }
@@ -371,9 +371,9 @@ function createLens({
       // what Claude Code itself queued while it worked (the composer's strip), oldest first; after an
       // operation the lens does not know, nothing until the next enqueue
       queued: [], queuedBlocked: false,
-      // Phase 4: the cards that wait on the user (status.asks), by key, with the call key that settles each
+      // the cards that wait on the user (status.asks), by key, with the call key that settles each
       asks: new Map(),
-      // Phase 5: the open view's change index (chatChanges.cjs), its scan and its sub-agents' files
+      // the open view's change index (chatChanges.cjs), its scan and its sub-agents' files
       changes: null,
     }
     t.linkSeen = readLink(id) || null
@@ -782,7 +782,7 @@ function createLens({
       t.turnStart = anchor ?? r.endOffset
       t.prompt = { path: t.path, end: anchor ?? r.endOffset }
       // the turn ended while no view read it live (a permission refused with Esc in the terminal: no
-      // hook follows; the Phase 3 trial): its own record says so after its prompt — an interrupt or
+      // hook follows): its own record says so after its prompt — an interrupt or
       // the turn's end — and the session is idle, not waiting for good
       if (anchor !== null) {
         const after = [...t.items.values()].filter(i => !i.parent && i.order > anchor && i.order < LIVE_BASE)
@@ -956,7 +956,7 @@ function createLens({
     }, QUEUE_IDLE_MS)
   }
 
-  // ---- the cards that wait on the user (Phase 4) ------------------------------
+  // ---- the cards that wait on the user ------------------------------
   //
   // A held request (its hold id from main) is bound — to this terminal, its call key and what an
   // answer needs — or passed back to the terminal. Its card is in the status (status.asks, oldest
@@ -1005,7 +1005,7 @@ function createLens({
     const key = keyOf(tool, body.tool_input)
     if (event === 'PermissionRequest') {
       if (tool === 'ExitPlanMode') {
-        // plan approval from the chat (2026-11-17): 승인 (allow) or 계속 계획하기 (deny, Claude plans on), only when the
+        // plan approval from the chat: 승인 (allow) or 계속 계획하기 (deny, Claude plans on), only when the
         // plan is shown whole and it is the main thread's; a sub-agent's, a plan too long, or no key: the terminal's
         const input = toolInput(tool, body.tool_input, t.cwd)
         const raw = isObj(body.tool_input) && typeof body.tool_input.plan === 'string' ? body.tool_input.plan : ''
@@ -1031,7 +1031,7 @@ function createLens({
       }
       const cut = why !== null
       // (a call outside the sandbox gets no 항상 허용: the rule could not say so, and would let the next one run outside
-      // it unasked too; the real-session trial showed Claude passing the flag when asked to)
+      // it unasked too; a real session showed Claude passing the flag when asked to)
       const rules = cut || shown.sandboxOff ? [] : alwaysRules(tool, body.permission_suggestions)
       const card = {
         key: cut ? `ask:${holdId}` : holdId, holdId: cut ? null : holdId, kind: 'permission',
@@ -1056,11 +1056,11 @@ function createLens({
       addCard(t, { key: answerable ? holdId : `ask:${holdId}`, holdId: answerable ? holdId : null, kind: 'question', toolId, agent: typeof body.agent_id === 'string', tool, input: {}, always: null, question: q.question, ...(q.questions.length > 1 || q.questions[0]?.multiSelect ? { questions: q.questions } : {}), state: answerable ? 'open' : 'terminal', since: at }, key)
     }
     if (!answerable) return sendHold({ t: 'hold-pass', holdId, why: 'shape' })
-    // (the whole input: the answer keeps every field of it, review M10)
+    // (the whole input: the answer keeps every field of it)
     return sendHold({ t: 'hold-bind', holdId, id: t.id, kind: 'question', key, data: { questions: body.tool_input.questions, labels: q.labels, sets: q.sets, input: body.tool_input } })
   }
 
-  /** Main's word on a hold (Phase 4): the card's state, nothing else */
+  /** Main's word on a hold: the card's state, nothing else */
   function holdState(holdId, state, choice) {
     if (typeof holdId !== 'string' || !holdId) return
     for (const t of terms.values()) {
@@ -1128,7 +1128,7 @@ function createLens({
     try { id = t.calls.get(callKey(body.tool_name, body.tool_input)) } catch {}
     const item = id && rowsOn(t) ? t.items.get(id) : null
     // (Claude Code asks a PermissionRequest for AskUserQuestion and ExitPlanMode too: their rows stay a question and a
-    // plan, never a permission — the owner's log said "permission: AskUserQuestion")
+    // plan, never a permission)
     const waiting = body.tool_name === 'AskUserQuestion' ? 'question' : body.tool_name === 'ExitPlanMode' ? 'plan' : 'permission'
     if (item && item.kind === 'tool' && item.state === 'running' && item.waiting !== waiting) upsertRow(t, { ...item, waiting }, ops)
   }
@@ -1178,7 +1178,7 @@ function createLens({
   /**
    * The prompt Claude Code just took, shown at once from its UserPromptSubmit (a terminal's own Enter too):
    * Claude Code writes the prompt's line only once every UserPromptSubmit hook is done, and another plugin's
-   * can take 6–12 s (measured 2026-11-19: a 6 s hook beside spawn's held the line 6.4 s; the hook itself came
+   * can take 6–12 s (measured: a 6 s hook beside spawn's held the line 6.4 s; the hook itself came
    * 0.13 s after Enter). Built as the record would build it (a command, a `!` command or a wake-up shows no
    * bubble), marked `pending: 'sent'`, ordered after what the turn has so far; its own line replaces it
    * (ingest), and it goes with the turn's other provisional rows (clearLive).
@@ -1208,7 +1208,7 @@ function createLens({
       // a prompt typed while Claude works (queued, or taken in mid-turn) belongs to the turn in progress
       // (one a prompt opened and no Stop, failure, interrupt or turn end has closed yet): the message
       // streaming now, its stream positions, the open calls and the turn's start all stay
-      // (2026-11-19, the owner's log: a question dismissed with Esc in the terminal, no view reading the record, then a
+      // (a question dismissed with Esc in the terminal, no view reading the record, then a
       // prompt typed there. A prompt can only be typed once no dialog holds the terminal: a wait with no card still
       // answerable here (no hold pending) is over, and the prompt opens a new turn)
       const dismissed = t.status.state === 'waiting' && ![...t.asks.values()].some(a => a.card.state === 'open' && a.card.holdId)
@@ -1336,7 +1336,7 @@ function createLens({
       const removes = new Set()
       if (passed) canaryPassed(t, upserts, removes)
       // (failed: the check stays, late, until the next prompt; the answer landing after all clears the banner,
-      // as a 다시 읽기 would have shown it: the owner's session, 2026-11-17)
+      // as a 다시 읽기 would have shown it)
       else { t.canary.late = true; setBanner(t, 'canary'); clearLive(t, removes) }
       const out = []
       if (removes.size) out.push({ op: 'remove', ids: [...removes] })
@@ -1574,7 +1574,7 @@ function createLens({
   }
 
   /**
-   * A chat hook, answered already — or, with `holdId` (Phase 4), held by main until the lens binds or
+   * A chat hook, answered already — or, with `holdId`, held by main until the lens binds or
    * passes it: every way out of here that does not bind it passes it (no request waits on a doubt).
    * `urlId`: the terminal the hook's URL named.
    */
@@ -1773,7 +1773,7 @@ function createLens({
     return true
   }
 
-  // ---- the change index (Phase 5): the whole conversation's file changes, counts and offsets only ----
+  // ---- the change index: the whole conversation's file changes, counts and offsets only ----
   //
   // Made when a view loads its transcript. Its forward scan runs outside the view's queue (its own file
   // handle, its own loop, yielding every 2 MB), so hooks and reads never wait for it; the lines written
@@ -1815,7 +1815,7 @@ function createLens({
     const s = c.index.summary()
     const state = c.state === 'scanning' || c.state === 'gone' ? c.state
       : c.state === 'partial' || s.partial || c.agentPartial ? 'partial' : 'ready'
-    // (the record gone: nothing it held is shown, no stale count — Phase 6 drill)
+    // (the record gone: nothing it held is shown, no stale count)
     if (state === 'gone') return { v: c.v, state, files: 0, edits: 0, added: 0, removed: 0, unknown: 0 }
     return { v: c.v, state, files: s.files, edits: s.edits, added: s.added, removed: s.removed, unknown: s.unknown }
   }
@@ -1995,7 +1995,7 @@ function createLens({
   }
 
   /**
-   * chat:full (2026-11-17) — one item of the view read again whole from its transcript line (src/chat… "전체 보기"
+   * chat:full — one item of the view read again whole from its transcript line (src/chat… "전체 보기"
    * in place of "see the terminal"), only while the transcript is the one the items came from (the tailer's guard)
    */
   async function full(id, itemId) {
@@ -2057,8 +2057,8 @@ function createLens({
   }
 
   /**
-   * Whether `url` is written in a finished answer of the main thread in terminal `id`'s open view (the final review's
-   * M2: a link preview is fetched only for a link Claude wrote in the view that asks, whatever the page says). Never a
+   * Whether `url` is written in a finished answer of the main thread in terminal `id`'s open view (a link
+   * preview is fetched only for a link Claude wrote in the view that asks, whatever the page says). Never a
    * user's message, a tool's output, a sub-agent's text, an interrupted answer or the live bubble.
    */
   function linkInView(id, url) {

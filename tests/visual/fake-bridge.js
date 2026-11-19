@@ -54,7 +54,7 @@
   // { silent } open answers ok and sends nothing (a reset that never comes)
   const chatOpts = shot.chatOpts || {}
 
-  // The composer (chat view phase 3): chat.send / submit / interrupt / image / dropImage / files are
+  // The composer: chat.send / submit / interrupt / image / dropImage / files are
   // recorded (an image as its size and first bytes) and answered from window.__CHAT_SCRIPT__ (a value,
   // or a function of the call's argument), else as main would answer a send that goes through. The
   // fake screen: window.__SCREEN__(termId, name) writes a fixture screen (shot.screens, from
@@ -125,7 +125,7 @@
       // (as main: Enter only for an echo seen; 'hang' in the script: an answer that never comes)
       submit: (p) => { record('chat.submit', [p]); return script('submit', p, p.echo === 'ok' ? { ok: true } : { ok: false, reason: 'no-echo' }) },
       interrupt: (id) => { record('chat.interrupt', [id]); return script('interrupt', id, { ok: true }) },
-      // the dialog card's keys (2026-11-19, chat-question-flip): only with shot.chatOpts.dialogKey, so no other flow
+      // the dialog card's keys (chat-question-flip): only with shot.chatOpts.dialogKey, so no other flow
       // starts reading its screens for a dialog; an arrow moves the fixture screen's mark as Claude Code would
       ...(chatOpts.dialogKey ? {
         dialogKey: (p) => {
@@ -143,19 +143,19 @@
       dropImage: (p) => record('chat.dropImage', [p]),
       files: (p) => { record('chat.files', [p]); return script('files', p, { ok: true, files: ['src/lib/safe-redirect.ts', 'src/middleware.ts', 'README.md'].filter(f => f.toLowerCase().includes(String(p.query || '').toLowerCase())) }) },
       stranded: (id) => { record('chat.stranded', [id]); return script('stranded', id, { stranded: false }) },
-      // the buttons (phase 4): which chat is shown, and an answer card's choice (answered from the script, else ok)
+      // the buttons: which chat is shown, and an answer card's choice (answered from the script, else ok)
       visible: (id) => record('chat.visible', [id]),
       answer: (p) => { record('chat.answer', [p]); return script('answer', p, { ok: true }) },
-      // 7-48: the redraw nudge for a shown chat's hidden terminal (recorded; answered from the script, else ok)
+      // the redraw nudge for a shown chat's hidden terminal (recorded; answered from the script, else ok)
       redraw: (id) => { record('chat.redraw', [id]); return script('redraw', id, { ok: true }) },
-      // the 변경 사항 panel (phase 5): shot.changes[id] = { list, pages } from chatFixture.mjs changes() (the real
+      // the 변경 사항 panel: shot.changes[id] = { list, pages } from chatFixture.mjs changes() (the real
       // electron/chatChanges.cjs over changes.jsonl); recorded, answered from the script first, else from the shot
       changes: (id) => {
         record('chat.changes', [id])
         const c = (shot.changes || {})[id]
         return script('changes', id, c ? Object.assign({ ok: true }, c.list) : { ok: false })
       },
-      // link previews (phase 5): recorded; answered from the script first, else shot.previews[url] (a card whose image
+      // link previews: recorded; answered from the script first, else shot.previews[url] (a card whose image
       // bytes are a plain array of numbers in the shot, handed on as a Uint8Array as main does), else shot.previewAll
       // (a made-up card for any https://*.example/ link: a long session's flow), else { ok: false }
       preview: (p) => {

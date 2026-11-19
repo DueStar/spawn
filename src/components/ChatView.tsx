@@ -1,5 +1,5 @@
 /**
- * ChatView — a Claude Code session shown as a conversation (Phase 2, the read-only lens).
+ * ChatView — a Claude Code session shown as a conversation (a read-only lens).
  * The real terminal keeps running underneath; this view only reads. It draws the session's
  * transcript and chat hooks as the page's store has them (src/chat/store.ts): the user's
  * messages, the assistant's prose as safe markdown, one-line tool rows, diffs, a
@@ -8,12 +8,12 @@
  * read-failed banner with 터미널로 보기.
  *
  * Who answers is `who` (src/chat/lensMode.ts chatWho): in 업무 모드 a glyph and "에이전트".
- * Nothing here sends anything to the terminal. `footer` is the composer's slot (Phase 3);
+ * Nothing here sends anything to the terminal. `footer` is the composer's slot;
  * `state` bypasses the store (the QA page draws a fixed conversation). The view takes the
  * focus only right after the user's own flip or session switch (src/chat/lensMode.ts
  * askChatFocus), never from something being typed into.
  *
- * Ctrl/⌘+F (Phase 5) opens find over the conversation as the store holds it (src/chat/find.ts,
+ * Ctrl/⌘+F opens find over the conversation as the store holds it (src/chat/find.ts,
  * src/components/chat/FindBar.tsx); in a terminal it stays the terminal's own find, as in 1.4.0.
  */
 
@@ -69,7 +69,7 @@ export interface ChatViewProps {
   branch: string | null
   /** Show this session's terminal (the flip, or a banner's 터미널로 보기) */
   onTerminal(): void
-  /** The composer (Phase 3: src/components/chat/Composer.tsx), under the conversation */
+  /** The composer (src/components/chat/Composer.tsx), under the conversation */
   footer?: React.ReactNode
   /** 멈추기 in the working line's right slot (the composer's stop: one Esc into the session) */
   onStop?: () => void
@@ -79,12 +79,12 @@ export interface ChatViewProps {
   onChanges?: (p: { file: string; toolId: string }) => void
   /** 업무 모드: nothing of the game (no step count, and no GET /pokedex for it) */
   workMode?: boolean
-  /** The new-version note's 설정에서 더 보기: 설정 › 세션 with the 채팅 보기 help open (Phase 6) */
+  /** The new-version note's 설정에서 더 보기: 설정 › 세션 with the 채팅 보기 help open */
   onHelp?: () => void
 }
 
 /**
- * A Claude Code newer than the verified range (Phase 6, Task 6.2): the quiet note, with 자세히 for one more line on
+ * A Claude Code newer than the verified range: the quiet note, with 자세히 for one more line on
  * what is off for such a version (the buttons' holds) and the way to the 채팅 보기 help in 설정
  */
 const VersionNote: React.FC<{ version: string | null; onHelp?: () => void }> = ({ version, onHelp }) => {
@@ -140,11 +140,11 @@ const Picture: React.FC<{ who: ChatWho; size: 'head' | 'empty' }> = ({ who, size
 
 // ---------------------------------------------------------------- rows
 
-/** `copy` false: the turn's foot copies the answer (Decision 10); a turn with no foot keeps the row's own */
+/** `copy` false: the turn's foot copies the answer; a turn with no foot keeps the row's own */
 const TextRow: React.FC<{ item: TextItem; copy?: boolean }> = ({ item, copy = true }) => {
   const { onLink, onPath, previews } = useChatContext()
   const blocks = useMemo(() => parseMarkdown(item.text), [item.text])
-  // link preview cards (Phase 5, opt-in): only for a finished answer of the main thread (never an interrupted one,
+  // link preview cards (opt-in): only for a finished answer of the main thread (never an interrupted one,
   // never a sub-agent's), its first 3 links, each after the block holding it (src/chat/preview.ts cardLinks)
   const cards = useMemo(() => (previews && !item.partial && !item.parent ? cardLinks(blocks) : null), [previews, item.partial, item.parent, blocks])
   const afterBlock = useMemo(() => (cards && cards.size
@@ -352,7 +352,7 @@ const ANNOUNCE_MS = 1500
 const SENT_SETTLE_MS = 1500
 
 /**
- * The chat's live region (review M9): mounted with the view, so the first card is heard; what comes
+ * The chat's live region: mounted with the view, so the first card is heard; what comes
  * while one is being read waits its turn instead of replacing it
  */
 function useAnnouncer(): [string, (text: string) => void] {
@@ -376,7 +376,7 @@ function useAnnouncer(): [string, (text: string) => void] {
   return [say, announce]
 }
 
-// ---------------------------------------------------------------- the wild Pokémon met (Phase 5)
+// ---------------------------------------------------------------- the wild Pokémon met
 
 const NO_WILD: WildEntry[] = []
 const WILD_ALL = { from: -Infinity, to: Infinity }
@@ -458,7 +458,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   // the wild Pokémon this session met within this conversation's time (src/chat/wild.ts), from the page's own game state
   const { wild, wildNew, wildPlayed } = useWild(game ? sid : null, items)
   const rows = useMemo(() => buildRows(items, { dayLabel, density, hasOlder, extra: wild }), [items, lang, today, density, hasOlder, wild]) // eslint-disable-line react-hooks/exhaustive-deps
-  // the text rows whose copy a turn's foot took over (Decision 10)
+  // the text rows whose copy a turn's foot took over
   const footed = useMemo(() => footCopies(rows), [rows])
   // the turn summary's steps (src/chat/steps.ts)
   const ledger = stepLedgerFor(game)
@@ -506,14 +506,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     if (itemId.startsWith('pending:')) return entries.find(e => `pending:${e.local}` === itemId)?.images.map(i => i.url) ?? []
     return box.thumbs(itemId)
   }, [box, entries])
-  // link preview cards (Phase 5): only with the flag, 채팅으로 보기 and 링크 미리보기 on (main checks the same again);
+  // link preview cards: only with the flag, 채팅으로 보기 and 링크 미리보기 on (main checks the same again);
   // off, the page's cards and their blob: URLs go; this view's go when it goes (a flip, a switch, the chat closed)
   const settings = useSettings()
   const previews = chatViewOn(settings) && settings.session.linkPreviews === true
   useEffect(() => { if (!previews) dropPreviews() }, [previews])
   useEffect(() => () => releasePreviews(id), [id])
   const wait = useMemo(() => findWait(state.items, status), [state.items, status])
-  // the card the surface shows (Phase 4): when it can be answered here, the waiting rows point to it (review M7)
+  // the card the surface shows: when it can be answered here, the waiting rows point to it
   const card = shownCard(status?.asks)
   const cardHere = cardNote(card) === 'here'
   const agentsKey = wait?.agents.join(',') ?? ''
@@ -556,13 +556,13 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   useEffect(() => {
     if (!fixed && !footer && listRef.current && takeChatFocus()) listRef.current.focus()
   })
-  // what waits on the user (Phase 4): the answer surface, in the amber pill's place while it shows a card
+  // what waits on the user: the answer surface, in the amber pill's place while it shows a card
   const asks = status?.asks ?? NO_ASKS
-  // a dialog on the terminal's screen that no card holds (2026-11-17): its own card, answered from here
+  // a dialog on the terminal's screen that no card holds: its own card, answered from here
   const dialogKey = fixed ? undefined : bridge?.chat.dialogKey
   // (a card that can only be answered in the terminal — too long, a sub-agent's — gives way to the dialog its
   // terminal shows, read from the screen; one answerable here, or an answer on its way, keeps the screen untouched)
-  // (2026-11-19: also one timed out, or answered and still waiting on Claude Code a moment after: src/chat/answer.ts
+  // (also one timed out, or answered and still waiting on Claude Code a moment after: src/chat/answer.ts
   // screenDialogs — a dialog that follows an answer gets its card too)
   const sentKeys = asks.filter(a => a.state === 'sent').map(a => a.key).join('\n')
   const [sentSettled, setSentSettled] = useState(true)
@@ -575,9 +575,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const termOnly = asks.length > 0 && screenDialogs(asks, sentSettled)
   const dialog = useTermDialog(id, !!dialogKey && (!asks.length || termOnly))
   const waiting = wait && !asks.length ? { text: t(wait.kind === 'permission' ? '{name}{iga} 허락을 기다려요' : '{name}{iga} 답을 기다려요', nameVars(who.name)), key: wait.key } : null
-  // the chat's one live region (review M9): there before any card, announcements one after another
+  // the chat's one live region: there before any card, announcements one after another
   const [say, announce] = useAnnouncer()
-  // find in the conversation (Phase 5, src/chat/find.ts): over the store's items as they are drawn (only what is loaded)
+  // find in the conversation (src/chat/find.ts): over the store's items as they are drawn (only what is loaded)
   const rootRef = useRef<HTMLDivElement>(null)
   const agentFit = useAgentWidth(rootRef, agentShown !== null)
   const listFocus = useCallback(() => listRef.current?.focus(), [])
@@ -585,7 +585,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   const openFind = find.openBar
   // Ctrl/⌘+F (src/keys.ts appShortcut: Widget's capture handler lets it through) opens the bar, while this view is
   // mounted: never mid-composition, never from a terminal (its own find bar, as in 1.4.0), and never while a dialog,
-  // 설정 or the lightbox is open on top (the final review's M7: the bar would open under it)
+  // 설정 or the lightbox is open on top (the bar would open under it)
   useEffect(() => {
     const onFindKey = (e: KeyboardEvent) => {
       if (appShortcut(e) !== 'find' || e.isComposing || e.defaultPrevented) return

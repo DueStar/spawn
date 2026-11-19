@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * chatWorker.cjs — the worker thread the chat view reads in (Phase 2). All
+ * chatWorker.cjs — the worker thread the chat view reads in. All
  * transcript reading and parsing happens here (chatLens.cjs over real fs and
  * timers), so a session's multi-hundred-MB transcript can never block the
  * main process. Started and stopped by chatHost.cjs.
@@ -10,11 +10,11 @@
  *                { t: 'terminals', list: [{ id, cwd, armed, status }] }
  *                { t: 'hook', event, raw, at, id?, hold? } (answered already — or held, with its hold id; the
  *                                                     body's bytes, capped, parsed here; id: the terminal its URL named)
- *                { t: 'hold-state', holdId, state, choice? }  (Phase 4: a held request ended: sent, timeout, terminal)
+ *                { t: 'hold-state', holdId, state, choice? }  (a held request ended: sent, timeout, terminal)
  *                { t: 'open' | 'close', id }
  *                { t: 'older' | 'reload' | 'resync', id, req? }  { t: 'agent', id, toolId, req? }
- *                { t: 'changes', id, req }  { t: 'change-file', id, file, before?, req }  (Phase 5: the change index)
- *                { t: 'preview', id, url, req }  { t: 'previews', on }  (Phase 5: link previews, only for a link
+ *                { t: 'changes', id, req }  { t: 'change-file', id, file, before?, req }  (the change index)
+ *                { t: 'preview', id, url, req }  { t: 'previews', on }  (link previews, only for a link
  *                                                     in an answer of terminal id's open view; `init` carries
  *                                                     preview: { allowLoopback, on }; off: every running fetch
  *                                                     aborted, every cache emptied; `close`: the fetches only that
@@ -23,7 +23,7 @@
  *                { t: 'prompt', id }                  (UserPromptSubmit for terminal id: its prompt row was taken)
  *                { t: 'asking', id, on }              (a question or a plan to approve open in terminal id, or none)
  *                { t: 'hold-bind', holdId, id, kind, key, data } | { t: 'hold-pass', holdId, why }
- *                { t: 'hold-resolved', holdIds, why }  (Phase 4: what a held request is; its call settled)
+ *                { t: 'hold-resolved', holdIds, why }  (what a held request is; its call settled)
  *                { t: 'reply', req, result }          (for a request that carried `req`; a preview's image bytes
  *                                                     are transferred, a copy: the service keeps its own)
  *                { t: 'log', level, msg }             (never transcript text, never a URL or a host)
@@ -45,7 +45,7 @@ function post(m, transfer) {
   try { if (transfer) parentPort.postMessage(m, transfer); else parentPort.postMessage(m) } catch { /* main is gone */ }
 }
 
-// ---- link previews (Phase 5): the policy main sent, and the service, made the first time previews are on
+// ---- link previews: the policy main sent, and the service, made the first time previews are on
 let previewPolicy = { allowLoopback: false, on: false }
 let previews = null
 function previewService() {
@@ -80,7 +80,7 @@ function setPreviews(on) {
 }
 /**
  * One card, or { ok: false } (off, refused, failed: silent); the image's bytes a copy, transferred. Only for a link
- * written in a finished answer of terminal `m.id`'s open view (the lens has the items: the final review's M2).
+ * written in a finished answer of terminal `m.id`'s open view (the lens has the items).
  */
 async function preview(m) {
   try {
@@ -123,7 +123,7 @@ parentPort.on('message', async (m) => {
         onPrompt: (id) => post({ t: 'prompt', id }),
         // a question or a plan to approve open in this terminal (on), or none any more: main holds the composer's Enter
         onAsking: (id, on) => post({ t: 'asking', id, on: on === true }),
-        // Phase 4: a held request bound or passed, a call settled (main answers or releases the hold)
+        // a held request bound or passed, a call settled (main answers or releases the hold)
         onHold: (m) => post(m),
       })
       // the previews' policy: the test switch (main reads it only in a development build) and on / off
@@ -152,12 +152,12 @@ parentPort.on('message', async (m) => {
     case 'reload': reply(m, lens ? await lens.reload(m.id) : { ok: false }); return
     case 'resync': reply(m, lens ? await lens.resync(m.id) : { ok: false }); return
     case 'agent': reply(m, lens ? await lens.agent(m.id, m.toolId) : { ok: false }); return
-    // Phase 5: the change index (counts and offsets; a file's edits read again from the transcript)
+    // the change index (counts and offsets; a file's edits read again from the transcript)
     case 'changes': reply(m, lens ? await lens.changes(m.id) : { ok: false }); return
     case 'change-file': reply(m, lens ? await lens.changeFile(m.id, m.file, m.before) : { ok: false, reason: 'gone' }); return
-    // "전체 보기" (2026-11-17): one item read again whole
+    // "전체 보기": one item read again whole
     case 'full': reply(m, lens ? await lens.full(m.id, m.itemId) : { ok: false, reason: 'gone' }); return
-    // Phase 5: link previews (only while main says they are on)
+    // link previews (only while main says they are on)
     case 'preview': await preview(m); return
     case 'previews': setPreviews(m.on === true); return
     default:

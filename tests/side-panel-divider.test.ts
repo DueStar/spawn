@@ -1,7 +1,7 @@
 /**
  * The left panel as a window: its sections are divided by full-width hairlines (each card's border-bottom), except
- * that the Pokédex strip and the session list read as one block (no line between them) — until 1.6.2, when the owner
- * asked for a line there too. 업무 모드 has no Pokédex strip, so nothing changes there.
+ * that the Pokédex strip and the session list read as one block (no line between them) — until 1.6.2, which
+ * adds a line there too. 업무 모드 has no Pokédex strip, so nothing changes there.
  */
 
 import { readFileSync } from 'node:fs'

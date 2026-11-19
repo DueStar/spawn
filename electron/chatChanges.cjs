@@ -1,14 +1,14 @@
 'use strict'
 
 /**
- * chatChanges.cjs — the change index of a conversation (Phase 5, the 변경 사항 panel). It runs in the
+ * chatChanges.cjs — the change index of a conversation (the 변경 사항 panel). It runs in the
  * chat worker (chatLens.cjs), never in the main process.
  *
  * The page keeps a window of the conversation, so a panel built from its items would undercount a long
  * session. The index reads the whole conversation instead: a forward scan of the transcript (and of the
  * sub-agents' own files), then the lens's live lines. It holds counts and byte offsets only, never the
  * text of a diff. When the page asks for a file, each edit is read again from its line (readEdit),
- * checked by its tool id, and rebuilt with Phase 2's buildDiff — the same block chatItems gives its row.
+ * checked by its tool id, and rebuilt with buildDiff — the same block chatItems gives its row.
  *
  * Wrong information is the worst failure:
  *   - edits of a file are kept and returned one by one, in order, never composed into one diff (that
@@ -56,7 +56,7 @@ const hashOf = (text) => crypto.createHash('sha1').update(Buffer.from(text, 'utf
  * The file as the panel names it (relative to the session folder with forward slashes, else as
  * recorded), the key it is found by, and whether it is outside the folder. The judgement and the key
  * are made on the path with `.` and `..` resolved by its text (never the disk), without case on Windows
- * and macOS; the name shown is still the recorded text (the final review's M5).
+ * and macOS; the name shown is still the recorded text.
  */
 function fileOf(raw, cwd, platform = process.platform) {
   const rel = relFile(raw, cwd, platform)

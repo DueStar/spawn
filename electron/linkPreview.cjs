@@ -1,7 +1,7 @@
 'use strict'
 
 /**
- * linkPreview.cjs — the link-preview service the chat worker hosts (Phase 5): linkFetch.cjs previewOf (the policy and
+ * linkPreview.cjs — the link-preview service the chat worker hosts: linkFetch.cjs previewOf (the policy and
  * the transport) behind a bounded memory cache, a small load limit and an on/off switch. It runs only in the chat
  * worker: never in the page, never in the main process's own thread.
  *
@@ -11,7 +11,7 @@
  *   Load    at most 3 fetches at once and 1 per host; at most 24 waiting, the oldest waiting dropped (its caller hears
  *           null, nothing is fetched for it); the same URL asked while in flight or waiting shares that one fetch.
  *   Off     until setOn(true) nothing is fetched (get answers null). setOn(false) empties every cache, drops the
- *           queue and aborts every running fetch at once (the final review's I2): its AbortSignal fires, so it makes
+ *           queue and aborts every running fetch at once: its AbortSignal fires, so it makes
  *           no further request, redirect hop or image request and its sockets are destroyed; its callers hear null.
  *   Owners  a URL is asked for a view (`owner`, a terminal's id); release(owner) — the view closed — aborts the fetches
  *           and drops the waiting ones that no other view wants.

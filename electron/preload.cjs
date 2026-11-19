@@ -54,14 +54,14 @@ contextBridge.exposeInMainWorld('spawn', {
     resync: (id) => ipcRenderer.invoke('chat:resync', String(id)),
     agent: (id, toolId) => ipcRenderer.invoke('chat:agent', { id: String(id), toolId: String(toolId) }),
     full: (id, itemId) => ipcRenderer.invoke('chat:full', { id: String(id), itemId: String(itemId) }),
-    // the changes panel (Phase 5): the conversation's changed files, and one file's edits (read from the transcript)
+    // the changes panel: the conversation's changed files, and one file's edits (read from the transcript)
     changes: (id) => ipcRenderer.invoke('chat:changes', String(id)),
     changeFile: (p) => ipcRenderer.invoke('chat:change-file', {
       id: String(p?.id ?? ''), file: String(p?.file ?? ''),
       ...(typeof p?.before === 'number' && Number.isFinite(p.before) ? { before: p.before } : {}),
     }),
     onUpdate: (fn) => on('chat:update', fn),
-    // the composer (Phase 3): plain values only (strings, a list of strings); anything else is dropped
+    // the composer: plain values only (strings, a list of strings); anything else is dropped
     send: (p) => ipcRenderer.invoke('chat:send', {
       id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), text: typeof p?.text === 'string' ? p.text : '',
       images: Array.isArray(p?.images) ? p.images.filter(x => typeof x === 'string').slice(0, 64) : [], screen: String(p?.screen ?? ''),
@@ -71,9 +71,9 @@ contextBridge.exposeInMainWorld('spawn', {
     }),
     submit: (p) => ipcRenderer.invoke('chat:submit', { id: String(p?.id ?? ''), sendId: String(p?.sendId ?? ''), echo: String(p?.echo ?? '') }),
     interrupt: (id) => ipcRenderer.invoke('chat:interrupt', String(id)),
-    // the mode menu (2026-11-17): one Shift+Tab, checked in main
+    // the mode menu: one Shift+Tab, checked in main
     cycleMode: (id) => ipcRenderer.invoke('chat:cycle-mode', String(id)),
-    // the dialog card (2026-11-17): one key (up, down, enter, esc) or one line of words, checked in main
+    // the dialog card: one key (up, down, enter, esc) or one line of words, checked in main
     dialogKey: (p) => ipcRenderer.invoke('chat:dialog-key', { id: String(p?.id ?? ''), key: String(p?.key ?? ''), ...(typeof p?.text === 'string' ? { text: p.text.slice(0, 4000) } : {}), ...(Number.isInteger(p?.n) ? { n: p.n } : {}) }),
     // an image's bytes (main checks them and names the file; the page never names a path) and its removal
     image: (p) => ipcRenderer.invoke('chat:image', { id: String(p?.id ?? ''), bytes: p?.bytes instanceof Uint8Array ? p.bytes : null }),
@@ -84,7 +84,7 @@ contextBridge.exposeInMainWorld('spawn', {
     commands: (p) => ipcRenderer.invoke('chat:commands', { id: String(p?.id ?? '') }),
     // a send whose page went away before its Enter (asked once as the composer opens)
     stranded: (id) => ipcRenderer.invoke('chat:stranded', String(id)),
-    // the buttons (Phase 4): which session's chat is shown (or none), and an answer — its choice only
+    // the buttons: which session's chat is shown (or none), and an answer — its choice only
     // (main builds what is sent; the page never does)
     visible: (id) => ipcRenderer.send('chat:visible', { id: typeof id === 'string' && id ? id : null }),
     answer: (p) => ipcRenderer.invoke('chat:answer', {
@@ -95,11 +95,11 @@ contextBridge.exposeInMainWorld('spawn', {
       // (each question's own words, its "Other" row: a string or null per question)
       ...(Array.isArray(p?.other) ? { other: p.other.slice(0, 4).map(x => (typeof x === 'string' ? x.slice(0, 4000) : null)) } : {}),
     }),
-    // 7-48: one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
+    // one resize nudge for the shown chat's hidden terminal (main checks everything; never a write)
     redraw: (id) => ipcRenderer.invoke('chat:redraw', String(id)),
     // 1.5.3: a send the page refused for its screen, logged with the screen's shape (letters and digits masked)
     diag: (p) => ipcRenderer.send('chat:diag', { id: String(p?.id ?? '').slice(0, 200), why: String(p?.why ?? '').slice(0, 20), shape: String(p?.shape ?? '').slice(0, 3000) }),
-    // link previews (Phase 5): one link's card for the view of terminal `id`, fetched by the chat worker (main answers
+    // link previews: one link's card for the view of terminal `id`, fetched by the chat worker (main answers
     // { ok: false } while off, and for a link that is not in that view's answers)
     preview: (p) => ipcRenderer.invoke('chat:preview', { id: String(p?.id ?? '').slice(0, 200), url: String(p?.url ?? '').slice(0, 4096) }),
   },

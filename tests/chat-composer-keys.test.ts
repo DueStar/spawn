@@ -109,7 +109,7 @@ describe('the @ mention at the caret', () => {
   })
 })
 
-describe('the review of Phase 3 (fixed)', () => {
+describe('composer keys: review fixes', () => {
   it('m1: Esc while a mention is typed (its menu still loading) closes the mention, never stops the work', () => {
     const s = { ...idle, working: true, menuOpen: false, mentionOpen: true }
     expect(keyAction(key('Escape'), s)).toBe('menu-close')

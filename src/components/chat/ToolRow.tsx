@@ -1,5 +1,5 @@
 /**
- * One tool call in the chat view (the lab's `.tl`): a single line — chevron, icon, label,
+ * One tool call in the chat view: a single line — chevron, icon, label,
  * detail, and quiet words on the right — that opens to show its output. A failed call is
  * red and shows its first error line. A call that waits on the user (a permission, a
  * question, a plan) is never folded: an amber dot, "터미널에서 답해 주세요" and 터미널로
@@ -51,7 +51,7 @@ const ALWAYS_OPEN = new Set(['AskUserQuestion', 'ExitPlanMode'])
 export const ToolRow: React.FC<{ item: ToolItem }> = ({ item }) => {
   const ctx = useChatContext()
   const lab = toolLabel(item)
-  // (a card below answers it, Phase 4: the row points there, with no 터미널로 보기)
+  // (a card below answers it: the row points there, with no 터미널로 보기)
   const meta = item.waiting && ctx.cardHere ? { text: '아래 카드에서 답해 주세요', dot: 'amber' as const, terminal: false } : toolMeta(item)
   const failed = item.state === 'failed'
   const always = !!item.tool && ALWAYS_OPEN.has(item.tool)

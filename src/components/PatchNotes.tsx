@@ -32,7 +32,7 @@ export const PatchNotes: React.FC = () => {
 }
 
 /**
- * Every release, kept (2026-11-19, the owner: none should go missing): grouped by minor version (1.10, 1.9, …), the
+ * Every release, kept (none goes missing): grouped by minor version (1.10, 1.9, …), the
  * newest group open, the older ones folded under their version range
  */
 export const PatchNotesHistory: React.FC<{ onClose: () => void }> = ({ onClose }) =>

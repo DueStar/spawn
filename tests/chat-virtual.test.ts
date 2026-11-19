@@ -60,7 +60,7 @@ describe('prependAnchor', () => {
 })
 
 describe('atBottom', () => {
-  it('within 160px of the end is the bottom (the lab\'s slack)', () => {
+  it('within 160px of the end is the bottom', () => {
     expect(atBottom(1000 - 600 - 159, 1000, 600)).toBe(true)
     expect(atBottom(1000 - 600 - 161, 1000, 600)).toBe(false)
     expect(atBottom(0, 300, 600)).toBe(true) // shorter than the view
@@ -97,7 +97,7 @@ describe('chat.css, what the calm look allows', () => {
     for (const r of rules) for (const v of vals(r.body, 'font-family')) expect(v, r.sel).not.toMatch(/var\(/)
   })
 
-  it('yellow only on the composer\'s send button (Phase 3); nothing else is yellow', () => {
+  it('yellow only on the composer\'s send button; nothing else is yellow', () => {
     expect(css.toLowerCase()).not.toContain('#f2c94c')
     const yellow = rules.filter(r => /var\(--accent\)|var\(--accent-hover\)/.test(r.body))
     expect(yellow.map(r => r.sel)).toEqual(['.chat-send', '.chat-send:hover'])
@@ -139,7 +139,7 @@ describe('chat.css, what the calm look allows', () => {
   })
 })
 
-describe('the virtual list holds no old render (the Phase 6 soak: a leak of about 1 MB a turn)', () => {
+describe('the virtual list holds no old render (the soak test: a leak of about 1 MB a turn)', () => {
   it("a row's ref callback is made outside the render (it holds only its key and the two refs), and the map is pruned", async () => {
     const { readFileSync } = await import('node:fs')
     const src = readFileSync(new URL('../src/components/chat/ChatList.tsx', import.meta.url), 'utf8')
@@ -147,7 +147,7 @@ describe('the virtual list holds no old render (the Phase 6 soak: a leak of abou
     expect(refFor).toContain('rowRef(key, elements, observer)')
     expect(refFor).not.toMatch(/=>\s*\{[\s\S]*elements\.current/)
     expect(src).toMatch(/^function rowRef\(/m)
-    // (pruned with the rows by src/chat/virtual.ts pruneToRows, as the heights are since the final review's M4)
+    // (pruned with the rows by src/chat/virtual.ts pruneToRows, as the heights are)
     expect(src).toMatch(/pruneToRows\(refs\.current, rows, elements\.current\)/)
   })
 })

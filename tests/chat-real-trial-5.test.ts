@@ -1,5 +1,5 @@
 /**
- * What the real-session trial of Phase 5 showed (Claude Code 2.1.325, Task 5.12; docs/HANDOFF.md 7-50).
+ * What a real-session trial showed (Claude Code 2.1.325).
  *
  * The folder-trust question of a new folder ("Quick safety check … ❯ No, exit / Yes, I trust this folder"), answered in
  * the terminal with ↓ and Enter, left the composer's ledger of the prompt row `unknown`: the page's xterm answers a
@@ -66,7 +66,7 @@ function armedTerminal() {
   return { terms, t, out, heard, writes }
 }
 
-describe('Phase 5 trial: the folder-trust question answered in the terminal leaves the prompt row known', () => {
+describe('real trial: the folder-trust question answered in the terminal leaves the prompt row known', () => {
   for (const report of REPORTS) {
     it(`a terminal report (${JSON.stringify(report)}) between the question and the keys: ↓ and Enter still answer the question`, () => {
       const { terms, t, out, heard, writes } = armedTerminal()

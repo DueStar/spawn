@@ -1,8 +1,8 @@
 /**
- * Wild Pokémon in the chat's flow (Phase 5, Task 5.7): src/chat/wild.ts (the game's own `catch` / `flee` events of
+ * Wild Pokémon in the chat's flow: src/chat/wild.ts (the game's own `catch` / `flee` events of
  * this session inside this conversation's time → entries), src/chat/rows.ts (`extra` → `wild` rows placed before the
  * first main-thread item stamped later; never inside a group, no day line, no turn head, never unread) and
- * src/components/chat/WildRow.tsx (the lab's `.wild`: the sprite, 야생의 {name}{iga} 나타났다 → the ball and 잡았다 ·
+ * src/components/chat/WildRow.tsx (`.chat-wild`: the sprite, 야생의 {name}{iga} 나타났다 → the ball and 잡았다 ·
  * Lv.n, 새로 등록, 놓쳤다, 색이 다른, a rare tier's word in its colour; one sentence for a screen reader; nothing in 업무 모드).
  * The events are tests/fixtures/chat/dex-events.json (the server's own shapes), the conversation turns.jsonl.
  */
@@ -180,7 +180,7 @@ function dayKey(at: number) { const d = new Date(at); return `${d.getFullYear()}
 
 // ---------------------------------------------------------------- the row
 
-describe('WildRow (the lab\'s .wild)', async () => {
+describe('WildRow', async () => {
   const { WildRow } = await import('../src/components/chat/WildRow')
   const { ChatContext } = await import('../src/components/chat/context')
   const base = { id: 't1', onTerminal() {}, onLink() {}, onPath() {}, loadAgent: () => Promise.resolve({ ok: true }), waitingAgents: [] }
@@ -273,12 +273,12 @@ describe('the view: wild rows only outside 업무 모드, from the page\'s own g
     for (const ko of Object.keys(chat.en)) for (const s of [ko, chat.en[ko], chat.ja[ko]]) expect(GAME_WORDS.test(s), s).toBe(false)
   })
 
-  it('its look in chat-game.css (the lab\'s .wild, app.css 264–274); chat.css has none of it', () => {
+  it('its look in chat-game.css; chat.css has none of it', () => {
     const game = read('src', 'styles', 'chat-game.css').replace(/\/\*[\s\S]*?\*\//g, '')
     expect(game).toMatch(/\.chat-wild \{[^}]*display: flex;[^}]*align-items: center;[^}]*min-height: 34px;[^}]*font-size: var\(--t-ui\);[^}]*color: var\(--ink-3\);/)
     expect(game).toMatch(/\.chat-wild-mon \{[^}]*width: 34px; height: 34px;/)
     expect(game).toMatch(/\.chat-wild b \{[^}]*color: var\(--ink-2\);[^}]*font-weight: var\(--w-name\);/)
-    // the tag: a hairline, no fill (the lab's .newtag, not the "now" style's filled yellow pill)
+    // the tag: a hairline, no fill (not the "now" style's filled yellow pill)
     const tag = /\.chat-wild-tag \{([^}]*)\}/.exec(game)
     expect(tag).toBeTruthy()
     expect(tag![1]).toMatch(/border: 1px solid var\(--line\);/)

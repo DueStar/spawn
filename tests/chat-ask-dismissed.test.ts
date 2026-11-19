@@ -1,5 +1,5 @@
 /**
- * A question dismissed in the terminal (2026-11-19, the owner's log on Claude Code 2.1.328): the AskUserQuestion's
+ * A question dismissed in the terminal (seen on Claude Code 2.1.328): the AskUserQuestion's
  * hold went back to the terminal (the chat was not shown), Esc there dismissed it — no PostToolUse, no Stop — and a
  * prompt typed in the terminal started new work. The chat kept refusing every send ("… is waiting for your answer")
  * for minutes: the lens still said a question was open (`asking`), main's waitingNow believed it. Now whatever proves
@@ -54,7 +54,7 @@ const Q = hooksOf('hooks-question.jsonl')
 const ask = Q[0].body
 const prompt = (text: string) => ({ session_id: S, hook_event_name: 'UserPromptSubmit', prompt: text, transcript_path: ask.transcript_path })
 
-/** The owner's sequence up to the Esc: a prompt, the question (both PreToolUse routes), its hold handed back, its PermissionRequest passed */
+/** The sequence up to the Esc: a prompt, the question (both PreToolUse routes), its hold handed back, its PermissionRequest passed */
 async function questionHandedBack() {
   const s = setup()
   s.lens.hook('UserPromptSubmit', prompt('ask me something'), 0)

@@ -1,5 +1,5 @@
 /**
- * "전체 보기" (2026-11-17): an item the chat shows cut (an answer over its cap, a long message, a command's output
+ * "전체 보기": an item the chat shows cut (an answer over its cap, a long message, a command's output
  * past 200 lines) read again whole from the transcript (electron/chatFull.cjs) and shown over the conversation,
  * with 복사 and 닫기 — in place of "the rest is in the terminal". An answer reads as prose, an output as text.
  */

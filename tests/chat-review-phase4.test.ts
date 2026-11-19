@@ -1,7 +1,7 @@
 /**
- * The review of Phase 4 (.superpowers/sdd/2026-11-15-chat-view-phase-2/review-phase-4.md): what a card
+ * The answer cards' review findings: what a card
  * shows is what 허용 approves (C3, C4, M12, M13), 항상 허용 only for a rule of the requesting tool
- * with real content (I4). The reviewer's probes, through the real lens (electron/chatLens.cjs) and
+ * with real content (I4). The probes, through the real lens (electron/chatLens.cjs) and
  * electron/chatItems.cjs; fake timers, a temp Claude folder.
  */
 

@@ -133,7 +133,7 @@ describe('the host: chat:files', () => {
 
 void fs
 
-describe('the review of Phase 3: a slow folder (m13, fixed)', () => {
+describe('review fix: a slow folder (m13)', () => {
   it('a network share (\\\\server\\share, //server/share) is not walked: nothing is asked of the network', async () => {
     const asked: string[] = []
     const spy = { realpath: async (p: string) => { asked.push(p); return p }, lstat: async () => { throw new Error('x') }, opendir: async () => { throw new Error('x') } }

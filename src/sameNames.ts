@@ -1,5 +1,5 @@
 /**
- * sameNames — telling apart sessions that carry the same name (2026-11-19, the owner's "two sessions named 'Spawn'").
+ * sameNames — telling apart sessions that carry the same name (e.g. two sessions named "Spawn").
  * Claude Code copies a /rename'd title onto the conversation a /clear starts, and two tabs can be given one name:
  * the name is kept and a quiet mark added where needed, never a session hidden for it.
  *

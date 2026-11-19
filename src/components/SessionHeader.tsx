@@ -12,7 +12,7 @@
  * before the pair, so the pair and the × keep their place when they come and go. Without them
  * the markup is exactly as it was.
  *
- * With two or more `tabs` (2026-11-17, src/sessionTabs.ts) the left part is the session tabs: the one in view keeps
+ * With two or more `tabs` (src/sessionTabs.ts) the left part is the session tabs: the one in view keeps
  * its picture, name (renamed on a double-click) and branch; the others are its picture, name and status dot, a click
  * shows them; each tab's own × closes the tab only. The 채팅 / 터미널 pair on the right is the app's one choice, for
  * every session — the tabs are the sessions, the pair is how they are all seen. One tab: the header as before.

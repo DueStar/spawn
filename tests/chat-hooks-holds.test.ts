@@ -1,5 +1,5 @@
 /**
- * electron/chatHooks.cjs with holds (Phase 4, Task 4.3): the endpoint keeps a PermissionRequest and
+ * electron/chatHooks.cjs with holds: the endpoint keeps a PermissionRequest and
  * the AskUserQuestion route open until the hold registry answers, releases or loses it; every other
  * hook is still answered first; the entries outlast the holds. A real socket.
  */
@@ -129,7 +129,7 @@ describe('the endpoint holds', () => {
   it('a held response still arrives after the server\'s request timeout (body read: the timeout is over)', async () => {
     const holds = createHolds({ timers: realTimers })
     // (Node checks for timed-out requests every connectionsCheckingInterval: 50 ms here, so a request it
-    // would cut is cut well inside the 1.2 s held; review M11)
+    // would cut is cut well inside the 1.2 s held)
     const { port, token, hooks } = await endpoint({ holds, requestTimeoutMs: 300, checkEveryMs: 50 })
     const started = Date.now()
     const r = request(port, `/chat/${token}/${TID}/PermissionHold`, BODY)
@@ -170,13 +170,13 @@ describe('the endpoint holds', () => {
     await worker.terminate()
     expect(results.map(r => [r.status, r.body])).toEqual([[200, ''], [200, '']])
     // the first is answered before its own handler stalls (1 s); the second may wait out the first's stall only
-    // (a wide margin: a loaded machine is slow, never a whole stall slow; review M11)
+    // (a wide margin: a loaded machine is slow, never a whole stall slow)
     expect(results[0].ms).toBeLessThan(800)
     holds.releaseAll('test')
     await held.done
   })
 
-  it('the plain PermissionRequest route (the Phase 2 entry, 5 s) is never held, even with a registry (review M1)', async () => {
+  it('the plain PermissionRequest route (the passive entry, 5 s) is never held, even with a registry (review M1)', async () => {
     const holds = createHolds({ timers: realTimers })
     const { port, token, hooks } = await endpoint({ holds })
     const res = await request(port, `/chat/${token}/${TID}/PermissionRequest`, BODY).done
@@ -226,7 +226,7 @@ describe('the entries with holds', () => {
     expect(e.PreToolUse[1].hooks[0].timeout).toBeGreaterThan(HOLD.questionMs / 1000)
   })
 
-  it('without holds: Phase 2\'s entries, byte for byte', () => {
+  it('without holds: the passive entries, byte for byte', () => {
     const PHASE2 = `{"UserPromptSubmit":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/UserPromptSubmit","timeout":5}]},"PreToolUse":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PreToolUse","timeout":5}]},"PermissionRequest":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PermissionRequest","timeout":5}]},"PostToolUse":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PostToolUse","timeout":5}]},"PostToolUseFailure":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PostToolUseFailure","timeout":5}]},"MessageDisplay":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/MessageDisplay","timeout":3}]},"Stop":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/Stop","timeout":5}]},"StopFailure":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/StopFailure","timeout":5}]},"SubagentStart":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/SubagentStart","timeout":5}]},"SubagentStop":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/SubagentStop","timeout":5}]},"PreCompact":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PreCompact","timeout":5}]},"PostCompact":{"hooks":[{"type":"http","url":"http://127.0.0.1:4321/chat/${TOKEN}/${TID}/PostCompact","timeout":5}]}}`
     expect(JSON.stringify(chatHookEntries({ port: 4321, token: TOKEN, id: TID }))).toBe(PHASE2)
     expect(JSON.stringify(chatHookEntries({ port: 4321, token: TOKEN, id: TID, holds: false }))).toBe(PHASE2)

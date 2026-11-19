@@ -1,7 +1,7 @@
 /**
  * fixture.mjs — the made-up state the screenshot harness (shots.mjs) shows:
- * the same four sessions, usage and game as the design lab
- * (spawn-site-lab/calm-lab/app.js, views.js), so a sheet compares like with like.
+ * the same four sessions, usage and game as the reference design
+ * (its mock-up data), so a sheet compares like with like.
  *
  *   snapshot / terminals       four Claude Code sessions + one shell
  *   snapshot12 / terminals12   twelve sessions (two with very long names) + the shell
@@ -113,7 +113,7 @@ const boxMons = BOX_DEX.map((dex, i) => mon(`b${i + 1}`, dex, 5 + (i % 17), { sh
 function caughtIds() {
   const ids = new Set([...PARTY.map(p => p[0]), ...BOX_DEX, 8, 9, 2, 3, 5, 17, 20, 26])
   for (let id = 1; ids.size < 185 && id <= 1025; id += id < 160 ? 1 : id < 400 ? 3 : 11) {
-    if (id < 160 && id % 7 === 3) continue // a few holes in Kanto, as in the lab
+    if (id < 160 && id % 7 === 3) continue // a few holes in Kanto, as in the reference design
     ids.add(id)
   }
   return [...ids].sort((a, b) => a - b)
@@ -203,7 +203,7 @@ const TWELVE = [...BASE, ...MORE]
 
 export const snapshot = snapshotOf(BASE)
 export const terminals = [...BASE.map(terminalOf), shellTerminal]
-/** The same four with nobody waiting (session 1 working): the widget opens no question card, as in the lab's widget */
+/** The same four with nobody waiting (session 1 working): the widget opens no question card, as in the reference design's widget */
 export const snapshotPlain = snapshotOf(BASE.map(s => s.mood === 'needs-you' ? { ...s, mood: 'working' } : s))
 export const snapshot12 = snapshotOf(TWELVE)
 /** The four with the last n waiting for a Pokémon (none rested when they opened): session-nomon */

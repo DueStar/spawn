@@ -1,5 +1,5 @@
 /**
- * A link preview card (Phase 5, opt-in; the lab's `.og`, calm-lab app.css 223–230, app.js 386–401): after the
+ * A link preview card (opt-in): after the
  * block of a finished answer that holds the link. A hairline box at most 480px wide: the site line (a neutral
  * globe, the link's own host, `→ final host` when a redirect left it), the title on one line, the description on
  * two, and the picture at 104×68 on the right when there is one. The whole card is one link that opens the

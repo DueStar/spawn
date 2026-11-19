@@ -219,8 +219,8 @@ describe('M9: a row is drawn again only when its items changed', () => {
 
 describe('M11, M8: 오늘 / 어제 move on at midnight; rows are measured again for a new width or text step', () => {
   it('the rows are built again when the day changes', () => {
-    // (items: the record's, with the composer's provisional bubbles after it — Phase 3)
-    // (Phase 5: and when the density changes, or whether older items exist: the first turn's foot)
+    // (items: the record's, with the composer's provisional bubbles after it)
+    // (and when the density changes, or whether older items exist: the first turn's foot)
     expect(read('src', 'components', 'ChatView.tsx')).toMatch(/useMemo\(\(\) => buildRows\(items, \{ dayLabel, density, hasOlder, extra: wild \}\), \[items, lang, today, density, hasOlder, wild\]\)/)
   })
   it('the measured heights are forgotten on a new width or a class change of <html> (the text step)', () => {
@@ -286,7 +286,7 @@ describe('I7: a path chip in the chat never runs a file', () => {
   })
 })
 
-describe('I2: the conversation takes the focus only right after the user asked', () => {
+describe('I2: the conversation takes the focus only right after it was asked for', () => {
   it('nothing asked: never; asked: once, within two seconds', () => {
     expect(takeChatFocus()).toBe(false)
     askChatFocus()

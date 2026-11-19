@@ -1,5 +1,5 @@
 /**
- * 보기 정도 in the session header (the lab's `.dens` and its menu, only while the chat is shown): the eye, the
+ * 보기 정도 in the session header (only while the chat is shown): the eye, the
  * level's name and a chevron. The menu holds the three levels (src/chat/density.ts), each with its one-line
  * hint; the chosen one is checked on the quiet selection grey (never yellow). It works from the keyboard as the
  * text-size menu does: ↓ / ↑ on the button open it on the checked level, ↓ / ↑ / Home / End move, Enter or

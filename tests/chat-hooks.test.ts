@@ -14,7 +14,7 @@ import { budget } from './timing'
 const require = createRequire(import.meta.url)
 const { createChatEndpoint, chatHookEntries, CHAT_HOOK_EVENTS } = require('../electron/chatHooks.cjs')
 
-/** a terminal's id: the hook's URL names the terminal the session runs in (review I-4) */
+/** a terminal's id: the hook's URL names the terminal the session runs in */
 const TID = '33333333-3333-4333-8333-333333333333'
 
 const open: { close(): Promise<void> }[] = []
@@ -159,7 +159,7 @@ describe('the endpoint', () => {
   })
 })
 
-// review M13: main never parses a hook body (it can hold a file's text); review M15: refusals are logged once per reason
+// main never parses a hook body (it can hold a file's text); refusals are logged once per reason
 describe('raw bodies and refusals', () => {
   it('raw: the body is handed on as its own bytes, unparsed (the worker parses it)', async () => {
     const got: any[] = []
@@ -189,7 +189,7 @@ describe('raw bodies and refusals', () => {
   })
 })
 
-describe('the endpoint tells the host what arrives (the composer, Phase 3)', () => {
+describe('the endpoint tells the host what arrives (the composer)', () => {
   it('onArrive gets the event name before the response, never a body; a refused request is not one', async () => {
     const order: string[] = []
     const arrived: unknown[][] = []

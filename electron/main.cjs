@@ -722,7 +722,7 @@ function buildAppWindow(mode, { hidden = false, near = null } = {}) {
   win.on('hide', refreshMenus)
   // The chat view: whether the app window is seen (a question is answered from the chat only while it is),
   // and no chat shown once its page is gone or reloading
-  // (review I3: only the app window of now speaks for the window; a page going clears only what it showed)
+  // (only the app window of now speaks for the window; a page going clears only what it showed)
   if (CHAT_VIEW) {
     const chatSeen = () => { if (win !== widgetWin) return; if (chatHost) chatHost.setWindowVisible(!win.isDestroyed() && win.isVisible() && !win.isMinimized()) }
     for (const ev of ['show', 'hide', 'minimize', 'restore']) win.on(ev, chatSeen)
@@ -1145,9 +1145,9 @@ function registerTerminalIpc() {
   if (CHAT_VIEW) chatHost = require('./chatHost.cjs').createChatHost({
     terminals: {
       list: () => terminals?.list() ?? [], refreshSettings: () => terminals?.refreshSettings(), armedCount: () => terminals?.armedCount() ?? 0,
-      // the composer's only way into a terminal (an armed Claude Code session), and the side panel's 확인 필요 cleared (Phase 4)
+      // the composer's only way into a terminal (an armed Claude Code session), and the side panel's 확인 필요 cleared
       typeForChat: (id, data) => terminals?.typeForChat(id, data) ?? false, clearAsking: (id) => terminals?.clearAsking(id),
-      // 7-48: the one-row resize nudge for a shown chat's hidden terminal (chatHost.cjs redraw decides; a resize only)
+      // the one-row resize nudge for a shown chat's hidden terminal (chatHost.cjs redraw decides; a resize only)
       redrawForChat: (id) => terminals?.redrawForChat(id) ?? false,
     },
     send: sendToWindows, userDataDir: app.getPath('userData'),
@@ -1226,7 +1226,7 @@ function registerTerminalIpc() {
     const r = await dialog.showOpenDialog(parent, { title, defaultPath: app.getPath('documents'), properties: ['openDirectory'] })
     return r.canceled ? null : r.filePaths[0]
   }))
-  // The resume list's states (2026-11-19): `open` (one of the app's tabs has it, also the conversation a /clear gave a
+  // The resume list's states: `open` (one of the app's tabs has it, also the conversation a /clear gave a
   // tab), `closing` (its tab was just closed and its Claude Code is still ending), `running` (checked: a pid Windows
   // reused for another program no longer counts, history.cjs runningCheck)
   const runningNow = runningCheck()
@@ -1257,9 +1257,9 @@ function registerTerminalIpc() {
   }))
   // The picker asks again every few seconds while a row is 실행 중 or 닫는 중, so the badge goes by itself
   ipcMain.handle('sessions:states', guard((ids) => sessionStates(Array.isArray(ids) ? ids.map(String).slice(0, 200) : [])))
-  // A session deleted from the resume list (2026-11-17): its transcript into ~/.spawn/trash for 7 days, never one
+  // A session deleted from the resume list: its transcript into ~/.spawn/trash for 7 days, never one
   // open in this app or running elsewhere; restore puts it back (electron/sessionTrash.cjs). One whose tab was just
-  // closed is waited for (30 s at most) while its Claude Code ends (2026-11-19)
+  // closed is waited for (30 s at most) while its Claude Code ends
   ipcMain.handle('sessions:trash', guard((id) => {
     const closed = terminals.recentlyClosed()
     return trashWhenEnded({
@@ -1279,7 +1279,7 @@ function registerTerminalIpc() {
     if (!w || !w.isVisible() || w.isMinimized()) return
     terminals.resize(String(id), Number(cols), Number(rows))
   }))
-  // (the page's only use is its /rename: never typed while the owner types there, 1.6.2)
+  // (the page's only use is its /rename: never typed while the user types there)
   ipcMain.handle('terminals:send', guard(({ id, text } = {}) => terminals.sendInstruction(String(id), text, { notWhileTyping: true })))
   ipcMain.handle('terminals:open-url', guard((url) => {
     try {

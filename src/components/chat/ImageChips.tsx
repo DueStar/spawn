@@ -1,5 +1,5 @@
 /**
- * The images attached to the composer's message (the lab's `.ichip`): a hairline chip with
+ * The images attached to the composer's message: a hairline chip with
  * a small picture (a button: it opens the picture large), its name (붙여넣은 이미지 n) and ×
  * (빼기). The picture is the page's own blob URL of the pasted file; the file main keeps is
  * reached only by its token.

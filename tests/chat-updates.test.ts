@@ -1,6 +1,6 @@
 /**
  * Claude Code's `thinkingDisplay: "updates"`: a thinking block with text is the progress note the terminal shows
- * (the owner's session, 2026-11-17: "6번째 상품은 끌리젠 보풀제거기이고…" in the terminal, nothing in the chat).
+ * (a note seen in the terminal showed nothing in the chat).
  * The hidden thinking is written empty. The chat shows the notes in 기본, as prose.
  */
 import { createRequire } from 'node:module'

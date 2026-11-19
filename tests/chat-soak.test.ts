@@ -1,5 +1,5 @@
 /**
- * An hour of streaming through the lens (Phase 6, Task 6.1), on a fake clock: 600 turns, each a prompt, three tool
+ * An hour of streaming through the lens, on a fake clock: 600 turns, each a prompt, three tool
  * calls (PreToolUse → the call and its result in the transcript → PostToolUse), a provisional answer streamed by
  * MessageDisplay every 200 ms (30 batches: six seconds a turn), the answer line, Stop and the turn's end.
  *

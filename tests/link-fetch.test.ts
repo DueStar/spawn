@@ -1,5 +1,5 @@
 /**
- * electron/linkFetch.cjs — the link-preview fetcher (Phase 5, Task 5.9). Each row of the plan's "Link preview
+ * electron/linkFetch.cjs — the link-preview fetcher. Each row of the plan's "Link preview
  * policy" has its own describe block below (Scheme, URL shape, Names, IP forms, Address check, DNS, Redirects,
  * Request, Response, Time, Size, HTML, Image, Logs, Test switch), then the composition (previewOf) and the
  * source guards.
@@ -975,7 +975,7 @@ describe('previewOf: the composition into a LinkCardData', () => {
   it('og-basic and its image: title, description, the link\'s own host as the site, image bytes with type and size, the url as written', async () => {
     const url = at('/rivers')
     const card = await previewOf(url, local())
-    // (Task 5.10, the controller's ruling: og:site_name is what the page claims, so the card's site is always the
+    // (og:site_name is what the page claims, so the card's site is always the
     // link's real host; a page can never make a card name another site)
     expect(card).toMatchObject({ url, site: 'site.test', via: null, title: 'The longest rivers', description: 'The Nile and the Amazon, compared by length and by flow.' })
     expect(card.image).toMatchObject({ type: 'png', width: 3, height: 2 })
@@ -1077,7 +1077,7 @@ describe('Guards: the source of linkFetch.cjs', () => {
   const src = readFileSync(SRC_PATH, 'utf8')
   it('requires only http, https, dns, net, zlib, url (and the pure linkShape.cjs)', () => {
     const reqs = [...src.matchAll(/require\(\s*['"`]([^'"`]+)['"`]\s*\)/g)].map(m => m[1])
-    // (./linkShape.cjs: the rule for which links may get a card at all, pure; the final review's I1)
+    // (./linkShape.cjs: the rule for which links may get a card at all, pure)
     expect(new Set(reqs)).toEqual(new Set(['http', 'https', 'dns', 'net', 'zlib', 'url', './linkShape.cjs']))
     expect(src).not.toMatch(/\brequire\(\s*[^'"`\s]/)
     expect(src).not.toMatch(/\bimport\(/)

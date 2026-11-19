@@ -1,5 +1,5 @@
 /**
- * Which rows of the chat view get a link preview card (Phase 5, Task 5.10): the whole ChatView drawn with
+ * Which rows of the chat view get a link preview card: the whole ChatView drawn with
  * react-dom/server over a fixed conversation, LinkCard stood in by a marker (the real one asks for its card
  * only once mounted, in an effect, so a server render could not see it). Only links of a finished assistant
  * text get one: never a user's message, a tool's command or output, a code block or inline code, an

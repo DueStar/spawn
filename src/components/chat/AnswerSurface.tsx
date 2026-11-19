@@ -1,7 +1,6 @@
 /**
- * The answer surface (Phase 4): what the session waits on the user for, outside the virtual list,
- * between the conversation and the composer, in the reading column (the lab's `.card.ask`,
- * calm-lab app.css 296–309). It shows one card — the oldest that can be answered here, else the
+ * The answer surface: what the session waits on the user for, outside the virtual list,
+ * between the conversation and the composer, in the reading column. It shows one card — the oldest that can be answered here, else the
  * oldest (src/chat/answer.ts shownCard) — and "{n}건 더 기다려요" when there are more.
  *
  * Never by itself: no button is focused, the focus is never moved here (a card appearing while the

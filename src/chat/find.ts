@@ -1,5 +1,5 @@
 /**
- * Find in the conversation (Phase 5): what the store's items say as plain text, where a query is found, the row
+ * Find in the conversation: what the store's items say as plain text, where a query is found, the row
  * each place is drawn in and what must open for it to show. Pure apart from `t` (a notice's words); the view
  * (src/components/ChatView.tsx) navigates and src/components/chat/FindBar.tsx paints.
  *
@@ -278,7 +278,7 @@ export const OVERLAY_SELECTOR = '[role="dialog"], [role="alertdialog"], [aria-mo
 
 /**
  * Whether something sits on top of the chat (a dialog, 설정, the lightbox): Ctrl/⌘+F then does nothing for the chat,
- * so the find bar never opens under it (the final review's M7)
+ * so the find bar never opens under it
  */
 export function overlayOpen(doc: { querySelector(selector: string): unknown } | null | undefined): boolean {
   try { return !!doc && doc.querySelector(OVERLAY_SELECTOR) !== null } catch { return false }

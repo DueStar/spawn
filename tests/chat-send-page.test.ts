@@ -76,7 +76,7 @@ describe('sendDraft', () => {
     expect(t.calls).toEqual([])
   })
 
-  // 2026-11-19, the owner's log: a question dismissed with Esc in the terminal left a card handed back to it and the
+  // A question dismissed with Esc in the terminal left a card handed back to it and the
   // status waiting; the composer refused every send. The screen shows the prompt box and no dialog: main decides
   it('a wait whose dialog the screen no longer shows (a card handed to the terminal, the status waiting): sent, main told noDialog', async () => {
     const t = deps([screen('idle-empty'), screen('idle-empty'), screen('echo-plain')])
@@ -180,7 +180,7 @@ describe('sendDraft', () => {
   })
 })
 
-describe('the review of Phase 3: the page\'s half (fixed)', () => {
+describe('the composer\'s review: the page\'s half (fixed)', () => {
   it('I-6: once the echo is right, the page waits out main\'s minimum and reads the screen once more; a dialog that opened meanwhile: blocked, no Enter asked', async () => {
     // reads: preflight, the echo (right at once), then the screen again after the wait
     const t = deps([screen('idle-empty'), screen('echo-plain'), screen('dialog-question')], { send: { ok: true, expect: { head: 'Without tools, name thre', images: 0, long: false }, command: false, minEnterMs: 150 }, submit: { ok: false, reason: 'no-echo' } })

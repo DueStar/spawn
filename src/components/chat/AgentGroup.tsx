@@ -1,5 +1,5 @@
 /**
- * A sub-agent in the chat view (the lab's nested `.tl-group`): the Agent call's row —
+ * A sub-agent in the chat view: the Agent call's row —
  * 보조 에이전트, what it was asked to do, how many tools it used and its state — that
  * opens onto the sub-agent's own rows. Its rows live in the sub-agent's transcript; an open
  * row asks the lens for them (chat:agent) whenever it has none (also after main let them go:

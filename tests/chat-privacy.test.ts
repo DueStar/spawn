@@ -1,5 +1,5 @@
 /**
- * Privacy (Phase 6, Task 6.5): nothing of a conversation reaches a log, storage or a file; previews leave nothing
+ * Privacy: nothing of a conversation reaches a log, storage or a file; previews leave nothing
  * behind.
  *
  * - Logs: no log call of the chat's main-side files (electron/chat*.cjs, electron/link*.cjs) interpolates a text, a

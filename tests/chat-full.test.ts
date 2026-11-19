@@ -1,5 +1,5 @@
 /**
- * "전체 보기" (2026-11-17): an item read again whole from its transcript line — an answer, a user message, a
+ * "전체 보기": an item read again whole from its transcript line — an answer, a user message, a
  * thinking block, a tool's output (found after its call), a `!` command's output; a Read's text never.
  */
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'

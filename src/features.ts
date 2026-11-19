@@ -3,7 +3,7 @@
  * from the same electron/features.json, so flipping it there flips both.
  *
  * OTHER_TOOLS: AI tools other than Claude Code (Codex CLI, tools added in
- * 설정 › AI 도구). Hidden on 2026-11-13 at the owner's request; set
+ * 설정 › AI 도구). Hidden by default; set
  * `otherTools` to true in electron/features.json to bring them back. The
  * stored settings (tools, defaultTool) are left as they are, only not used.
  */
@@ -14,7 +14,7 @@ import type { AiTool } from './desktop'
 export const OTHER_TOOLS: boolean = FEATURES.otherTools === true
 
 /**
- * CHAT_VIEW: the chat view of a Claude Code session (Phase 2, a read-only lens),
+ * CHAT_VIEW: the chat view of a Claude Code session (a read-only lens),
  * the same switch as electron/features.cjs. Off, the app is release 1.4.0 (no 설정
  * row, no flip). VITE_SPAWN_CHAT_VIEW=1 turns it on for development and the
  * screenshot harness only.

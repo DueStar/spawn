@@ -129,7 +129,7 @@ export function itemProblems(item: any): Problem[] {
         check(item.truncated === undefined || item.truncated === true, p, 'shell.truncated')
         break
       case 'thinking':
-        // (Phase 5: a thinking block, shown from 생각 포함; Claude Code 2.1.32x writes its text empty)
+        // (a thinking block, shown from 생각 포함; Claude Code 2.1.32x writes its text empty)
         only(item, [...base, 'text', 'durationMs', 'redacted', 'truncated', 'update'], p, 'thinking')
         check(item.update === undefined || item.update === true, p, 'thinking.update')
         check(typeof item.text === 'string', p, 'thinking.text')

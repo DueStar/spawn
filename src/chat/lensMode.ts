@@ -1,7 +1,7 @@
 /**
  * The chat view's place in the app: who speaks in it (the session's Pokémon, or in
  * 업무 모드 a plain glyph and "에이전트"), and how a file named in it opens (the one
- * function Phase 5 retargets to the 변경 사항 panel).
+ * function that targets the 변경 사항 panel).
  */
 
 import { bridge, type TerminalInfo, type WidgetMode } from '../desktop'
@@ -41,7 +41,7 @@ export function readLensModes(): Record<string, LensMode> {
 }
 
 /**
- * The one 채팅 / 터미널 choice for every session (2026-11-17, the owner's call: the flip is the app's, not a session's).
+ * The one 채팅 / 터미널 choice for every session (the flip is the app's, not a session's).
  * Until it is chosen once: 채팅 when the most recent session's old choice was 채팅.
  */
 export function readLensAll(): LensMode {

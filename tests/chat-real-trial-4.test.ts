@@ -1,5 +1,5 @@
 /**
- * What the real-session trial of Phase 4 showed (Claude Code 2.1.325, Task 4.9; docs/HANDOFF.md 7-49),
+ * What a real-session trial of the answer buttons showed (Claude Code 2.1.325),
  * replayed from hand-redacted real hook bodies (tests/fixtures/chat/real-holds-4.jsonl): the Bash
  * body carries timeout, run_in_background and dangerouslyDisableSandbox when Claude passes them; a
  * Write over a file and an Edit carry a setMode suggestion; a sub-agent's request carries agent_id

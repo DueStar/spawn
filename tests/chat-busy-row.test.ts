@@ -1,6 +1,6 @@
 /**
- * Words left on the terminal's prompt row never stop a send from the chat (2026-11-19, the owner: "whichever side it
- * is sent from, that is what is sent"): on prompt-busy the composer clears the row (src/chat/clearRow.ts) and sends
+ * Words left on the terminal's prompt row never stop a send from the chat (what is sent is
+ * what was typed in the chat): on prompt-busy the composer clears the row (src/chat/clearRow.ts) and sends
  * its message, once, without asking; only a row it could not clear is said.
  */
 

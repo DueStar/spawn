@@ -1,5 +1,5 @@
 /**
- * The user's message in the chat view (the lab's `.msg-user`): a quiet block on the
+ * The user's message in the chat view: a quiet block on the
  * right, the text as typed (line breaks kept, never markdown; an `@path` drawn as a file badge), and the time under it.
  * Pictures: the thumbnails of images sent from this composer in this run (a click shows
  * one large), else "이미지 n" (no picture data ever comes back from main).

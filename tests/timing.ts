@@ -4,7 +4,7 @@
  * budget(ms) — a budget that is a product number (the page finds a word in 4,000 items within 40 ms). It is that
  * number on a developer's machine and in the SPAWN_PERF=1 runs. On a CI runner (process.env.CI, which GitHub
  * Actions sets) it is CI_SLOWDOWN (×4) wider: a shared runner running the whole suite is slower and noisier than a
- * desktop (in run 43775891062 the macos-15-intel runner took 2–4× what the owner's PC takes under the whole suite,
+ * desktop (in run 43775891062 the macos-15-intel runner took 2–4× what a desktop PC takes under the whole suite,
  * up to 10× what it takes alone, and missed the 40 ms find by 0.2 ms), and the claim is about the code, not the
  * runner. Run with SPAWN_PERF=1 to hold a CI runner to the strict numbers.
  *

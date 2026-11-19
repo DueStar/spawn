@@ -1,5 +1,5 @@
 /**
- * The hidden terminal's size (7-48, Task 5.2), the page's half: src/chat/termWarm.ts remembers how
+ * The hidden terminal's size, the page's half: src/chat/termWarm.ts remembers how
  * each terminal's xterm first mounted (fitted while shown and visible, or replayed first), keeps the
  * shown chat session's terminal warm (active under the opaque chat pane, never focused) until it has
  * fitted once, and asks for one redraw only for a terminal that replayed first. Widget.tsx wires it
@@ -113,7 +113,7 @@ describe('Widget.tsx: warm only for the main TerminalView of the shown chat sess
 
   it("the main TerminalView: active={today's expression || warm} and focus={warm ? false : undefined}; the mount noted with the same active", () => {
     const main = /<TerminalView key=\{r\.terminal\.id\}[^\n]*\/>/.exec(src)?.[0] ?? ''
-    // (2026-11-19, the split view: outside it the expression is today's; in it each pane's terminal in its own box)
+    // (the split view: outside it the expression is today's; in it each pane's terminal in its own box)
     expect(src).toContain(`: (${TODAY}) || warm`)
     expect(src.match(/const active = /g)).toHaveLength(1)
     expect(main).toBe('<TerminalView key={r.terminal.id} term={r.terminal} active={active} focus={warm || (split && r.sessionId !== shown?.sessionId) ? false : undefined} slot={pane >= 0 ? paneStyle(pane, paneSids.length, fracs) : undefined} />')

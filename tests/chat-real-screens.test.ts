@@ -1,11 +1,11 @@
 /**
- * What the owner's own session showed after 1.5.1 (Claude Code 2.1.325, Windows, `"tui": "fullscreen"`):
+ * What a real session showed after 1.5.1 (Claude Code 2.1.325, Windows, `"tui": "fullscreen"`):
  * every send from the chat was refused as `screen` ("터미널이 지금 입력을 받을 수 있는지 확인하지
- * 못했어요") while the terminal took the same text. Two shapes of the prompt box the Phase 3 trial never
+ * 못했어요") while the terminal took the same text. Two shapes of the prompt box the first composer trial never
  * met, each a real screen redacted by hand (tests/fixtures/chat/screens/real-*.txt):
  *
  *   a named session (/rename, --name)   Claude Code draws the name at the right end of the box's top
- *                                        rule ("───…─── Spawn ─"); the owner's session is named
+ *                                        rule ("───…─── Spawn ─"); the session seen was named
  *   a subagent running (fullscreen)     the agents panel under the footer: a blank line, "● main",
  *                                        one line per agent
  */
@@ -65,7 +65,7 @@ describe('a subagent running: the agents panel under the footer', () => {
   })
 })
 
-describe('the prompt mark drawn as a plain > (the owner\'s own app, seen in 1.5.3\'s log)', () => {
+describe('the prompt mark drawn as a plain > (seen in 1.5.3\'s log)', () => {
   it('is read as the prompt box: empty, typed, the echo of a send', () => {
     const s = screen('real-ascii-mark')
     expect(promptRow(s)).toEqual({ kind: 'empty' })

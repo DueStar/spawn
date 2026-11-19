@@ -1,5 +1,5 @@
 /**
- * The 변경 사항 panel's data (Phase 5): what the worker's change index answers (chat:changes, chat:change-file),
+ * The 변경 사항 panel's data: what the worker's change index answers (chat:changes, chat:change-file),
  * the file tree it is shown as, the unchanged lines between two hunks of one edit, and the file selected per
  * terminal (in memory, let go with the terminal: onChatForget).
  *

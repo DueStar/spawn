@@ -1,5 +1,5 @@
 /**
- * A picture shown large over the chat view (the lab's `.lightbox`): the view dimmed, the
+ * A picture shown large over the chat view: the view dimmed, the
  * image at most min(760px, 80vw), its caption. A modal dialog: the focus goes to its close
  * button, Esc or a click anywhere closes it, and the focus returns to what opened it.
  * Nothing moves in or out (no animation).

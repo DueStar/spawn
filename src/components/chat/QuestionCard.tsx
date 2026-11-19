@@ -1,12 +1,12 @@
 /**
- * A question card (Phase 4): Claude's question and its options as buttons, each with its description under
- * it — every word of it exact (review M4). One single-select question: a click on an option answers it.
- * Several questions, or a multi-select one (2026-11-17; the terminal's until then): each question with its
+ * A question card: Claude's question and its options as buttons, each with its description under
+ * it — every word of it exact. One single-select question: a click on an option answers it.
+ * Several questions, or a multi-select one: each question with its
  * options to pick (one, or any number for a multi-select), then 보내기 once every question has a pick.
  * Answerable only while it is open and held for this chat (main releases it the moment this chat stops being
  * the shown view); a sub-agent's question is shown read-only and answered in the terminal. See AnswerSurface.tsx.
  *
- * 직접 입력 (2026-11-19): Claude Code's dialog always ends a question's options with its "Other" row, where the user
+ * 직접 입력 (free text): Claude Code's dialog always ends a question's options with its "Other" row, where the user
  * types their own answer. Here it is the last option of each question, with a field: one question's own words are its
  * answer (alone, in a single-select; after the picks, in a multi-select), sent as the terminal's dialog would send them.
  */

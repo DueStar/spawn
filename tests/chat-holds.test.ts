@@ -1,5 +1,5 @@
 /**
- * electron/chatHolds.cjs — the held hooks of the chat's buttons (Phase 4, Task 4.2): one response
+ * electron/chatHolds.cjs — the held hooks of the chat's buttons: one response
  * per request, ever; "no decision" on every doubt; the answer bodies; the bounds.
  */
 
@@ -261,7 +261,7 @@ describe('chatHolds.cjs source', () => {
   })
 })
 
-// 2026-11-17: several questions at once, and a multi-select one, answered from the chat
+// several questions at once, and a multi-select one, answered from the chat
 describe('several questions and a multi-select', () => {
   const { questionsBody, MULTI_JOIN } = holdsMod
   const Q2 = { question: 'Which areas?', header: 'Areas', options: [{ label: 'UI' }, { label: 'Server' }, { label: 'Docs' }], multiSelect: true }
@@ -297,7 +297,7 @@ describe('several questions and a multi-select', () => {
   })
 })
 
-// 2026-11-19: Claude Code's question dialog always ends with its "Other" row (Type something); the chat's 직접 입력
+// Claude Code's question dialog always ends with its "Other" row (Type something); the chat's 직접 입력
 // sends that question's own words as its answer — alone in a single-select, after the picks in a multi-select (the
 // 2.1.328 binary: a multi-select's answer is its picks, not "__other__", then the typed words)
 describe('a question\'s own words (직접 입력)', () => {

@@ -1,6 +1,6 @@
 /**
- * The final whole-branch review's findings (.superpowers/sdd/final/final-review.md), each with the test that failed
- * before its fix. No real network: every server is on 127.0.0.1 (the preview test switch, allowLoopback).
+ * Regression tests for issues found in a whole-branch review, each failing before its fix; the IDs below
+ * label the describe blocks. No real network: every server is on 127.0.0.1 (the preview test switch, allowLoopback).
  *
  *   I1  a link in an answer could carry data out when previews are on: a link with a query string, userinfo, a port
  *       or a long / data-like path never gets a card — the page asks nothing, main refuses, the worker refuses before
@@ -201,7 +201,7 @@ describe('I1: which links may get a card (the page and main run one rule)', () =
     expect(lines).toEqual(['link preview: refused (query) x1', 'link preview: refused (data) x1', 'link preview: refused (path) x1'])
   })
 
-  describe('the reviewer\'s probe (scratchpad/probe/offlate.cjs) as a test: the real service and fetcher, a local server', () => {
+  describe('the late-fetch probe as a test: the real service and fetcher, a local server', () => {
     const srv = recorder()
     beforeAll(async () => { srv.routes.set('/page', slowPage(50)); srv.routes.set('/img.png', png); await srv.start() })
     afterAll(() => srv.stop())

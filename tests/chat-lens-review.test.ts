@@ -1,9 +1,9 @@
 /**
- * electron/chatLens.cjs — the review of Tasks 1–10 (review-1-10.md): a
+ * electron/chatLens.cjs — regression tests for reviewed issues (IDs label the tests): a
  * provisional bubble ends with its turn (C1), the canary is anchored at the
  * turn's own prompt and compares strictly (I1), a tab reopened under the same
  * id starts afresh (I2), resync keeps the banners (I5), and the minor ones
- * (M2–M5, M9, M12, M14, M16–M18, M20). Each test is a reviewer's reproduction.
+ * (M2–M5, M9, M12, M14, M16–M18, M20). Each test reproduces its issue.
  */
 
 import fs, { appendFileSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, unlinkSync, writeFileSync } from 'node:fs'
@@ -435,7 +435,7 @@ describe('M20: links out of the projects folder', () => {
   })
 })
 
-// ---------------------------------------------------------------- the re-review (rereview.md)
+// ---------------------------------------------------------------- a second round of fixes
 
 const summaryLine = (uuid: string, extra: Record<string, unknown> = { isCompactSummary: true, isVisibleInTranscriptOnly: true }) => JSON.stringify({ parentUuid: null, isSidechain: false, type: 'user', message: { role: 'user', content: 'This session is being continued from a previous conversation that ran out of context. The summary below covers the earlier portion.\n\nSummary: made-up work.' }, uuid, timestamp: '2026-11-14T12:00:01.000Z', ...extra }) + '\n'
 

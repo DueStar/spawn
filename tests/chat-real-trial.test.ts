@@ -1,5 +1,5 @@
 /**
- * What the first real Claude Code session (2.1.325, the trial of 2026-11-15) showed
+ * What the first real Claude Code session (2.1.325) showed
  * that the hand-written fixtures had guessed wrong. Each test reproduces one defect:
  *
  *  1. A prompt sent while Claude works is taken into the running turn and written as an

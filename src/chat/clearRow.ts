@@ -1,6 +1,6 @@
 /**
  * Words left on the terminal's prompt row stop a chat send (prompt-busy). Instead of sending the user to the
- * terminal (2026-11-17), the chat can clear them: the caret to the end of its line (Ctrl+E), then as many Backspaces
+ * terminal, the chat can clear them: the caret to the end of its line (Ctrl+E), then as many Backspaces
  * as there are characters, then the row read again — at most three rounds (a caret left mid-text leaves a tail the
  * next round takes). Only a row the screen shows as empty, or with only a dim suggestion, counts as cleared; a
  * dialog or an unreadable row stops it at once. Pure: the screen, the keys and the clock are injected.
