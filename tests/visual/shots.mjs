@@ -158,6 +158,7 @@ Before: npx vite build   (the harness reads dist/, it never builds)
                    chat-ask-terminal-first  chat.answer refused (gone) → 보내지 못했어요 · 터미널에서 답해 주세요; gone with the next status
                    chat-question  chat.visible(id) at mount; the options as buttons; Tab, Tab, Enter → option 1
                    chat-question-hidden  the flip to 터미널 → chat.visible(null); a card handed to the terminal is read-only
+                   chat-question-flip  (2026-11-19) 터미널 / 채팅 three times, then the question from the screen (2.1.328's) answers
                    chat-plan  read-only: no answer button, 더 보기, 터미널에서 답하기 flips
                    chat-ask-a11y  a card arriving mid-composition moves nothing; between the list and the composer;
                               its group named; announced once; Shift+Tab from the composer reaches it; buttons ≥ 22px
@@ -3033,6 +3034,53 @@ const FLOWS = {
     return problems
   },
 
+  /**
+   * (2026-11-19, the owner's "the card took no choice after 터미널 → 채팅") a question card, flipped to 터미널 and back
+   * three times: main hands its hold back on each flip, so back in 채팅 the question is the terminal's dialog, read
+   * from its screen (2.1.328's, a rule over "4. Chat about this") as a card that answers it: Markdown is ↓ then Enter
+   */
+  'chat-question-flip': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat-ask-question', chatOpts: { dialogKey: true } })
+      const { page } = app
+      const id = await firstTerm(page)
+      await page.waitForSelector('.chat-answer .chat-card-opt', { timeout: 15_000 })
+      for (let n = 0; n < 3; n++) {
+        await page.locator('.w-lens button', { hasText: '터미널' }).click()
+        await sleep(250)
+        await page.locator('.w-lens button', { hasText: '채팅' }).click()
+        await page.waitForSelector('.chat-answer .chat-card', { timeout: 5000 })
+        await sleep(250)
+      }
+      // main released it (hidden): its card is the terminal's now, and the terminal draws the question
+      await pushAsks(page, id, [{ ...chatFixture.ASKS.question(), state: 'terminal' }], 'waiting')
+      // the fake terminal moves its mark on ↓ / ↑ as Claude Code does
+      await page.evaluate(([i]) => {
+        const name = 'reconstructed-question-2.1.328'
+        window.__DIALOG_KEY__ = (p) => {
+          if (p.key !== 'down' && p.key !== 'up') return
+          const lines = window.__SHOT__.screens[name].split('\n')
+          const rows = lines.map((l, k) => (/^ (?:❯|\s) ?\s?\d\. /.test(l) ? k : -1)).filter(k => k >= 0)
+          const at = rows.findIndex(k => lines[k].startsWith(' ❯ '))
+          const to = rows[Math.max(0, Math.min(rows.length - 1, at + (p.key === 'down' ? 1 : -1)))]
+          window.__SHOT__.screens[name] = lines.map((l, k) => (k === rows[at] ? `   ${l.slice(3)}` : k === to ? ` ❯ ${l.slice(3)}` : l)).join('\n')
+          window.__SCREEN__(i, name)
+        }
+      }, [id])
+      await screenTo(page, id, 'reconstructed-question-2.1.328')
+      await page.locator('.chat-card.dialog .chat-card-opt', { hasText: 'Chat about this' }).waitFor({ timeout: 3000 }).catch(() => bad('no card for the question on the terminal\'s screen after the flips'))
+      const labels = await page.locator('.chat-card.dialog .chat-card-opt .chat-card-optlabel').allInnerTexts()
+      if (JSON.stringify(labels) !== JSON.stringify(['JSON', 'Markdown', 'Type something.', 'Chat about this'])) bad(`the dialog card's options: ${JSON.stringify(labels)}`)
+      await page.locator('.chat-card.dialog .chat-card-opt', { hasText: 'Markdown' }).click()
+      await sleep(800)
+      const keys = (await callsOf(page, 'chat.dialogKey')).map(c => c.args[0].key)
+      if (JSON.stringify(keys) !== JSON.stringify(['down', 'enter'])) bad(`Markdown pressed: ${JSON.stringify(keys)}`)
+    } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close() }
+    return problems
+  },
   /** A plan: read-only, its first lines, 더 보기, and 터미널에서 답하기 flips */
   'chat-plan': async ({ browser }) => {
     const problems = []

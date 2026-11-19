@@ -125,6 +125,15 @@
       // (as main: Enter only for an echo seen; 'hang' in the script: an answer that never comes)
       submit: (p) => { record('chat.submit', [p]); return script('submit', p, p.echo === 'ok' ? { ok: true } : { ok: false, reason: 'no-echo' }) },
       interrupt: (id) => { record('chat.interrupt', [id]); return script('interrupt', id, { ok: true }) },
+      // the dialog card's keys (2026-11-19, chat-question-flip): only with shot.chatOpts.dialogKey, so no other flow
+      // starts reading its screens for a dialog; an arrow moves the fixture screen's mark as Claude Code would
+      ...(chatOpts.dialogKey ? {
+        dialogKey: (p) => {
+          record('chat.dialogKey', [p])
+          if (typeof window.__DIALOG_KEY__ === 'function') window.__DIALOG_KEY__(p)
+          return script('dialogKey', p, { ok: true })
+        },
+      } : {}),
       image: (p) => {
         const b = p.bytes || new Uint8Array(0)
         record('chat.image', [{ id: p.id, size: b.length, head: Array.from(b.slice(0, 8)) }])
