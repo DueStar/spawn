@@ -119,6 +119,16 @@ function liveMatches(live, text) {
   return (pa.length >= 20 && b.startsWith(pa)) || (pb.length >= 20 && a.startsWith(pb))
 }
 
+/** The row shown from a UserPromptSubmit before the prompt's own line is written (showPrompt) */
+const isPromptRow = (i) => !!i && i.kind === 'user' && !i.parent && typeof i.pending === 'string'
+
+/** The prompt a hook named and a user line are the same: equal once normalised, or one starts the other (liveMatches) */
+function samePrompt(a, b) {
+  const x = normalise(a)
+  const y = normalise(b)
+  return !!x && !!y && (x === y || liveMatches(x, y))
+}
+
 // ---------------------------------------------------------------------------
 // The lens
 // ---------------------------------------------------------------------------
@@ -513,6 +523,12 @@ function createLens({
             }
           }
         }
+        // the prompt's own line: the row shown from its UserPromptSubmit goes
+        if (live && item.kind === 'user' && !item.parent) {
+          for (const [id, p] of t.items) {
+            if (isPromptRow(p) && samePrompt(p.text, item.text)) { t.items.delete(id); upserts.delete(id); removes.add(id) }
+          }
+        }
         if (live) onItem(t, item, upserts, removes)
         // a prompt Claude Code took in (mid-turn, or as the next turn): its entry leaves the strip
         if (queue && item.kind === 'user' && !item.parent) unqueue(t, item.text)
@@ -543,10 +559,10 @@ function createLens({
     t.status.hasOlder = true
   }
 
-  /** The provisional bubbles go (their turn is over): the ids removed, also added to `removes` when given */
+  /** The provisional bubbles (and the prompt shown from its hook) go (their turn is over): the ids removed, also added to `removes` when given */
   function clearLive(t, removes) {
     const ids = []
-    for (const [id, i] of t.items) if (i.kind === 'live') ids.push(id)
+    for (const [id, i] of t.items) if (i.kind === 'live' || isPromptRow(i)) ids.push(id)
     for (const id of ids) { t.items.delete(id); removes?.add(id) }
     t.live.clear()
     return ids
@@ -678,7 +694,11 @@ function createLens({
       : t.canary.fresh
     // (a thinking item alone is not the turn: Claude Code writes it before anything the turn did)
     if (!t.canary.msg) return lines.some(i => i.kind !== 'user' && i.kind !== 'thinking')
-    return lines.some(i => i.kind === 'text' && sameAnswer(t.canary.msg, i))
+    if (lines.some(i => i.kind === 'text' && sameAnswer(t.canary.msg, i))) return true
+    // no user line of its own (a wake-up's prompt is an `agent-done` notice, a prompt the record words otherwise):
+    // the answer may have been read before Stop reached the lens (the file is written ~0.1 s after Stop is sent),
+    // so the turn's own part of the file counts too — every line past where the file stood at its prompt
+    return anchor === null && [...t.items.values()].some(i => i.kind === 'text' && !i.parent && i.order >= t.canary.start && i.order < LIVE_BASE && sameAnswer(t.canary.msg, i))
   }
 
   function clearCanary(t) {
@@ -1144,6 +1164,34 @@ function createLens({
     upsertRow(t, { id: `live:${mid}`, order: LIVE_ORDER, at, kind: 'live', text: l.text }, ops)
   }
 
+  /**
+   * The prompt Claude Code just took, shown at once from its UserPromptSubmit (a terminal's own Enter too):
+   * Claude Code writes the prompt's line only once every UserPromptSubmit hook is done, and another plugin's
+   * can take 6–12 s (measured 2026-11-19: a 6 s hook beside spawn's held the line 6.4 s; the hook itself came
+   * 0.13 s after Enter). Built as the record would build it (a command, a `!` command or a wake-up shows no
+   * bubble), marked `pending: 'sent'`, ordered after what the turn has so far; its own line replaces it
+   * (ingest), and it goes with the turn's other provisional rows (clearLive).
+   */
+  function showPrompt(t, body, at, ops) {
+    if (!rowsOn(t) || typeof body.prompt !== 'string') return
+    const raw = body.prompt
+    // (a slash command opens a panel or runs locally: the record words it, never a bubble)
+    if (/^\s*\/[A-Za-z]/.test(raw)) return
+    let item = null
+    try {
+      const line = { type: 'user', uuid: '00000000-0000-4000-8000-000000000000', message: { role: 'user', content: raw } }
+      item = createItemBuilder({ cwd: t.cwd }).line(line, 0).find(i => i.kind === 'user') ?? null
+    } catch { item = null }
+    if (!item || !item.text.trim()) return
+    // the record was faster (it rarely is), or the newest line already says it (the same words twice: then
+    // only no early bubble): nothing provisional to show
+    let newest = null
+    for (const i of t.items.values()) if (i.kind === 'user' && !i.parent && !i.pending && i.order < LIVE_BASE && (!newest || i.order > newest.order)) newest = i
+    if (newest && samePrompt(item.text, newest.text)) return
+    const images = (item.text.match(/\[Image #\d+\]/g) ?? []).length
+    upsertRow(t, { ...item, id: `prompt:${body.prompt_id && typeof body.prompt_id === 'string' ? body.prompt_id.slice(0, 80) : ++t.liveSeq}`, order: LIVE_BASE + (++t.liveSeq), at, images: Math.max(item.images ?? 0, images), pending: 'sent' }, ops)
+  }
+
   const EVENTS = {
     UserPromptSubmit(t, body, at, ops) {
       // a prompt typed while Claude works (queued, or taken in mid-turn) belongs to the turn in progress
@@ -1170,6 +1218,7 @@ function createLens({
       // (a view still waiting for its first file just looks for the new conversation's)
       const moving = (t.open || t.timers.close) && t.loaded && t.path && t.conv !== body.session_id
       if (moving) { t.turnStart = 0; switchConversation(t) }
+      else showPrompt(t, body, at, ops)
       onPrompt(t, body, at)
       if (moving) t.prompt = { path: null, end: 0 }
     },
