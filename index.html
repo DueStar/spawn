@@ -43,6 +43,7 @@
 
   <link rel="stylesheet" href="assets/css/site.css">
   <link rel="stylesheet" href="assets/css/app.css">
+  <link rel="stylesheet" href="assets/css/chat.css">
   <link rel="stylesheet" href="assets/css/site-app.css">
   <link rel="stylesheet" href="assets/css/feedback.css">
   <link rel="stylesheet" href="assets/css/motion.css">
@@ -170,12 +171,46 @@
                     <span class="w-icon"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,191.51a12,12,0,0,1-17,17L128,145,64.49,208.49a12,12,0,0,1-17-17L111,128,47.51,64.49a12,12,0,0,1,17-17L128,111l63.51-63.52a12,12,0,0,1,17,17L145,128Z"></path></svg></span>
                   </div>
                 </div>
-                <!-- 1.8.0: up to three session tabs, the one in view named with its branch (main.js updateHead) -->
+                <!-- 1.9.0: the session header (SessionHeader.tsx) with the chat's own tools — 보기 정도, 변경 사항 — and 채팅 · 터미널 -->
                 <div class="w-sess-bar">
-                  <div class="w-sess-head" id="sessHead"></div>
+                  <div class="w-sess-head" id="sessHead">
+                    <img class="w-sess-head-pic" alt="">
+                    <span class="w-sess-head-name"></span>
+                    <span class="w-row-branch w-sess-head-branch"></span>
+                    <span class="w-sess-head-proj"></span>
+                    <span class="w-sess-head-spacer"></span>
+                    <div class="w-chat-tools">
+                      <span class="w-dens-anchor"><span class="w-dens"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M251,123.13c-.37-.81-9.13-20.26-28.48-39.61C196.63,57.67,164,44,128,44S59.37,57.67,33.51,83.52C14.16,102.87,5.4,122.32,5,123.13a12.08,12.08,0,0,0,0,9.75c.37.82,9.13,20.26,28.49,39.61C59.37,198.34,92,212,128,212s68.63-13.66,94.48-39.51c19.36-19.35,28.12-38.79,28.49-39.61A12.08,12.08,0,0,0,251,123.13Zm-46.06,33C183.47,177.27,157.59,188,128,188s-55.47-10.73-76.91-31.88A130.36,130.36,0,0,1,29.52,128,130.45,130.45,0,0,1,51.09,99.89C72.54,78.73,98.41,68,128,68s55.46,10.73,76.91,31.89A130.36,130.36,0,0,1,226.48,128,130.45,130.45,0,0,1,204.91,156.12ZM128,84a44,44,0,1,0,44,44A44.05,44.05,0,0,0,128,84Zm0,64a20,20,0,1,1,20-20A20,20,0,0,1,128,148Z"></path></svg><span class="w-dens-name" data-i18n="chat.density"></span><svg class="ico" width="12" height="12" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M216.49,104.49l-80,80a12,12,0,0,1-17,0l-80-80a12,12,0,0,1,17-17L128,159l71.51-71.52a12,12,0,0,1,17,17Z"></path></svg></span></span>
+                      <span class="w-chg"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true" style="transform:scaleX(-1)"><path d="M216,36H40A20,20,0,0,0,20,56V200a20,20,0,0,0,20,20H216a20,20,0,0,0,20-20V56A20,20,0,0,0,216,36ZM44,60H76V196H44ZM212,196H100V60H212Z"></path></svg></span>
+                    </div>
+                    <div class="w-lens"><button class="on" tabindex="-1"><svg class="ico" width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.5 3.5h11v7.5H7l-3 2.5V11H2.5z"/></svg><span class="w-lens-word" data-i18n="chat.lens.chat"></span></button><button tabindex="-1"><svg class="ico" width="13" height="13" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M120,137,48,201A12,12,0,1,1,32,183l61.91-55L32,73A12,12,0,1,1,48,55l72,64A12,12,0,0,1,120,137Zm96,43H120a12,12,0,0,0,0,24h96a12,12,0,0,0,0-24Z"></path></svg><span class="w-lens-word" data-i18n="chat.lens.term"></span></button></div>
+                    <span class="w-sess-head-close">×</span>
+                  </div>
                 </div>
-                <div class="w-term-body">
-                  <div class="term-view"><div class="fake-term" id="term"></div></div>
+                <!-- the chat view (ChatView.tsx): the conversation, the working line, the composer (Composer.tsx + ControlRow.tsx) -->
+                <div class="w-term-body site-chat-body">
+                  <div class="chat site-chat">
+                    <div class="chat-list"><div class="chat-scroll" id="chatScroll"><div class="chat-col"><div class="chat-rows" id="chatRows"></div><div class="chat-status" id="chatStatus" role="status"></div></div></div></div>
+                    <div class="chat-composer"><div class="chat-composer-in">
+                      <div class="chat-cbox">
+                        <textarea class="chat-input" id="chatInput" rows="1" tabindex="-1"></textarea>
+                        <div class="chat-cbar">
+                          <span class="chat-ib"><svg class="ico" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M228,128a12,12,0,0,1-12,12H140v76a12,12,0,0,1-24,0V140H40a12,12,0,0,1,0-24h76V40a12,12,0,0,1,24,0v76h76A12,12,0,0,1,228,128Z"></path></svg></span>
+                          <span class="chat-ib"><svg class="ico" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M128,20a108,108,0,0,0,0,216c22.27,0,45.69-6.73,62.64-18a12,12,0,1,0-13.29-20c-13,8.63-31.89,14-49.35,14a84,84,0,1,1,84-84c0,9.29-1.67,17.08-4.69,21.95-2.64,4.24-6,6.05-11.31,6.05s-8.67-1.81-11.31-6.05c-3-4.87-4.69-12.66-4.69-21.95V88a12,12,0,0,0-23.49-3.46,52,52,0,1,0,8.86,79.57C172.3,174.3,182.81,180,196,180c24.67,0,40-19.92,40-52A108.12,108.12,0,0,0,128,20Zm0,136a28,28,0,1,1,28-28A28,28,0,0,1,128,156Z"></path></svg></span>
+                          <span class="chat-send empty" id="chatSend"><svg class="ico" width="16" height="16" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208.49,120.49a12,12,0,0,1-17,0L140,69V216a12,12,0,0,1-24,0V69L64.49,120.49a12,12,0,0,1-17-17l72-72a12,12,0,0,1,17,0l72,72A12,12,0,0,1,208.49,120.49Z"></path></svg></span>
+                        </div>
+                      </div>
+                      <div class="chat-ctrl">
+                        <span class="chat-ctrl-item"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M156,88H100a12,12,0,0,0-12,12v56a12,12,0,0,0,12,12h56a12,12,0,0,0,12-12V100A12,12,0,0,0,156,88Zm-12,56H112V112h32Zm88-4H220V116h12a12,12,0,0,0,0-24H220V56a20,20,0,0,0-20-20H164V24a12,12,0,0,0-24,0V36H116V24a12,12,0,0,0-24,0V36H56A20,20,0,0,0,36,56V92H24a12,12,0,0,0,0,24H36v24H24a12,12,0,0,0,0,24H36v36a20,20,0,0,0,20,20H92v12a12,12,0,0,0,24,0V220h24v12a12,12,0,0,0,24,0V220h36a20,20,0,0,0,20-20V164h12a12,12,0,0,0,0-24Zm-36,56H60V60H196Z"></path></svg><b id="ctrlModel"></b></span>
+                        <span class="chat-ctrl-item"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M180,232a12,12,0,0,1-12,12H88a12,12,0,0,1,0-24h80A12,12,0,0,1,180,232Zm40-128a91.51,91.51,0,0,1-35.17,72.35A12.26,12.26,0,0,0,180,186v2a20,20,0,0,1-20,20H96a20,20,0,0,1-20-20v-2a12,12,0,0,0-4.7-9.51A91.57,91.57,0,0,1,36,104.52C35.73,54.69,76,13.2,125.79,12A92,92,0,0,1,220,104Zm-24,0a68,68,0,0,0-69.65-68C89.56,36.88,59.8,67.55,60,104.38a67.71,67.71,0,0,0,26.1,53.19A35.87,35.87,0,0,1,100,184h56.1A36.13,36.13,0,0,1,170,157.49,67.68,67.68,0,0,0,196,104Zm-20.07-5.32a48.5,48.5,0,0,0-31.91-40,12,12,0,0,0-8,22.62,24.31,24.31,0,0,1,16.09,20,12,12,0,0,0,23.86-2.64Z"></path></svg><b data-i18n="chat.effort.high"></b></span>
+                        <span class="chat-ctrl-item"><svg class="ico" width="14" height="14" viewBox="0 0 256 256" fill="currentColor" aria-hidden="true"><path d="M208,36H48A20,20,0,0,0,28,56v56c0,54.29,26.32,87.22,48.4,105.29,23.71,19.39,47.44,26,48.44,26.29a12.1,12.1,0,0,0,6.32,0c1-.28,24.73-6.9,48.44-26.29,22.08-18.07,48.4-51,48.4-105.29V56A20,20,0,0,0,208,36Zm-4,76c0,35.71-13.09,64.69-38.91,86.15A126.28,126.28,0,0,1,128,219.38a126.14,126.14,0,0,1-37.09-21.23C65.09,176.69,52,147.71,52,112V60H204ZM79.51,144.49a12,12,0,1,1,17-17L112,143l47.51-47.52a12,12,0,0,1,17,17l-56,56a12,12,0,0,1-17,0Z"></path></svg><b data-i18n="chat.mode.edits"></b></span>
+                        <span class="chat-ctrl-grow"></span>
+                        <span class="chat-ctrl-meter"><span class="chat-ctrl-label">HP</span><span class="chat-ctx" id="ctrlCtx"><i></i></span><span id="ctrlPct"></span></span>
+                        <span class="chat-ctrl-sep"></span>
+                        <span class="chat-ctrl-item"><span id="ctrl5"></span><span id="ctrlW"></span></span>
+                      </div>
+                    </div></div>
+                  </div>
                 </div>
               </section>
 

@@ -1,0 +1,679 @@
+/* chat.css — the app's chat view, copied from the app (src/styles/chat.css + chat-game.css, the 1.9.0 look) with the
+   tokens it needs (src/styles/tokens.css) and the session header's 보기 정도 · 변경 사항 · 채팅/터미널 (widget-expanded.css).
+   Refresh by copying again; the site adds only .site-chat* at the end. */
+:root { --read-w: 840px; --add-bg: rgba(116, 214, 139, 0.07); --del-bg: rgba(255, 100, 100, 0.07); }
+.tier-common { --tier: #a4a9b6; }  .tier-rare { --tier: #6cb6ff; }  .tier-sub { --tier: #c08bff; }
+.tier-legendary { --tier: #ffc94a; }  .tier-mythical { --tier: #ff7ad9; }
+/* src/styles/chat.css — the chat view (Phase 2, the read-only lens), on the 차분하게 2 tokens.
+   Imported by src/components/ChatView.tsx (and the 변경 사항 panel, loaded only with the chat shown), so with the
+   chat view off none of this loads.
+   The values follow the design lab (calm-lab/app.css "chat view" and the v3 block). Font stacks
+   are literal (tests/fonts.test.ts): prose in Pretendard, code in Monaspace. Text sizes are the
+   four text steps' tokens only. Nothing here animates. */
+
+/* ---------------------------------------------------------------- prose (markdown) */
+.chat-prose { font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-prose); line-height: 1.7; color: var(--ink); overflow-wrap: anywhere; min-width: 0; }
+.chat-prose p, .chat-prose li, .chat-prose td, .chat-prose th, .chat-prose h1, .chat-prose h2, .chat-prose h3, .chat-prose h4, .chat-prose blockquote { unicode-bidi: isolate; }
+.chat-prose p { margin: 0 0 8px; }
+.chat-prose > :last-child, .chat-prose li > :last-child { margin-bottom: 0; }
+.chat-prose h1, .chat-prose h2, .chat-prose h3, .chat-prose h4 { font-size: var(--t-head); font-weight: 600; margin: 14px 0 6px; letter-spacing: -0.01em; color: var(--ink); line-height: 1.5; }
+.chat-prose h3, .chat-prose h4 { font-size: var(--t-prose); }
+.chat-prose > :first-child { margin-top: 0; }
+.chat-prose ol, .chat-prose ul { margin: 2px 0 8px; padding-left: 20px; }
+.chat-prose li { margin: 2px 0; padding-left: 2px; }
+.chat-prose li > ol, .chat-prose li > ul { margin: 2px 0; }
+.chat-prose li::marker { color: var(--ink-3); }
+.chat-prose strong { font-weight: 500; color: var(--ink); }
+.chat-prose em { font-style: italic; }
+.chat-prose del { color: var(--ink-3); text-decoration-color: var(--ink-3); }
+.chat-prose hr { border: 0; border-top: 1px solid var(--line); margin: 12px 0; }
+.chat-prose blockquote { margin: 4px 0 8px; padding: 0 0 0 12px; border-left: 1px solid var(--line-hover); color: var(--ink-2); }
+.chat-prose code, .chat-tool code { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-prose) - 1px); padding: 1px 5px; border-radius: var(--r-xs); background: rgba(255, 255, 255, 0.06); color: var(--ink); }
+.chat-prose a { color: var(--ink); text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.28); text-underline-offset: 3px; border-radius: var(--r-xs); }
+.chat-prose a:hover { text-decoration-color: var(--ink); }
+.chat-prose .chat-cut { color: var(--ink-3); font-size: var(--t-ui); }
+
+/* a file named in the prose: a quiet chip (a button: Enter and Space open it too). The button is 3px taller
+   above and below than the chip it draws (its hit area is ≥ 22px), with no effect on the line */
+.fchip { display: inline-flex; align-items: center; max-width: 100%; padding: 3px 0; margin: -3px 0; border: 0; background: none; color: var(--ink-2); font: inherit; line-height: inherit; vertical-align: 0; cursor: pointer; border-radius: var(--r-xs); }
+.fchip-in { display: inline-flex; align-items: center; gap: 4px; min-width: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-prose) - 2px); background: rgba(255, 255, 255, 0.05); border-radius: var(--r-xs); padding: 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fchip:hover { color: var(--ink); }
+.fchip:hover .fchip-in { background: rgba(255, 255, 255, 0.09); }
+.fchip svg { opacity: 0.7; flex: none; }
+
+/* a link preview card (Phase 5, opt-in; the lab's .og, app.css 223–230): after the block that holds the link, a hairline
+   box, the whole card one link. The site line is the link's own host (a neutral globe, never the site's own picture);
+   the picture (a blob: URL the page made) at 104×68 on the right when there is one */
+.chat-prose a.chat-og { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; align-items: center; max-width: 480px; padding: 10px 10px 10px 12px; border: 1px solid var(--line); border-radius: var(--r-l); text-decoration: none; color: inherit; margin: 2px 0 10px; }
+.chat-prose a.chat-og.has-img { grid-template-columns: minmax(0, 1fr) 104px; }
+.chat-og:hover { background: rgba(255, 255, 255, 0.025); }
+.chat-og-main { display: block; min-width: 0; }
+.chat-og-site { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); margin-bottom: 3px; }
+.chat-og-globe { flex: none; }
+.chat-og-host, .chat-og-via { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
+.chat-og-via { flex: 0 1 auto; }
+.chat-og-title { display: block; font-size: var(--t-ui); font-weight: 500; line-height: 1.5; color: var(--ink); margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: isolate; }
+.chat-og-desc { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-2); unicode-bidi: isolate; }
+.chat-og-img { display: block; width: 104px; height: 68px; object-fit: cover; border-radius: var(--r-s); }
+
+/* a table: its own sideways scroll */
+.tbl-wrap { overflow-x: auto; margin: 4px 0 10px; max-width: 100%; }
+.chat-prose table { border-collapse: collapse; width: 100%; font-size: calc(var(--t-prose) - 1px); line-height: 1.5; }
+.chat-prose th { text-align: left; font-weight: 500; font-size: var(--t-meta); color: var(--ink-3); padding: 0 12px 6px 0; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.chat-prose td { padding: 7px 12px 7px 0; border-bottom: 1px solid var(--line); color: var(--ink-2); vertical-align: top; overflow-wrap: normal; }
+.chat-prose td:first-child { white-space: nowrap; }
+.chat-prose tr:last-child td { border-bottom: 0; }
+
+/* code: a hairline box on the terminal's ground, a head with the language and 복사 */
+.chat-code { border: 1px solid var(--line); border-radius: var(--r-m); background: var(--term-bg); overflow: hidden; margin: 4px 0 10px; }
+.chat-code-head { display: flex; align-items: center; gap: 8px; padding: 3px 4px 3px 12px; border-bottom: 1px solid var(--line); font-size: var(--t-meta); color: var(--ink-3); min-height: 30px; }
+.chat-code-lang { flex: 1; min-width: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-code pre { margin: 0; padding: 10px 12px; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-code); line-height: 1.6; color: var(--ink); overflow-x: auto; white-space: pre; word-break: normal; overflow-wrap: normal; }
+.chat-code pre code { font: inherit; padding: 0; background: none; border-radius: 0; }
+.chat-copy { display: inline-flex; align-items: center; gap: 4px; min-height: 24px; padding: 0 8px; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); font: inherit; font-size: var(--t-meta); cursor: pointer; white-space: nowrap; flex: none; }
+.chat-copy:hover { background: var(--hover); color: var(--ink); }
+
+/* ---------------------------------------------------------------- buttons and dots */
+.chat-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 24px; padding: 0 10px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); font-weight: 500; white-space: nowrap; cursor: pointer; flex: none; }
+.chat-btn:hover { color: var(--ink); border-color: var(--line-hover); }
+.chat-btn.solid { background: var(--ink); color: var(--accent-ink); border-color: transparent; }
+.chat-btn.solid:hover { background: #fff; color: var(--accent-ink); }
+.chat-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); flex: none; }
+.chat-dot.green { background: var(--green); }
+.chat-dot.amber { background: var(--amber); }
+
+/* ---------------------------------------------------------------- tool rows: one line each, open for the details */
+.chat-tools { display: flex; flex-direction: column; gap: 2px; }
+.chat-tool { display: flex; flex-direction: column; min-width: 0; }
+.chat-tool-head { display: flex; align-items: center; gap: 6px; min-height: 30px; margin-left: -4px; border-radius: var(--r-s); font-size: var(--t-ui); color: var(--ink-2); min-width: 0; }
+.chat-tool-head:hover { background: var(--hover); }
+.chat-tool-toggle { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 7px; min-height: 30px; padding: 4px 6px 4px 4px; border: 0; border-radius: var(--r-s); background: none; color: inherit; font: inherit; text-align: left; }
+button.chat-tool-toggle { cursor: pointer; }
+.chat-tool-chev { color: var(--ink-3); flex: none; display: inline-flex; }
+.chat-tool.open > .chat-tool-head .chat-tool-chev { transform: rotate(90deg); }
+.chat-tool-ico { color: var(--ink-3); flex: none; display: inline-flex; }
+.chat-tool-label { color: var(--ink-2); white-space: nowrap; flex: none; }
+.chat-tool-detail { color: var(--ink-3); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; }
+.chat-tool-detail.mono { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-ui) - 1px); }
+.chat-tool-err { color: var(--red-text); min-width: 0; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-ui) - 1px); }
+.chat-tool-meta { margin-left: auto; padding: 0 6px 0 10px; color: var(--ink-3); font-size: var(--t-meta); white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; flex: none; }
+.chat-tool-head > .chat-btn { margin-right: 4px; }
+.chat-tool.wait > .chat-tool-head .chat-tool-meta { color: var(--ink-2); }
+.chat-tool.fail .chat-tool-label, .chat-tool.fail > .chat-tool-head .chat-tool-ico { color: var(--red-text); }
+.chat-tool-body { margin: 2px 0 6px 10px; padding: 4px 0 4px 14px; border-left: 1px solid var(--line); font-size: var(--t-ui); color: var(--ink-3); min-width: 0; }
+.chat-tool.fail > .chat-tool-body { border-left-color: rgba(255, 100, 100, 0.35); }
+.chat-tool-out { margin: 0; max-height: 320px; overflow: auto; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.65; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; border-radius: var(--r-xs); }
+.chat-tool-note { margin: 4px 0 0; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-ln { display: flex; gap: 10px; white-space: nowrap; min-width: 0; line-height: 1.65; }
+.chat-ln > span { overflow: hidden; text-overflow: ellipsis; }
+.chat-ln .hit { color: var(--ink-2); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); flex: 0 1 auto; }
+.chat-ln > span:last-child:not(.hit) { flex: none; }
+/* a question and a plan: always open, read-only (answered in the terminal in this phase) */
+.chat-ask { font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; color: var(--ink-2); }
+.chat-ask-q { margin: 0 0 4px; color: var(--ink); font-size: var(--t-prose); line-height: 1.6; }
+.chat-ask-opts { margin: 0; padding-left: 20px; font-size: var(--t-ui); line-height: 1.65; }
+.chat-ask-opts li::marker { color: var(--ink-3); }
+.chat-plan { color: var(--ink-2); max-height: 420px; overflow: auto; }
+/* a sub-agent's rows, nested */
+.chat-agent-body { display: flex; flex-direction: column; gap: 2px; }
+.chat-sub-result { color: var(--ink-2); padding: 4px 0 2px; display: flex; flex-direction: column; gap: 2px; }
+.chat-sub-label { font-size: var(--t-micro); color: var(--ink-3); }
+.chat-sub-result .chat-prose { color: var(--ink-2); }
+
+/* ---------------------------------------------------------------- a file edit: +N −N and the change */
+.chat-diff { border: 1px solid var(--line); border-radius: var(--r-m); overflow: hidden; background: var(--term-bg); min-width: 0; margin: 2px 0; }
+.chat-diff-head { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 2px 10px; font-size: var(--t-meta); color: var(--ink-3); border-bottom: 1px solid var(--line); min-width: 0; }
+.chat-diff-kind { color: var(--ink-2); white-space: nowrap; flex: none; }
+.chat-diff-cut { color: var(--ink-3); font-size: var(--t-meta); white-space: nowrap; flex: none; }
+.chat-diff-file { min-width: 0; min-height: 24px; padding: 0 4px; margin-left: -4px; border: 0; border-radius: var(--r-s); background: none; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; text-align: left; }
+button.chat-diff-file:hover { color: var(--ink); background: var(--hover); }
+/* a UNC or device path: text, not a button */
+span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default; }
+.chat-counts { margin-left: auto; display: inline-flex; gap: 6px; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); white-space: nowrap; flex: none; }
+.chat-counts .a { color: var(--green); }
+.chat-counts .d { color: var(--red-text); }
+.chat-counts .z { color: var(--ink-3); }
+.chat-diff-body { min-width: 0; }
+.chat-diff-lines { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; padding: 4px 0; overflow-x: auto; }
+.chat-dl { display: grid; grid-template-columns: 36px 16px minmax(0, 1fr); white-space: pre; color: var(--ink-2); min-width: max-content; }
+.chat-dl .no { color: var(--ink-3); text-align: right; padding-right: 8px; }
+.chat-dl .sg { color: var(--ink-3); }
+.chat-dl.add { background: var(--add-bg); color: var(--ink); }
+.chat-dl.add .sg { color: var(--green); }
+.chat-dl.del { background: var(--del-bg); color: var(--ink-2); }
+.chat-dl.del .sg { color: var(--red-text); }
+.chat-dl.gap { color: var(--ink-3); }
+/* the counts as a button (Phase 5): they open the 변경 사항 panel at this edit; a hairline chip with the panel glyph (the lab's .cchip) */
+.chat-counts-btn { align-items: center; min-height: 22px; padding: 0 7px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; cursor: pointer; }
+.chat-counts-btn:hover { border-color: var(--line-hover); background: var(--hover); }
+.chat-counts-ico { display: inline-flex; color: var(--ink-3); }
+.chat-diff-more { display: flex; align-items: center; width: 100%; min-height: 26px; padding: 0 12px 0 52px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink-3); font: inherit; font-size: var(--t-meta); text-align: left; cursor: pointer; }
+.chat-diff-more:hover { color: var(--ink); background: var(--hover); }
+.chat-diff-hidden { padding: 4px 12px 6px 52px; font-size: var(--t-meta); color: var(--ink-3); border-top: 1px solid var(--line); }
+
+/* ---------------------------------------------------------------- the view: a column on the page ground */
+.chat { position: relative; display: flex; flex-direction: column; height: 100%; min-height: 0; min-width: 0; background: var(--bg); container-type: inline-size; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; color: var(--ink); }
+.chat button { -webkit-app-region: no-drag; }
+.chat :is(button, a, [tabindex="0"]):focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.chat-list { position: relative; flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; }
+.chat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; overflow-anchor: none; outline: none; }
+.chat-scroll::-webkit-scrollbar { width: 8px; }
+.chat-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.08); border-radius: var(--r-s); }
+.chat-scroll.dim { opacity: 0.45; }
+.chat-col { max-width: var(--read-w); margin: 0 auto; padding: 28px 32px 20px; box-sizing: border-box; }
+@container (max-width: 900px) { .chat-col { padding: 20px 16px 16px; } }
+.chat-rows { display: flow-root; }
+.chat-row { padding-bottom: 10px; min-width: 0; }
+.chat-row.tight { padding-bottom: 0; }
+.chat-row.k-user { padding-top: 8px; padding-bottom: 16px; }
+.chat-row.k-turn-head { padding-top: 6px; padding-bottom: 8px; }
+.chat-older { min-height: 20px; text-align: center; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-day { text-align: center; font-size: var(--t-meta); color: var(--ink-3); padding: 2px 0 6px; }
+.chat-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+/* the list's 위 / 아래 내용 더 보기 stops: unseen until the keyboard reaches one, then a quiet visible label (Phase 6) */
+.chat-sentinel:focus-visible { width: auto; height: auto; min-height: 22px; display: inline-flex; align-items: center; overflow: visible; clip-path: none; z-index: 3; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--bg); color: var(--ink-2); font-size: var(--t-meta); }
+
+/* the user's messages: right-aligned quiet blocks */
+.chat-user { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; margin-left: auto; max-width: 78%; width: fit-content; }
+.chat-bubble { background: var(--card-2); color: var(--ink); font-size: var(--t-prose); line-height: 1.6; padding: 8px 12px; border-radius: var(--r-l); white-space: pre-wrap; overflow-wrap: anywhere; unicode-bidi: isolate; }
+.chat-img-chip { font-size: var(--t-meta); color: var(--ink-2); border: 1px solid var(--line); border-radius: var(--r-s); padding: 1px 8px; }
+.chat-time { font-size: var(--t-micro); color: var(--ink-3); }
+
+/* a turn: who answers, once, at its head */
+.chat-turn-head { display: flex; align-items: center; gap: 6px; min-height: 22px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-turn-head b { font-weight: 500; color: var(--ink-2); }
+.chat-pic { flex: none; display: inline-grid; place-items: center; }
+.chat-pic.head { width: 22px; height: 22px; margin: 0 -1px 0 -3px; }
+.chat-pic.head img { width: 22px; height: 22px; object-fit: contain; }
+.chat-pic.empty { width: 96px; height: 96px; margin-bottom: 4px; }
+.chat-pic.empty img { width: 96px; height: 96px; object-fit: contain; }
+.chat-glyph { display: inline-grid; place-items: center; box-sizing: border-box; width: 20px; height: 20px; color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-s); }
+.chat-pic.empty .chat-glyph { width: 64px; height: 64px; border-radius: var(--r-l); }
+
+.chat-text .chat-stopped, .chat-text .chat-cut { margin: 4px 0 0; color: var(--ink-3); font-size: var(--t-ui); }
+/* 답 복사: shown when the answer is pointed at or a key reaches it (always reachable by Tab) */
+.chat-text-acts { display: flex; justify-content: flex-end; margin-top: 2px; opacity: 0; }
+.chat-row:hover .chat-text-acts, .chat-text-acts:focus-within { opacity: 1; }
+@media (hover: none) { .chat-text-acts { opacity: 1; } }
+/* the turn summary (the lab's .turn-foot / .tf-copy, app.css 660–663): one quiet line after a finished turn — its
+   time, its tool calls, the files it changed (the step count's look is in chat-game.css), and the answer's 복사 at
+   the right, always shown */
+.chat-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; min-height: 24px; font-size: var(--t-meta); color: var(--ink-3); padding-top: 2px; }
+.chat-foot .chat-copy { margin-left: auto; }
+/* nothing heard yet (after a moment): a quiet word in place of a blank pane */
+.chat-loading { flex: 1 1 auto; display: grid; place-items: center; min-height: 0; font-size: var(--t-meta); color: var(--ink-3); }
+/* the provisional bubble: the text as it streams, quieter, replaced by the record's line */
+.chat-live { display: flex; flex-direction: column; gap: 2px; }
+.chat-live-label { font-size: var(--t-micro); color: var(--ink-3); }
+.chat-live .chat-prose { color: var(--ink-2); }
+/* a thinking block (the lab's .think, app.css 232–233; only from 생각 포함): a left hairline, 생각 · {time} quiet above,
+   then the text in the quiet grey, or the line that says it is not in the record */
+.chat-think { padding-left: 12px; border-left: 1px solid var(--line); font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-ui); line-height: 1.65; color: var(--ink-3); min-width: 0; }
+.chat-think-head { display: block; margin-bottom: 2px; font-size: var(--t-meta); font-weight: 500; color: var(--ink-3); }
+.chat-think-none { margin: 0; }
+.chat-think .chat-prose { font-size: var(--t-ui); line-height: 1.65; color: var(--ink-3); }
+.chat-think .chat-prose code { color: var(--ink-2); }
+.chat-think .chat-cut { margin: 4px 0 0; color: var(--ink-3); font-size: var(--t-meta); }
+.chat-notice { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-height: 22px; font-size: var(--t-ui); color: var(--ink-3); }
+.chat-link-btn { min-height: 22px; padding: 0 2px; border: 0; background: none; color: var(--ink-2); font: inherit; text-decoration: underline; text-decoration-color: rgba(255, 255, 255, 0.28); text-underline-offset: 3px; cursor: pointer; border-radius: var(--r-xs); }
+.chat-link-btn:hover { color: var(--ink); text-decoration-color: var(--ink); }
+
+/* working / waiting, at the end; the same height when nothing shows (no jump when work starts) */
+.chat-status { display: flex; align-items: center; gap: 8px; min-height: 34px; margin-top: 2px; font-size: var(--t-ui); color: var(--ink-3); }
+.chat-status-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-status.waiting .chat-status-text { color: var(--ink-2); }
+
+/* 새 메시지 N개: centred above the bottom of the conversation */
+.chat-jump-live { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 6; }
+.chat-jump { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border: 1px solid rgba(255, 255, 255, 0.12); border-radius: var(--r-l); background: var(--card-2); color: var(--ink-2); font: inherit; font-size: var(--t-meta); white-space: nowrap; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); cursor: pointer; }
+.chat-jump:hover { color: var(--ink); }
+/* the session waits on the user while the view is up: the same pill, with the amber dot and the words */
+.chat-jump.wait { color: var(--ink); }
+
+/* the read-failed banner: amber-edged, above the dimmed conversation */
+.chat-banner { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 14px auto 0; width: calc(100% - 64px); max-width: var(--read-w); box-sizing: border-box; padding: 10px 12px; border: 1px solid rgba(255, 181, 74, 0.38); border-radius: var(--r-l); background: var(--card); flex: none; }
+@container (max-width: 900px) { .chat-banner { width: calc(100% - 32px); } }
+.chat-banner-ico { color: var(--amber); flex: none; display: inline-flex; }
+.chat-banner-text { flex: 1 1 240px; min-width: 0; display: flex; flex-direction: column; gap: 2px; font-size: var(--t-meta); color: var(--ink-2); line-height: 1.5; }
+.chat-banner-text b { font-size: var(--t-ui); font-weight: 500; color: var(--ink); }
+.chat-banner-acts { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chat-banner .chat-btn { min-height: 28px; padding: 0 12px; font-size: var(--t-ui); }
+.chat-note { flex: none; max-width: var(--read-w); margin: 10px auto 0; padding: 0 16px; text-align: center; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-note .chat-link-btn { font-size: var(--t-meta); color: var(--ink-3); }
+.chat-note-more { margin-top: 4px; }
+
+/* a new session: who is waiting, where, and how to send */
+.chat-empty { flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; }
+.chat-empty-title { font-size: var(--t-head); color: var(--ink-2); }
+.chat-empty-sub { font-size: var(--t-meta); color: var(--ink-3); }
+.chat-empty-hint { max-width: 440px; margin-top: 6px; font-size: var(--t-meta); color: var(--ink-3); line-height: 1.6; }
+
+/* ---------------------------------------------------------------- the composer (Phase 3; the lab's .composer, app.css 337–371)
+   Under the conversation, in the reading column. The send button is the only yellow. Nothing moves. */
+.chat-composer { flex: none; padding: 0 32px 14px; position: relative; }
+@container (max-width: 900px) { .chat-composer { padding: 0 16px 12px; } }
+.chat-composer-in { max-width: var(--read-w); margin: 0 auto; position: relative; }
+/* why a send did not go, or where its text is: quiet words, with 터미널로 보기 when it concerns the terminal */
+.chat-cnote { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: var(--t-ui); line-height: 1.5; color: var(--ink-2); }
+.chat-cnote:not(:empty) { padding: 0 4px 8px; }
+/* what Claude Code queued: attached above the box */
+.chat-queue { display: flex; align-items: center; gap: 8px; width: calc(100% - 16px); height: 30px; margin: 0 8px; padding: 0 12px; box-sizing: border-box; font-family: inherit; text-align: left; cursor: pointer; font-size: var(--t-ui); color: var(--ink-3); background: rgba(255, 255, 255, 0.025); border: 1px solid var(--line); border-bottom: 0; border-top-left-radius: var(--r-l); border-top-right-radius: var(--r-l); }
+.chat-queue-label { flex: none; color: var(--ink-3); white-space: nowrap; }
+.chat-queue-label::before { content: ''; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--ink-3); margin-right: 7px; vertical-align: 2px; }
+.chat-queue-text { flex: 1; min-width: 0; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; }
+/* the box: chips, the text, the bar */
+.chat-cbox { display: flex; flex-direction: column; gap: 6px; padding: 8px 8px 8px 12px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l); }
+.chat-cbox:focus-within { border-color: rgba(255, 255, 255, 0.16); }
+.chat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chat-ichip { display: inline-flex; align-items: center; gap: 6px; height: 30px; max-width: 220px; padding: 0 4px 0 3px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-s); font-size: var(--t-meta); color: var(--ink-2); }
+.chat-ichip-pic { flex: none; display: inline-flex; padding: 0; border: 0; border-radius: var(--r-xs); background: none; cursor: zoom-in; }
+.chat-ichip-pic img, .chat-thumb img { display: block; width: 34px; height: 22px; object-fit: cover; border-radius: var(--r-xs); background: #fff; }
+.chat-ichip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-ichip-x { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--r-xs); background: none; color: var(--ink-3); cursor: pointer; }
+.chat-ichip-x:hover { color: var(--ink); background: var(--hover); }
+.chat-input { display: block; width: 100%; min-height: 22px; max-height: 160px; margin: 0; padding: 2px 0; box-sizing: border-box; border: 0; outline: none; resize: none; overflow-y: hidden; background: none; color: var(--ink); font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-prose); line-height: 1.6; }
+.chat-input::placeholder { color: var(--ink-3); opacity: 1; }
+.chat-input[readonly] { color: var(--ink-3); }
+/* while its send runs (aria-busy): the draft quieter, until the outcome clears it or keeps it */
+.chat-input[aria-busy="true"] { color: var(--ink-2); }
+/* the field's hidden twin, only to measure the text's height */
+.chat-cbox { position: relative; }
+.chat-input.chat-input-twin { position: absolute; top: 0; left: 0; height: 0; min-height: 0; overflow: hidden; visibility: hidden; pointer-events: none; }
+.chat-cbar { display: flex; align-items: center; gap: 2px; margin: 0 -2px 0 -6px; }
+.chat-ib { display: inline-grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer; }
+.chat-ib:hover { color: var(--ink); background: var(--hover); }
+.chat-file { display: none; }
+/* 보내기: the one yellow; dimmed, not yellow, while there is nothing to send */
+.chat-send { flex: none; display: grid; place-items: center; width: 30px; height: 30px; margin-left: auto; padding: 0; border: 0; border-radius: var(--r-m); background: var(--accent); color: var(--accent-ink); cursor: pointer; }
+.chat-send:hover { background: var(--accent-hover); }
+.chat-composer .chat-send.empty { background: rgba(255, 255, 255, 0.06); color: var(--ink-3); cursor: default; }
+/* a text starting with /: how it goes */
+.chat-chint { padding: 6px 4px 0; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); }
+/* the control row: display only */
+.chat-ctrl { display: flex; align-items: center; gap: 2px; min-width: 0; margin-top: 6px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-ctrl-item { display: inline-flex; align-items: center; gap: 4px; min-width: 0; padding: 3px 6px; white-space: nowrap; }
+.chat-ctrl-item b { font-weight: 400; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.chat-ctrl-item > span + span { margin-left: 6px; }
+.chat-ctrl-grow { flex: 1; }
+.chat-ctrl-sep { flex: none; width: 1px; height: 12px; margin: 0 4px; background: var(--line); }
+.chat-ctrl-meter { display: inline-flex; align-items: center; gap: 6px; padding: 3px 6px; white-space: nowrap; }
+.chat-ctrl-label { font-size: var(--t-micro); }
+.chat-ctx { flex: none; width: 56px; height: 3px; overflow: hidden; border-radius: var(--r-xs); background: var(--track); }
+.chat-ctx i { display: block; height: 100%; background: var(--hp); }
+.chat-ctx.hp-yellow i { background: var(--hp-warn); }
+.chat-ctx.hp-red i { background: var(--hp-low); }
+.chat-ctx.hp-full i { opacity: 0.35; }
+/* 멈추기 in the working line's right slot: ink, a hairline (never yellow) */
+.chat-status .chat-stop { margin-left: auto; min-height: 26px; color: var(--ink); }
+.chat-btn kbd { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-micro); color: inherit; opacity: 0.55; }
+/* a message sent from here: its pictures, and while the record does not show it yet, a quiet word */
+.chat-user-thumbs { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.chat-thumb { display: inline-flex; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-s); background: none; cursor: zoom-in; }
+.chat-pending { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px 6px; font-size: var(--t-micro); color: var(--ink-3); }
+/* a picture shown large: over the view, nothing animates */
+.chat-lightbox { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(6, 7, 10, 0.8); cursor: zoom-out; }
+.chat-lightbox figure { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0; }
+.chat-lightbox img { max-width: min(760px, 80vw); max-height: 80vh; border-radius: var(--r-m); background: #fff; }
+.chat-lightbox figcaption { font-size: var(--t-meta); color: var(--ink-2); }
+.chat-lightbox-x { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--card); color: var(--ink-2); cursor: pointer; }
+.chat-lightbox-x:hover { color: var(--ink); border-color: var(--line-hover); }
+/* the @ menu (the lab's .menu, app.css 383–390): above the composer, the textarea keeps the focus */
+.chat-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 20; width: 300px; max-width: 100%; box-sizing: border-box; padding: 4px; background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
+.chat-menu-title { padding: 6px 8px 4px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-mi { display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 10px; min-height: 26px; padding: 4px 8px; box-sizing: border-box; border-radius: var(--r-s); color: var(--ink-3); cursor: pointer; }
+.chat-mi.sel, .chat-mi:hover { background: rgba(255, 255, 255, 0.06); }
+.chat-mi code { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink); }
+.chat-menu-empty { padding: 6px 8px; font-size: var(--t-meta); color: var(--ink-3); }
+
+/* ---------------------------------------------------------------- the answer surface (Phase 4; the lab's .card.ask, app.css 296–309)
+   Between the conversation and the composer, in the reading column. Amber only for "needs you" (the edge, the bar,
+   the dot); 허용 is the ink button, 거부 a hairline one; nothing yellow, nothing red, nothing moves. */
+.chat-answer { flex: none; padding: 0 32px 10px; }
+@container (max-width: 900px) { .chat-answer { padding: 0 16px 8px; } }
+/* (the conversation's column, as the lab's card sits in it: the column's inset less half its scrollbar gutter) */
+.chat-answer-in { max-width: var(--read-w); margin: 0 auto; padding: 0 28px; box-sizing: border-box; display: flex; flex-direction: column; gap: 6px; }
+@container (max-width: 900px) { .chat-answer-in { padding: 0 12px; } }
+.chat-answer-more { padding: 0 4px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-card { position: relative; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-l); background: var(--card); min-width: 0; outline: none; }
+.chat-card.ask { border-color: rgba(255, 181, 74, 0.38); }
+.chat-card.ask::before { content: ''; position: absolute; left: -1px; top: 10px; bottom: 10px; width: 2px; border-radius: var(--r-xs); background: var(--amber); }
+.chat-card:focus-visible { box-shadow: 0 0 0 1px var(--ink-3); }
+.chat-card-head { display: flex; align-items: baseline; gap: 8px; min-width: 0; font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink); line-height: 1.5; }
+.chat-card-head .chat-dot { align-self: center; }
+.chat-card-title { min-width: 0; overflow-wrap: anywhere; unicode-bidi: isolate; }
+.chat-card-kind { margin-left: auto; flex: none; font-size: var(--t-meta); font-weight: 400; color: var(--ink-3); white-space: nowrap; }
+/* what is asked, exactly: its own scroll past 160px, never cut */
+.chat-card-cmd { max-height: 160px; overflow: auto; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--term-bg); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-code); line-height: 1.6; color: var(--ink); white-space: pre-wrap; overflow-wrap: anywhere; direction: ltr; unicode-bidi: isolate; }
+/* the request's own text, in logical order as the terminal shows it (review M3: no right-to-left run reorders it) */
+.chat-exact { direction: ltr; unicode-bidi: bidi-override; }
+.chat-card-cmd.args { font-size: calc(var(--t-code) - 1px); color: var(--ink-2); }
+.chat-card-pr { color: var(--ink-3); user-select: none; }
+/* a hidden character, written out */
+.chat-cc { padding: 0 2px; border: 1px solid var(--line-hover); border-radius: var(--r-xs); color: var(--ink-2); font-size: calc(var(--t-code) - 2px); }
+.chat-card-sub { margin-top: -4px; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); overflow-wrap: anywhere; }
+.chat-card-diff { margin: 0; }
+/* the whole path, wrapped, never cut (review C1); the counts after it */
+.chat-card-diff .chat-diff-head { flex-wrap: wrap; align-items: flex-start; padding: 4px 10px; }
+.chat-diff-file.chat-card-file { flex: 1 1 0; min-width: 0; cursor: default; display: block; line-height: 1.6; padding: 1px 4px; white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; text-overflow: clip; }
+.chat-card-diff .chat-counts { line-height: 1.6; padding-top: 1px; }
+/* every line wrapped in the box (review C2): nothing out of sight to the right */
+.chat-card-lines { max-height: 220px; overflow-x: hidden; overflow-y: auto; }
+.chat-card-lines .chat-dl { white-space: pre-wrap; overflow-wrap: anywhere; min-width: 0; }
+/* a tab and trailing spaces on a changed line, quietly (review M12) */
+.chat-ws { color: var(--ink-3); }
+.chat-dl.nonum { grid-template-columns: 22px minmax(0, 1fr); }
+.chat-dl.nonum .sg { text-align: center; }
+.chat-card-acts { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; min-height: 28px; }
+.chat-card-btn { min-height: 28px; padding: 0 12px; font-size: var(--t-ui); font-weight: var(--w-name); }
+.chat-card .chat-btn:disabled { opacity: 0.5; cursor: default; }
+.chat-card .chat-btn:disabled:hover { color: var(--ink-2); border-color: var(--line); }
+.chat-card .chat-btn.solid:disabled:hover { background: var(--ink); color: var(--accent-ink); border-color: transparent; }
+.chat-card-hint { margin-left: auto; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-card-term { font-size: var(--t-meta); }
+.chat-card-state { min-width: 0; font-size: var(--t-ui); color: var(--ink-3); }
+.chat-card-state + .chat-btn { margin-left: auto; }
+/* a fact about the call, a line of its own; "outside the sandbox" carries the amber "needs you" dot, no fill */
+.chat-card-fact { display: flex; align-items: baseline; gap: 6px; margin-top: -4px; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); overflow-wrap: anywhere; min-width: 0; }
+.chat-card-fact > span { min-width: 0; }
+.chat-card-fact.warn { color: var(--ink); font-weight: var(--w-name); }
+.chat-card-fact.warn .chat-dot { align-self: center; flex: none; }
+.chat-card-rule { margin-top: -4px; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); overflow-wrap: anywhere; }
+.chat-card-rule code { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); color: var(--ink-2); }
+/* a question's options: one per row, the description under the label */
+.chat-card-opts { display: flex; flex-direction: column; gap: 6px; }
+.chat-card-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 30px; padding: 5px 12px; white-space: normal; text-align: left; font-size: var(--t-ui); }
+.chat-card-optlabel { color: var(--ink); font-weight: var(--w-name); overflow-wrap: anywhere; }
+.chat-card-optdesc { font-size: var(--t-meta); font-weight: 400; color: var(--ink-3); overflow-wrap: anywhere; }
+.chat-card-optlist { margin: 0; padding-left: 20px; font-size: var(--t-ui); line-height: 1.65; color: var(--ink-2); }
+.chat-card-optlist li::marker { color: var(--ink-3); }
+/* a plan: its first lines, the rest in place in a box of its own scroll */
+.chat-card-plan { color: var(--ink-2); }
+.chat-card-plan.all { max-height: 320px; overflow: auto; }
+
+/* ---------------------------------------------------------------- 변경 사항 (Phase 5; the lab's .changes, app.css 417–440, .rz 769–779)
+   The chat area's right column (Widget.tsx: inside .w-term-body, width --ch-w; the chat pane leaves it room), on the
+   side panel's grey with a hairline. The selected file on the quiet selection grey, never yellow. Each edit its own
+   section, its lines as the record holds them. Nothing moves. */
+.chat-changes { position: absolute; top: 0; right: 0; bottom: 0; z-index: 2; width: var(--ch-w, 320px); box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; border-left: 1px solid var(--line); background: var(--side-bg); color: var(--ink); font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; }
+.chat-changes button { -webkit-app-region: no-drag; }
+.chat-changes button:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+/* its left edge drags its width: a 7px strip over the hairline, its centre line only on hover, focus and while dragging */
+/* (a 22px grip centred on the edge, its 1px line in the middle: Phase 6 hit areas) */
+.chat-ch-rz { position: absolute; top: 0; bottom: 0; left: -11px; width: 22px; z-index: 6; cursor: col-resize; touch-action: none; -webkit-app-region: no-drag; outline: none; }
+.chat-ch-rz::after { content: ''; position: absolute; top: 0; bottom: 0; left: 10px; width: 1px; background: transparent; }
+.chat-ch-rz:hover::after, .widget.resizing .chat-ch-rz::after { background: rgba(255, 255, 255, 0.3); }
+.chat-ch-rz:focus-visible::after { background: var(--ink-3); }
+.chat-ch-head { flex: none; display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 8px 0 14px; box-sizing: border-box; border-bottom: 1px solid var(--line); }
+.chat-ch-head b { font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink); white-space: nowrap; }
+.chat-ch-head .chat-counts, .chat-ch-dhead .chat-counts, .chat-ch-ehead .chat-counts { margin-left: 0; }
+.chat-ch-spacer { flex: 1 1 0; min-width: 0; }
+.chat-ch-x { flex: none; display: inline-grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--r-s); background: none; color: var(--ink-3); cursor: pointer; }
+.chat-ch-x:hover { background: var(--hover); color: var(--ink); }
+.chat-ch-sub { flex: none; display: flex; flex-direction: column; gap: 2px; padding: 8px 14px 6px; font-size: var(--t-meta); line-height: 1.5; color: var(--ink-3); }
+.chat-ch-partial { color: var(--ink-2); }
+.chat-ch-empty { flex: none; margin: 0; padding: 6px 14px 10px; font-size: var(--t-ui); line-height: 1.6; color: var(--ink-3); }
+/* the tree: rows of 26px, folders then files; past half the panel it scrolls on its own */
+.chat-ch-tree { flex: 0 0 auto; max-height: 45%; overflow-y: auto; padding: 2px 6px 8px; border-bottom: 1px solid var(--line); }
+.chat-ch-tn { display: flex; align-items: center; gap: 6px; height: 26px; padding-right: 8px; box-sizing: border-box; border-radius: var(--r-s); font-size: var(--t-ui); color: var(--ink-3); white-space: nowrap; cursor: pointer; user-select: none; outline: none; }
+.chat-ch-tn.file { color: var(--ink-2); }
+.chat-ch-tn:hover { background: var(--hover); }
+.chat-ch-tn[aria-selected="true"], .chat-ch-tn[aria-selected="true"]:hover { background: var(--sel-bg); color: var(--ink); }
+.chat-ch-tn:focus-visible { box-shadow: inset 0 0 0 1px var(--ink-3); }
+.chat-ch-nm { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.chat-ch-tn .chat-counts { margin-left: auto; }
+.chat-ch-tag { flex: none; font-size: var(--t-micro); color: var(--ink-3); }
+.chat-ch-chev { flex: none; display: inline-flex; color: var(--ink-3); }
+.chat-ch-chev.open { transform: rotate(90deg); }
+/* the selected file's edits, under a head that stays */
+.chat-ch-diff { flex: 1 1 0; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+.chat-ch-dhead { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 6px 10px 6px 14px; box-sizing: border-box; background: var(--side-bg); font-size: var(--t-meta); color: var(--ink-3); }
+.chat-ch-fname { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); color: var(--ink-2); }
+.chat-ch-open { flex: none; min-height: 24px; padding: 0 8px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); white-space: nowrap; cursor: pointer; }
+.chat-ch-open:hover { color: var(--ink); border-color: var(--line-hover); }
+.chat-ch-more { display: flex; align-items: center; width: 100%; min-height: 26px; padding: 0 14px; border: 0; border-top: 1px solid var(--line); background: none; color: var(--ink-3); font: inherit; font-size: var(--t-meta); text-align: left; cursor: pointer; }
+.chat-ch-more:hover { color: var(--ink); background: var(--hover); }
+.chat-ch-edit { padding: 2px 0 8px; border-top: 1px solid var(--line); }
+.chat-ch-ehead { display: flex; align-items: center; gap: 8px; min-height: 26px; padding: 0 14px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-ch-ewords { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-ch-cut { flex: none; white-space: nowrap; }
+.chat-ch-note { margin: 2px 14px 4px; font-size: var(--t-meta); line-height: 1.6; color: var(--ink-3); }
+.chat-ch-note .chat-link-btn { font-size: var(--t-meta); }
+/* the diff grid of Phase 2, at the panel's size and wrapped (nothing out of sight to the right) */
+.chat-ch-lines { padding: 2px 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-meta); line-height: 1.55; }
+.chat-ch-lines .chat-dl { grid-template-columns: 32px 14px minmax(0, 1fr); min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-ch-lines .chat-dl > span:last-child { padding-right: 10px; }
+.chat-ch-gap { padding: 1px 0 1px 46px; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-micro); color: var(--ink-3); }
+/* what the panel cannot know, always said */
+.chat-ch-foot { flex: none; padding: 8px 14px 10px; border-top: 1px solid var(--line); font-size: var(--t-micro); line-height: 1.5; color: var(--ink-3); }
+.chat-ch-foot p { margin: 0; }
+.chat-card-more { align-self: flex-start; margin-top: -6px; font-size: var(--t-meta); }
+
+/* find in the conversation (Phase 5): the terminal's .term-search place and size, in the chat's greys; the matches are
+   painted with the Custom Highlight API (no markup touched), every one a light grey, the current one a stronger grey
+   with the body ink (tests/tokens.test.ts: the contrast over prose, bubbles, code and diff rows). Never yellow. */
+.chat-find { position: absolute; top: 10px; right: 18px; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 4px 8px; border-radius: var(--r-m); border: 1px solid rgba(255, 255, 255, 0.1); background: var(--card-2); -webkit-app-region: no-drag; }
+.chat-find:focus-within { border-color: var(--line-hover); }
+.chat-find-main { display: flex; align-items: center; gap: 4px; }
+.chat-find input { width: 200px; height: 24px; padding: 0; font: inherit; font-size: var(--t-ui); color: var(--ink); background: transparent; border: 0; outline: none; }
+.chat-find input::placeholder { color: var(--ink-3); }
+.chat-find-count { min-width: 44px; text-align: right; font-size: var(--t-meta); color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.chat-find button { flex: none; width: 24px; height: 24px; padding: 0; border: 0; border-radius: var(--r-s); background: transparent; color: var(--ink-2); font: inherit; font-size: var(--t-prose); cursor: pointer; }
+.chat-find button:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.chat-find button:disabled { color: var(--ink-3); cursor: default; }
+.chat-find-note { padding: 0 4px 2px 0; font-size: var(--t-meta); color: var(--ink-3); }
+::highlight(chat-find) { background-color: var(--find-bg); }
+::highlight(chat-find-now) { background-color: var(--find-now-bg); color: var(--ink); }
+/* (no Highlight API, or the current match is in a part its row does not draw as text: the row is outlined) */
+.chat-row.find-now { outline: 1px solid var(--line-hover); outline-offset: 2px; border-radius: var(--r-s); }
+/* the files the draft refers to (@path): a hairline badge each, the image chips' height */
+.chat-fchip { display: inline-flex; align-items: center; gap: 5px; height: 26px; max-width: 220px; padding: 0 2px 0 8px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-s); font-size: var(--t-meta); color: var(--ink-2); }
+.chat-fchip-ico { flex: none; display: inline-grid; color: var(--ink-3); }
+.chat-fchip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); }
+/* a file in a sent message: the badge, inline */
+.chat-fref { display: inline-flex; align-items: center; gap: 4px; margin: 0 1px; padding: 0 6px; border-radius: var(--r-xs); background: rgba(255, 255, 255, 0.06); color: var(--ink); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; vertical-align: baseline; white-space: nowrap; }
+.chat-fref svg { flex: none; color: var(--ink-3); }
+/* the next-prompt suggestion is the placeholder: Tab (or →) takes it */
+.chat-sugg-key { flex: none; margin-left: auto; padding: 0 5px; border: 1px solid var(--line); border-radius: var(--r-xs); font: inherit; font-size: var(--t-micro); line-height: 16px; color: var(--ink-3); }
+.chat-sugg-key + .chat-send { margin-left: 6px; }
+/* shell mode (a `!` into the empty draft): the box's edge a little brighter, the command in mono, a badge in the bar */
+.chat-cbox.shell { border-color: rgba(255, 255, 255, 0.22); }
+.chat-cbox.shell .chat-input { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-code); }
+.chat-shell-badge { display: inline-flex; align-items: center; gap: 6px; height: 26px; margin-left: 4px; padding: 0 9px 0 7px; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--hover); color: var(--ink); font: inherit; font-size: var(--t-meta); cursor: pointer; }
+.chat-shell-badge b { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-name); }
+.chat-shell-badge:hover { border-color: var(--line-hover); }
+/* a `!` command in the conversation: a small terminal block where the user's messages sit */
+.chat-shell { max-width: 88%; }
+.chat-shell-box { box-sizing: border-box; min-width: 220px; max-width: 100%; padding: 8px 12px 9px; border: 1px solid var(--line); border-radius: var(--r-l); background: rgba(0, 0, 0, 0.22); }
+.chat-shell-cmd { display: flex; gap: 8px; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-code); line-height: 1.6; color: var(--ink); overflow-wrap: anywhere; }
+.chat-shell-cmd b { flex: none; color: var(--ink-3); font-weight: var(--w-name); }
+.chat-shell-run { margin-top: 4px; font-size: var(--t-meta); color: var(--ink-3); }
+.chat-shell-out { margin: 6px 0 0; padding-top: 6px; border-top: 1px solid var(--line); max-height: 360px; overflow: auto; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-shell-err { color: var(--red-text); }
+.chat-shell-more { margin-top: 4px; }
+/* the files a message sent (the composer's badges): pills over the bubble, on the right, as its pictures */
+.chat-user-files { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
+.chat-user-files .chat-fref { margin: 0; padding: 3px 8px; border: 1px solid var(--line); background: none; color: var(--ink-2); }
+/* the queue opened (a click on its strip): every queued text, oldest first, over the strip */
+.chat-queue:hover { color: var(--ink-2); }
+.chat-queue-chev { flex: none; display: inline-grid; color: var(--ink-3); }
+.chat-queue-wrap.open .chat-queue-chev { transform: rotate(180deg); }
+.chat-queue-list { list-style: none; margin: 0 8px; padding: 6px 12px 2px; max-height: 180px; overflow: auto; background: rgba(255, 255, 255, 0.025); border: 1px solid var(--line); border-bottom: 0; border-top-left-radius: var(--r-l); border-top-right-radius: var(--r-l); font-size: var(--t-ui); }
+.chat-queue-wrap.open .chat-queue { border-top: 0; border-radius: 0; }
+.chat-queue-list li { display: flex; gap: 8px; padding: 4px 0; color: var(--ink-2); line-height: 1.5; }
+.chat-queue-n { flex: none; min-width: 14px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.chat-queue-full { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-family: 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; }
+.chat-queue-more { color: var(--ink-3); }
+/* several questions, or a multi-select (2026-11-17): each question, its options to pick, then 보내기 */
+.chat-card-q + .chat-card-q { margin-top: 10px; }
+.chat-card-qtext { margin: 0 0 6px; font-size: var(--t-ui); line-height: 1.5; color: var(--ink); }
+.chat-card-qtext b { font-weight: var(--w-name); color: var(--ink-2); }
+.chat-card-qmulti { color: var(--ink-3); }
+.chat-card-opt.pick .chat-card-optlabel { display: inline-flex; align-items: center; gap: 8px; }
+.chat-card-mark { flex: none; width: 12px; height: 12px; box-sizing: border-box; border: 1.5px solid var(--ink-3); border-radius: 50%; }
+.chat-card-opt.pick.multi .chat-card-mark { border-radius: var(--r-xs); }
+.chat-card-opt.pick.on { border-color: var(--ink-2); background: var(--hover); }
+.chat-card-opt.pick.on .chat-card-mark { border-color: var(--ink); background: var(--ink); box-shadow: inset 0 0 0 2px var(--card); }
+/* the model and the mode as menus (2026-11-17): the item a quiet button, its menu opening above it */
+.chat-ctrl-anchor { position: relative; display: inline-flex; min-width: 0; }
+.chat-ctrl-item.btn { font: inherit; color: inherit; background: none; border: 0; border-radius: var(--r-s); cursor: pointer; }
+.chat-ctrl-item.btn:hover:not(:disabled), .chat-ctrl-item.btn.open { background: var(--hover); color: var(--ink-2); }
+.chat-ctrl-item.btn:disabled { cursor: default; }
+.chat-ctrl-menu { position: absolute; left: 0; bottom: calc(100% + 4px); z-index: 20; display: flex; flex-direction: column; min-width: 168px; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-m); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); }
+.chat-ctrl-menu-note { padding: 4px 8px 6px; font-size: var(--t-meta); color: var(--ink-3); white-space: normal; }
+.chat-ctrl-opt { display: flex; align-items: center; gap: 6px; padding: 5px 8px; font: inherit; font-size: var(--t-ui); text-align: left; color: var(--ink-2); background: none; border: 0; border-radius: var(--r-s); cursor: pointer; white-space: nowrap; }
+.chat-ctrl-opt:hover:not(:disabled) { background: var(--hover); color: var(--ink); }
+.chat-ctrl-opt.on { color: var(--ink); }
+.chat-ctrl-opt:disabled { color: var(--ink-3); cursor: default; }
+.chat-ctrl-check { flex: none; width: 12px; color: var(--ink); }
+/* a markdown document (a ```markdown block, a new .md file): prose in a card, 문서 / 원문, long ones folded */
+.chat-mddoc { margin: 4px 0 10px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--card); overflow: hidden; }
+.chat-mddoc-head { display: flex; align-items: center; gap: 8px; min-height: 30px; padding: 3px 4px 3px 12px; border-bottom: 1px solid var(--line); font-size: var(--t-meta); color: var(--ink-3); }
+.chat-mddoc-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chat-mddoc-tabs { display: inline-flex; flex: none; padding: 2px; gap: 2px; border-radius: var(--r-s); background: rgba(255, 255, 255, 0.04); }
+.chat-mddoc-tabs button { padding: 1px 8px; font: inherit; font-size: var(--t-meta); color: var(--ink-3); background: none; border: 0; border-radius: var(--r-xs); cursor: pointer; }
+.chat-mddoc-tabs button:hover { color: var(--ink-2); }
+.chat-mddoc-tabs button.on { background: var(--hover); color: var(--ink); }
+.chat-mddoc-body { padding: 14px 18px 12px; }
+.chat-mddoc-body.folded { max-height: 420px; overflow: hidden; -webkit-mask-image: linear-gradient(to bottom, #000 80%, transparent); mask-image: linear-gradient(to bottom, #000 80%, transparent); }
+.chat-mddoc-prose h1 { font-size: calc(var(--t-head) + 2px); margin: 18px 0 8px; }
+.chat-mddoc-prose h2 { font-size: var(--t-head); margin: 18px 0 8px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.chat-mddoc-prose h3 { font-size: var(--t-prose); margin: 14px 0 6px; }
+.chat-mddoc-prose h4 { font-size: var(--t-prose); color: var(--ink-2); margin: 12px 0 4px; }
+.chat-mddoc-prose p { margin: 0 0 10px; }
+.chat-mddoc-prose .tbl-wrap { margin: 6px 0 12px; }
+.chat-mddoc-raw { margin: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.65; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-mddoc-more { display: block; width: 100%; padding: 6px 0; font: inherit; font-size: var(--t-meta); color: var(--ink-3); background: none; border: 0; border-top: 1px solid var(--line); cursor: pointer; }
+.chat-mddoc-more:hover { color: var(--ink); background: var(--hover); }
+/* a new .md file's diff shown as its document */
+.chat-diff-doc { border-top: 1px solid var(--line); }
+.chat-diff-head .chat-mddoc-tabs { margin-left: 4px; }
+/* the dialog card (a terminal dialog read from the screen): its body, the marked option, a field for words */
+.chat-card-dbody { margin: 0 0 8px; font-size: var(--t-ui); line-height: 1.55; color: var(--ink-2); }
+.chat-card-dbody p { margin: 0; overflow-wrap: anywhere; }
+.chat-card-dgap { display: block; height: 6px; }
+.chat-card-opt.marked { border-color: var(--line-hover); }
+.chat-card-words { display: flex; gap: 6px; margin-top: 8px; }
+.chat-card-field { flex: 1; min-width: 0; height: 30px; padding: 0 10px; box-sizing: border-box; font: inherit; font-size: var(--t-ui); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: var(--r-s); outline: none; }
+.chat-card-field:focus { border-color: var(--line-hover); }
+/* "전체 보기": an item read again whole, over the conversation */
+.chat-full-btn { margin-left: 4px; }
+.chat-full { position: absolute; inset: 0; z-index: 40; display: flex; align-items: stretch; justify-content: center; padding: 24px; background: rgba(0, 0, 0, 0.55); }
+.chat-full-panel { display: flex; flex-direction: column; width: 100%; max-width: var(--read-w); min-height: 0; background: var(--card); border: 1px solid var(--line); border-radius: var(--r-l); overflow: hidden; box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5); }
+.chat-full-head { display: flex; align-items: center; gap: 8px; padding: 8px 10px 8px 16px; border-bottom: 1px solid var(--line); }
+.chat-full-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--t-ui); font-weight: var(--w-name); color: var(--ink); }
+.chat-full-body { flex: 1; min-height: 0; overflow: auto; padding: 16px 20px; outline: none; }
+.chat-full-pre { margin: 0; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; color: var(--ink-2); white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-full-note { margin: 0 0 8px; font-size: var(--t-meta); color: var(--ink-3); }
+/* src/styles/chat-game.css — the game's lively bits in the chat view (Phase 5), on the 차분하게 2 tokens: the turn
+   summary's step count (the paw glyph, the lab's `.turn-foot .steps`, calm-lab app.css 661) and the wild Pokémon met
+   in the flow (the lab's `.wild`, app.css 264–274). Imported by src/components/ChatView.tsx. None of it is drawn in
+   업무 모드 (the components leave it out), and chat.css keeps its "nothing animates" rule: the allowed animations
+   (a wild Pokémon met while the view is open, Decision 12; the working Pokémon's hop and halo, the owner's call of
+   2026-11-17) live here and stop under prefers-reduced-motion. */
+
+/* the step count: the paw glyph and {n}걸음, in the foot's own quiet colour */
+.chat-steps { display: inline-flex; align-items: center; gap: 4px; }
+.chat-steps svg { flex: none; }
+
+/* a wild Pokémon, in passing: the picture, the meeting, → the ball and the result; a hairline tag, no fill */
+.chat-wild { display: flex; align-items: center; min-height: 34px; padding: 0 4px; margin: 2px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; }
+.chat-wild-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
+.chat-wild-mon { width: 34px; height: 34px; margin: -4px -2px -4px -6px; flex: none; object-fit: contain; }
+.chat-wild b { color: var(--ink-2); font-weight: var(--w-name); }
+.chat-wild-arrow { color: var(--ink-3); }
+.chat-wild-got { color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.chat-wild-ball { width: 14px; height: 14px; flex: none; }
+.chat-wild-tag { font-size: var(--t-micro); color: var(--ink-3); border: 1px solid var(--line); border-radius: var(--r-xs); padding: 0 5px; white-space: nowrap; }
+/* a rare-or-above one's tier: the dot and the word in the tier's colour (tokens.css .tier-*) */
+.chat-wild-tier { display: inline-flex; align-items: center; gap: 4px; color: var(--tier); white-space: nowrap; }
+
+/* met while watching: the picture comes in once (the lab's wildIn) */
+.chat-wild.appear .chat-wild-mon { animation: chat-wild-in .5s cubic-bezier(.2, .8, .2, 1) both; }
+@keyframes chat-wild-in { from { transform: translateY(6px) scale(.8); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-wild.appear .chat-wild-mon { animation: none; }
+}
+
+/* the working Pokémon (the line under the conversation, its time ticking): a 2px hop and a faint halo breathing on
+   the same beat, the owner's micro-interaction of 2026-11-17; still for anyone who asks for less motion */
+.chat-status.working .chat-pic.head { position: relative; }
+.chat-status.working .chat-pic.head::before { content: ''; position: absolute; inset: -4px; border-radius: 50%; background: radial-gradient(circle, rgba(255, 255, 255, 0.16) 0%, rgba(255, 255, 255, 0) 70%); pointer-events: none; animation: chat-halo 1.6s ease-in-out infinite; }
+.chat-status.working .chat-pic.head > * { position: relative; animation: chat-hop 1.6s ease-in-out infinite; }
+@keyframes chat-hop { 0%, 55%, 100% { transform: translateY(0); } 25% { transform: translateY(-2px); } 40% { transform: translateY(0.5px); } }
+@keyframes chat-halo { 0%, 100% { opacity: 0.25; } 25% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .chat-status.working .chat-pic.head::before { animation: none; }
+  .chat-status.working .chat-pic.head > * { animation: none; }
+}
+/* 채팅 · 터미널 (the chat view, while it is on): a hairline pair; the chosen one on the quiet selection, never yellow.
+   Not a window drag region (the session bar is one on a Mac) */
+.w-lens { position: relative; flex: none; display: inline-flex; align-items: center; gap: 2px; padding: 1px; margin-right: 4px; border: 1px solid var(--line); border-radius: var(--r-m); -webkit-app-region: no-drag; }
+/* why 채팅 is off, after a click on it: under the pair for a few seconds */
+.w-lens-note:empty { display: none; }
+.w-lens-note { position: absolute; top: calc(100% + 6px); right: 0; z-index: 30; width: max-content; max-width: 300px; padding: 6px 10px; background: var(--card); border: 1px solid var(--line-hover); border-radius: var(--r-m); font-size: var(--t-meta); line-height: 1.5; color: var(--ink-2); white-space: normal; }
+.w-lens button {
+  display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 4px 8px; box-sizing: border-box;
+  font: inherit; font-size: var(--t-ui); font-weight: 400; line-height: 1; color: var(--ink-3); white-space: nowrap;
+  background: none; border: 0; border-radius: var(--r-s); cursor: pointer; -webkit-app-region: no-drag;
+}
+.w-lens button:hover { background: var(--hover); color: var(--ink-2); }
+.w-lens button.on { background: var(--sel-bg); color: var(--ink); }
+.w-lens button[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.w-lens button[aria-disabled="true"]:hover { background: none; color: var(--ink-3); }
+.w-lens button:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+/* a narrow window (the session bar can be 260px): the pair as icons, the words kept for a screen reader */
+/* the chat's own tools in the session header, before the 채팅 · 터미널 pair (only while the chat is shown) */
+.w-chat-tools { flex: none; display: inline-flex; align-items: center; gap: 2px; margin-right: 6px; -webkit-app-region: no-drag; }
+/* 변경 사항 (the lab's .chg): the panel glyph and the conversation's +N −N; pressed on the quiet selection grey, never yellow */
+.w-chg {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; box-sizing: border-box;
+  font: inherit; font-size: var(--t-meta); font-weight: 400; line-height: 1; color: var(--ink-2); white-space: nowrap;
+  background: none; border: 0; border-radius: var(--r-s); cursor: pointer; -webkit-app-region: no-drag;
+}
+.w-chg:hover { background: var(--hover); color: var(--ink); }
+.w-chg.on { background: var(--sel-bg); color: var(--ink); }
+.w-chg[aria-disabled="true"] { opacity: 0.45; cursor: default; }
+.w-chg[aria-disabled="true"]:hover { background: none; color: var(--ink-2); }
+.w-chg:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.w-chg-counts { display: inline-flex; gap: 6px; font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); }
+.w-chg-counts .a { color: var(--green); }
+.w-chg-counts .d { color: var(--red-text); }
+.w-chg-counts .z { color: var(--ink-3); }
+/* 보기 정도 (the lab's .dens and its menu, app.css 382–402): the eye, the level's name, a chevron; the menu of the three
+   levels, the chosen one checked on the quiet selection grey, never yellow (DensityMenu.tsx) */
+.w-dens-anchor { position: relative; z-index: 40; flex: none; display: inline-flex; -webkit-app-region: no-drag; }
+.w-dens {
+  display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 8px; box-sizing: border-box;
+  font: inherit; font-size: var(--t-meta); font-weight: 400; line-height: 1; color: var(--ink-2); white-space: nowrap;
+  background: none; border: 0; border-radius: var(--r-s); cursor: pointer; -webkit-app-region: no-drag;
+}
+.w-dens > svg { flex: none; }
+.w-dens > svg:first-child { color: var(--ink-3); }
+.w-dens:hover, .w-dens.open { background: var(--hover); color: var(--ink); }
+.w-dens:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
+.w-dens-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); width: 250px; box-sizing: border-box; padding: 4px;
+  background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.w-dens-item {
+  display: grid; grid-template-columns: 16px minmax(0, 1fr); align-items: center; gap: 10px;
+  width: 100%; padding: 6px 8px; text-align: left; font: inherit; font-size: var(--t-ui); line-height: 1.35; color: var(--ink-2);
+  background: none; border: 0; border-radius: var(--r-s); cursor: pointer;
+}
+.w-dens-item:hover, .w-dens-item.on { background: var(--sel-bg); }
+.w-dens-item.on { color: var(--ink); }
+.w-dens-item:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
+.w-dens-ck { display: inline-grid; place-items: center; color: var(--ink); opacity: 0; }
+.w-dens-item.on .w-dens-ck { opacity: 1; }
+.w-dens-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.w-dens-item small { font-size: var(--t-meta); color: var(--ink-3); white-space: normal; }
+
+/* ---------- the site's frame for it: the chat fills the terminal's place in the demo window ---------- */
+.site-chat-body { position: relative; flex: 1; min-height: 0; }
+.site-chat-body > .chat { position: absolute; inset: 0; }
+.site-chat .chat-scroll { scrollbar-width: none; }
+.site-chat .chat-scroll::-webkit-scrollbar { display: none; }
+.site-chat .chat-row { animation: site-chat-in .35s ease-out both; }
+@keyframes site-chat-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .site-chat .chat-row { animation: none; } }

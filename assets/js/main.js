@@ -71,7 +71,7 @@
   // The version line and the first-install zip name, from LATEST_VERSION. loading.js asks GitHub for the
   // newest release and sets it through spawnLatest; until then these stand as skeletons
   function versionText(el) {
-    if (el.id === 'startZip') return platState() === 'mac-soon' ? t('dl.soon') : zipName(platState() === 'win' ? 'win-x64' : 'mac-arm64');
+    if (el.id === 'startZip') return platState() === 'mac-soon' ? t('dl.soon') : platState() === 'win' ? (PLATFORM.setup ? setupName() : zipName('win-x64')) : zipName('mac-arm64');
     return t('cta.version', { v: LATEST_VERSION });
   }
   window.spawnVersionText = versionText;
@@ -94,23 +94,29 @@
     return 'win';
   }
   // win: the latest release carries the Windows zip (then every Windows button downloads it straight away)
-  var PLATFORM = { os: detectOS(), arm: false, intel: false, win: false, locked: false };
+  // setup: the latest release carries the Windows installer (spawn-Setup-<v>.exe, 1.10.0): the button gets it
+  var PLATFORM = { os: detectOS(), arm: false, intel: false, win: false, setup: false, locked: false };
   function platState() { return PLATFORM.os !== 'mac' ? 'win' : (PLATFORM.arm ? 'mac-ready' : 'mac-soon'); }
   function zipName(kind) { return PRODUCT_NAME + '-' + LATEST_VERSION + '-' + kind + '.zip'; }
   function macUrl(arch) { return SITE_LINKS.repo + '/releases/download/v' + LATEST_VERSION + '/' + zipName('mac-' + arch); }
   /* 2026-11-19 (the owner: a button should download, not open a release page): the zip itself once GitHub has
      named the latest release and its files; until then, or without an answer, the project's main page */
-  function winHref() { return PLATFORM.win ? SITE_LINKS.repo + '/releases/download/v' + LATEST_VERSION + '/' + zipName('win-x64') : SITE_LINKS.repo; }
+  var DL_ICON = '<svg class="ico" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.5v8M4.5 7 8 10.5 11.5 7M3 13.5h10"/></svg>';
+  function setupName() { return PRODUCT_NAME + '-Setup-' + LATEST_VERSION + '.exe'; }
+  function winHref() {
+    var base = SITE_LINKS.repo + '/releases/download/v' + LATEST_VERSION + '/';
+    return PLATFORM.setup ? base + setupName() : PLATFORM.win ? base + zipName('win-x64') : SITE_LINKS.repo;
+  }
   // the same text with the Mac wording where there is one (hero note, unzip step, the Mac FAQ answer)
   function platKey(key) {
     if (key === 'faq.a9') return PLATFORM.arm ? 'faq.a9.ready' : key;
-    if (PLATFORM.os !== 'mac') return key;
+    if (PLATFORM.os !== 'mac') return PLATFORM.setup && (key === 'start.s1.p' || key === 'start.s2.p') ? key + '.setup' : key;
     if (key === 'faq.a3') return 'faq.a3.mac';
     if (key === 'start.s1.p') return PLATFORM.arm ? key : 'start.s1.p.soon';
     if (key === 'hero.note' || key === 'start.s2.p') return key + '.mac';
     return key;
   }
-  function exeText() { return PLATFORM.os === 'mac' ? PRODUCT_NAME + '.app' : 'win-unpacked\\' + PRODUCT_NAME + '.exe'; }
+  function exeText() { return PLATFORM.os === 'mac' ? PRODUCT_NAME + '.app' : PLATFORM.setup ? setupName() : 'win-unpacked\\' + PRODUCT_NAME + '.exe'; }
 
   function applyPlatform() {
     var state = platState(), mac = PLATFORM.os === 'mac';
@@ -139,10 +145,12 @@
     // Mac build is not out
     document.querySelectorAll('[data-dl-alt]').forEach(function (p) {
       var links = mac
-        ? (state === 'mac-soon' ? [['dl.win', winHref()]] : PLATFORM.intel ? [['dl.intel', macUrl('x64')]] : [])
-        : (PLATFORM.arm ? [['dl.mac.arm', macUrl('arm64')]].concat(PLATFORM.intel ? [['dl.intel', macUrl('x64')]] : []) : []);
+        ? (state === 'mac-soon' ? [['dl.short.win', winHref()]] : [['dl.short.win', winHref()]].concat(PLATFORM.intel ? [['dl.short.intel', macUrl('x64')]] : []))
+        : (PLATFORM.arm ? [['dl.short.arm', macUrl('arm64')]].concat(PLATFORM.intel ? [['dl.short.intel', macUrl('x64')]] : []) : []);
       p.hidden = !links.length;
-      p.innerHTML = links.map(function (l) { return '<a href="' + esc(l[1]) + '" rel="noopener">' + esc(t(l[0])) + '</a>'; }).join('<span class="dl-alt-sep" aria-hidden="true"> · </span>');
+      p.innerHTML = '<span class="dl-alt-label">' + esc(t('dl.other')) + '</span>' + links.map(function (l) {
+        return '<a class="btn btn-ghost btn-small dl-alt-btn" href="' + esc(l[1]) + '" rel="noopener">' + DL_ICON + '<span>' + esc(t(l[0])) + '</span></a>';
+      }).join('');
     });
     if (!mac) return;
     document.querySelectorAll('[data-dl]').forEach(function (a) {
@@ -168,6 +176,7 @@
       PLATFORM.arm = names.some(function (n) { return /-mac-arm64\.zip$/.test(n); });
     PLATFORM.intel = names.some(function (n) { return /-mac-x64\.zip$/.test(n); });
     PLATFORM.win = names.some(function (n) { return n === zipName('win-x64'); });
+    PLATFORM.setup = names.some(function (n) { return n === setupName(); });
     window.spawnReapply();
   };
   window.spawnSetPlatform = function (o) {
@@ -385,7 +394,11 @@
     rows: document.getElementById('rows'),
     head: document.getElementById('sessHead'),
     listCount: document.getElementById('listCount'),
-    term: document.getElementById('term'),
+    chatRows: document.getElementById('chatRows'),
+    chatScroll: document.getElementById('chatScroll'),
+    chatStatus: document.getElementById('chatStatus'),
+    chatInput: document.getElementById('chatInput'),
+    chatSend: document.getElementById('chatSend'),
     dexCount: document.getElementById('dexCount'),
     dexRecent: document.getElementById('dexRecent'),
     dexNew: document.getElementById('dexNew'),
@@ -415,51 +428,40 @@
 
   function newSession(o) {
     var s = { id: o.id, title: o.title || '', titleKey: o.titleKey || null, project: o.project, branch: o.branch || null, tool: o.tool || null,
-      model: o.model, dex: o.dex || 0, lv: o.lv || 5, mood: o.mood || 'idle', hp: o.hp == null ? 100 : o.hp, ctx: o.ctx || 200000, chosen: false, lines: [] };
+      model: o.model, dex: o.dex || 0, lv: o.lv || 5, mood: o.mood || 'idle', hp: o.hp == null ? 100 : o.hp, ctx: o.ctx || 200000, chosen: false, items: [], turn: null };
     demo.sessions.push(s);
     els.rows.appendChild(makeRow(s));
     renderCount();
     return s;
   }
 
-  /* The session tabs above the terminal (1.8.0, SessionHeader.tsx): up to three open sessions, the one in view
-     named with its branch and ×, the others with their picture, name and a working / needs-you dot */
-  var headKey = '';
+  /* The session header above the chat (SessionHeader.tsx): the session in view, named */
   function updateHead() {
     var s = demo.shown, head = els.head;
     head.hidden = !s;
     if (!s) return;
-    var others = demo.sessions.filter(function (x) { return x !== s; }).slice(0, 2);
-    var tabs = demo.sessions.filter(function (x) { return x === s || others.indexOf(x) >= 0; });
-    var name = function (x) { return x.titleKey ? t(x.titleKey) : x.title; };
-    var key = tabs.map(function (x) { return [x.id, x.dex, x.mood, name(x), x.branch, x === s].join('|'); }).join('/') + lang;
-    if (key === headKey) return;
-    headKey = key;
-    head.innerHTML = '<span class="w-sess-tabs">' + tabs.map(function (x) {
-      var on = x === s;
-      return '<span class="w-sess-tab mood-' + x.mood + (on ? ' on' : '') + '">' +
-        (x.dex ? iconImg(x.dex, 'w-sess-head-pic') : '<img class="w-sess-head-pic" src="' + GENERIC_BALL + '" data-fb="' + OWN_BALL + '" alt="">') +
-        '<span class="' + (on ? 'w-sess-head-name' : 'w-sess-tab-name') + '">' + esc(name(x)) + '</span>' +
-        (on && x.branch ? '<span class="w-row-branch w-sess-head-branch">' + esc(x.branch) + '</span>' : '') +
-        (on ? '<span class="w-sess-tab-x">×</span>' : '<span class="w-sess-tab-dot"></span>') +
-        '</span>';
-    }).join('') + '</span><span class="w-sess-head-spacer"></span><span class="w-sess-head-close">×</span>';
+    var img = head.querySelector('.w-sess-head-pic');
+    if (img.getAttribute('data-dex') !== String(s.dex || 0)) { setIcon(img, s.dex); img.setAttribute('data-dex', String(s.dex || 0)); }
+    head.querySelector('.w-sess-head-name').textContent = s.titleKey ? t(s.titleKey) : s.title;
+    var br = head.querySelector('.w-sess-head-branch');
+    br.textContent = s.branch || '';
+    br.hidden = !s.branch;
+    head.querySelector('.w-sess-head-proj').textContent = s.project;
   }
 
-  function update(s) { updateRow(s); updateHead(); }
+  function update(s) { updateRow(s); if (s === demo.shown) { updateHead(); renderControl(); renderStatus(); } }
 
   function removeSession(s) {
     demo.sessions = demo.sessions.filter(function (x) { return x !== s; });
     if (s.ui) s.ui.row.remove();
     renderCount();
-    updateHead();
   }
 
   function show(s) {
     demo.shown = s;
     demo.sessions.forEach(function (x) { x.chosen = x === s; updateRow(x); });
     updateHead();
-    renderTerm();
+    renderChat();
   }
 
   /* The list's header: 세션 n */
@@ -474,7 +476,7 @@
 
   function renderLimits() { setLimit(els.lim5, demo.lim5); setLimit(els.limW, demo.limW); }
 
-  // --- terminal: each session keeps its own lines (keys, so a language change redraws them)
+  // a terminal line (the 동시에 section's small terminals still draw these)
   function lineEl(l) {
     var d = node('div', undefined, 'ln ' + (l.cls || ''));
     if (l.cls === 'ln-gap') return d;
@@ -482,17 +484,95 @@
     else d.textContent = l.key ? t(l.key) : l.text;
     return d;
   }
-  function renderTerm() {
-    els.term.textContent = '';
-    var s = demo.shown; if (!s) return;
-    s.lines.slice(-40).forEach(function (l) { var d = lineEl(l); d.style.animation = 'none'; els.term.appendChild(d); });
+  var CHAT_ICON = {"chev": "<svg class=\"ico\" width=\"12\" height=\"12\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M184.49,136.49l-80,80a12,12,0,0,1-17-17L159,128,87.51,56.49a12,12,0,1,1,17-17l80,80A12,12,0,0,1,184.49,136.49Z\"></path></svg>", "file": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M216.49,79.52l-56-56A12,12,0,0,0,152,20H56A20,20,0,0,0,36,40V216a20,20,0,0,0,20,20H200a20,20,0,0,0,20-20V88A12,12,0,0,0,216.49,79.52ZM160,57l23,23H160ZM60,212V44h76V92a12,12,0,0,0,12,12h48V212Z\"></path></svg>", "search": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M232.49,215.51,185,168a92.12,92.12,0,1,0-17,17l47.53,47.54a12,12,0,0,0,17-17ZM44,112a68,68,0,1,1,68,68A68.07,68.07,0,0,1,44,112Z\"></path></svg>", "run": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M72.5,150.63,100.79,128,72.5,105.37a12,12,0,1,1,15-18.74l40,32a12,12,0,0,1,0,18.74l-40,32a12,12,0,0,1-15-18.74ZM144,172h32a12,12,0,0,0,0-24H144a12,12,0,0,0,0,24ZM236,56V200a20,20,0,0,1-20,20H40a20,20,0,0,1-20-20V56A20,20,0,0,1,40,36H216A20,20,0,0,1,236,56Zm-24,4H44V196H212Z\"></path></svg>", "edit": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M230.14,70.54,185.46,25.85a20,20,0,0,0-28.29,0L33.86,149.17A19.85,19.85,0,0,0,28,163.31V208a20,20,0,0,0,20,20H92.69a19.86,19.86,0,0,0,14.14-5.86L230.14,98.82a20,20,0,0,0,0-28.28ZM91,204H52V165l84-84,39,39ZM192,103,153,64l18.34-18.34,39,39Z\"></path></svg>", "agent": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M160,116h48a20,20,0,0,0,20-20V48a20,20,0,0,0-20-20H160a20,20,0,0,0-20,20V60H128a28,28,0,0,0-28,28v28H76v-4A20,20,0,0,0,56,92H24A20,20,0,0,0,4,112v32a20,20,0,0,0,20,20H56a20,20,0,0,0,20-20v-4h24v28a28,28,0,0,0,28,28h12v12a20,20,0,0,0,20,20h48a20,20,0,0,0,20-20V160a20,20,0,0,0-20-20H160a20,20,0,0,0-20,20v12H128a4,4,0,0,1-4-4V88a4,4,0,0,1,4-4h12V96A20,20,0,0,0,160,116ZM52,140H28V116H52Zm112,24h40v40H164Zm0-112h40V92H164Z\"></path></svg>", "web": "<svg class=\"ico\" width=\"14\" height=\"14\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M128,20A108,108,0,1,0,236,128,108.12,108.12,0,0,0,128,20Zm0,187a113.4,113.4,0,0,1-20.39-35h40.82a116.94,116.94,0,0,1-10,20.77A108.61,108.61,0,0,1,128,207Zm-26.49-59a135.42,135.42,0,0,1,0-40h53a135.42,135.42,0,0,1,0,40ZM44,128a83.49,83.49,0,0,1,2.43-20H77.25a160.63,160.63,0,0,0,0,40H46.43A83.49,83.49,0,0,1,44,128Zm84-79a113.4,113.4,0,0,1,20.39,35H107.59a116.94,116.94,0,0,1,10-20.77A108.61,108.61,0,0,1,128,49Zm50.73,59h30.82a83.52,83.52,0,0,1,0,40H178.75a160.63,160.63,0,0,0,0-40Zm20.77-24H173.71a140.82,140.82,0,0,0-15.5-34.36A84.51,84.51,0,0,1,199.52,84ZM97.79,49.64A140.82,140.82,0,0,0,82.29,84H56.48A84.51,84.51,0,0,1,97.79,49.64ZM56.48,172H82.29a140.82,140.82,0,0,0,15.5,34.36A84.51,84.51,0,0,1,56.48,172Zm101.73,34.36A140.82,140.82,0,0,0,173.71,172h25.81A84.51,84.51,0,0,1,158.21,206.36Z\"></path></svg>", "paw": "<svg class=\"ico\" width=\"12\" height=\"12\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M236,108a24,24,0,1,1-24-24A24,24,0,0,1,236,108ZM68,108a24,24,0,1,0-24,24A24,24,0,0,0,68,108ZM92,84A24,24,0,1,0,68,60,24,24,0,0,0,92,84Zm72,0a24,24,0,1,0-24-24A24,24,0,0,0,164,84Zm48,100a44,44,0,0,1-61.1,40.55,60.15,60.15,0,0,0-45.8,0A44,44,0,0,1,67,145.34,31.33,31.33,0,0,0,81.91,126.6a48,48,0,0,1,92.18,0A31.34,31.34,0,0,0,189,145.34,44,44,0,0,1,212,184Zm-24,0a20,20,0,0,0-10.49-17.6l-.1-.06a55.22,55.22,0,0,1-26.37-33,24,24,0,0,0-46.08,0,55.21,55.21,0,0,1-26.37,33.05l-.1.06A20,20,0,0,0,88,204a19.77,19.77,0,0,0,7.8-1.58l.13,0a84,84,0,0,1,64.14,0l.13,0A19.77,19.77,0,0,0,168,204,20,20,0,0,0,188,184Z\"></path></svg>", "copy": "<svg class=\"ico\" width=\"12\" height=\"12\" viewBox=\"0 0 256 256\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M216,28H88A12,12,0,0,0,76,40V76H40A12,12,0,0,0,28,88V216a12,12,0,0,0,12,12H168a12,12,0,0,0,12-12V180h36a12,12,0,0,0,12-12V40A12,12,0,0,0,216,28ZM156,204H52V100H156Zm48-48H180V88a12,12,0,0,0-12-12H100V52H204Z\"></path></svg>"};
+  // --- the chat (ChatView.tsx): each session keeps its own rows (keys, so a language change redraws them)
+  function hasBatchim(w) { var c = w.charCodeAt(w.length - 1); return c >= 0xac00 && c <= 0xd7a3 && (c - 0xac00) % 28 !== 0; }
+  function iga(name) { return lang === 'ko' && name ? (hasBatchim(name) ? '이' : '가') : ''; }
+  function monName(s) { return nameOf(s.dex) || 'Claude'; }
+  function clock(d) { return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); }
+  function modelName(m) { return m + ' 5.5'; }
+  function duration(ms) {
+    var sec = Math.max(1, Math.round(ms / 1000));
+    return sec < 60 ? t('chat.sec', { n: sec }) : t('chat.min', { m: Math.floor(sec / 60), s: sec % 60 });
   }
-  function push(s, l) {
-    s.lines.push(l);
-    if (demo.shown === s) {
-      els.term.appendChild(lineEl(l));
-      while (els.term.children.length > 40) els.term.removeChild(els.term.firstChild);
+  function rowHtml(s, r) {
+    var name = monName(s);
+    switch (r.k) {
+      case 'user':
+        return '<div class="chat-row k-user"><div class="chat-user"><div class="chat-bubble">' + esc(r.key ? t(r.key) : r.text) + '</div><span class="chat-time">' + r.time + '</span></div></div>';
+      case 'head':
+        return '<div class="chat-row k-turn-head"><div class="chat-turn-head"><span class="chat-pic head">' + (s.dex ? '<img src="' + art(s.dex) + '" alt="">' : '') + '</span><b>' + esc(name) + '</b><span>· ' + r.time + '</span></div></div>';
+      case 'tool':
+        return '<div class="chat-row tight"><div class="chat-tools"><div class="chat-tool"><div class="chat-tool-head"><div class="chat-tool-toggle">' +
+          '<span class="chat-tool-chev" aria-hidden="true">' + CHAT_ICON.chev + '</span><span class="chat-tool-ico">' + CHAT_ICON[r.icon] + '</span>' +
+          '<span class="chat-tool-label">' + esc(t(r.label)) + '</span>' +
+          (r.detail ? '<span class="chat-tool-detail' + (r.mono ? ' mono' : '') + '">' + esc(r.detail) + '</span>' : '') +
+          '</div></div></div></div></div>';
+      case 'wild': {
+        var mon = nameOf(r.id), parts = t('chat.wild', { iga: iga(mon) }).split('{mon}');
+        var got = r.kind === 'catch'
+          ? '<img class="chat-wild-ball" src="' + ballSrc(r.ball) + '" alt="">' + esc(t('chat.caught')) + ' · Lv.' + r.level
+          : esc(t('chat.fled'));
+        return '<div class="chat-row"><div class="chat-wild' + (r.fresh ? ' appear' : '') + '"><span class="chat-wild-line">' +
+          '<img class="chat-wild-mon" src="' + art(r.id) + '" alt="">' +
+          '<span>' + esc(parts[0]) + '<b>' + esc(mon) + '</b>' + esc(parts[1] || '') + '</span>' +
+          '<span class="chat-wild-arrow">→</span><span class="chat-wild-got">' + got + '</span>' +
+          (r.isNew ? '<span class="chat-wild-tag">' + esc(t('chat.newEntry')) + '</span>' : '') +
+          '</span></div></div>';
+      }
+      case 'say':
+        return '<div class="chat-row"><div class="chat-text chat-prose"><p>' + esc(t(r.key)) + '</p></div></div>';
+      case 'foot':
+        return '<div class="chat-row"><div class="chat-foot"><span>' + esc(duration(r.ms)) + '</span><span>' + esc(t('chat.tools', { n: r.tools })) + '</span>' +
+          '<span class="chat-steps">' + CHAT_ICON.paw + esc(t('chat.steps', { n: r.steps })) + '</span>' +
+          '<span class="chat-copy">' + CHAT_ICON.copy + '<span>' + esc(t('chat.copy')) + '</span></span></div></div>';
     }
+    return '';
+  }
+  function scrollChat(smooth) {
+    var el = els.chatScroll;
+    if (!el) return;
+    if (smooth && !reduceMotion && el.scrollTo) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    else el.scrollTop = el.scrollHeight;
+  }
+  function renderChat() {
+    var s = demo.shown;
+    els.chatRows.innerHTML = s ? s.items.slice(-60).map(function (r) { var x = {}; for (var k in r) x[k] = r[k]; x.fresh = false; return rowHtml(s, x); }).join('') : '';
+    renderStatus(); renderControl();
+    scrollChat(false);
+  }
+  function push(s, r) {
+    s.items.push(r);
+    if (demo.shown === s) {
+      els.chatRows.insertAdjacentHTML('beforeend', rowHtml(s, r));
+      while (els.chatRows.children.length > 60) els.chatRows.removeChild(els.chatRows.firstChild);
+      scrollChat(true);
+    }
+    r.fresh = false;
+  }
+  /* the line under the conversation while the Pokemon works (its picture hops), and the control row under the box */
+  function renderStatus() {
+    var s = demo.shown, el = els.chatStatus;
+    if (!el) return;
+    if (!s || !s.turn) { el.className = 'chat-status'; el.innerHTML = ''; return; }
+    var name = monName(s);
+    el.className = 'chat-status working';
+    el.innerHTML = '<span class="chat-pic head">' + (s.dex ? '<img src="' + art(s.dex) + '" alt="">' : '') + '</span>' +
+      '<span class="chat-status-text">' + esc(t('chat.working', { mon: name, iga: iga(name), time: duration(Date.now() - s.turn.start) })) + '</span>';
+  }
+  setInterval(function () { if (demo.shown && demo.shown.turn && running()) renderStatus(); }, 1000);
+  function renderControl() {
+    var s = demo.shown;
+    if (!s) return;
+    var m = document.getElementById('ctrlModel'); if (m) m.textContent = modelName(s.model);
+    var bar = document.querySelector('#ctrlCtx i'), pct = document.getElementById('ctrlPct'), ctx = document.getElementById('ctrlCtx');
+    if (bar) bar.style.width = Math.round(s.hp) + '%';
+    if (ctx) ctx.className = 'chat-ctx' + (s.hp <= 20 ? ' hp-red' : s.hp <= 50 ? ' hp-yellow' : '');
+    if (pct) pct.textContent = Math.round(s.hp) + '%';
+    var f = document.getElementById('ctrl5'), w = document.getElementById('ctrlW');
+    if (f) f.textContent = t('app.usage5h') + ' ' + Math.round(demo.lim5) + '%';
+    if (w) w.textContent = t('app.usageWeek') + ' ' + Math.round(demo.limW) + '%';
+    if (els.chatInput) els.chatInput.placeholder = t('chat.placeholder', { mon: monName(s) });
   }
 
   // --- notifications, one at a time, as the toast window does
@@ -521,6 +601,7 @@
         var e = extra.encounter;
         e.place = place(s.project, terrain, false);
         toast(e);
+        push(s, { k: 'wild', id: e.id, kind: e.kind, level: e.level, ball: e.ball, isNew: !!e.isNew, fresh: true });
         if (e.kind === 'catch') {
           demo.dex++;
           demo.recent.unshift(e.id);
@@ -546,35 +627,52 @@
     });
   }
 
+  function sendPrompt(s, key) {
+    push(s, { k: 'user', key: key, time: clock(new Date()) });
+    s.turn = { start: Date.now(), tools: 0, steps: 0, head: false };
+    if (els.chatInput && demo.shown === s) { els.chatInput.value = ''; els.chatSend.classList.add('empty'); }
+    renderStatus();
+  }
   function typePrompt(s, key) {
-    var l = { cls: 't-prompt', key: key };
-    s.lines.push({ cls: 'ln-gap' });
-    if (demo.shown === s) els.term.appendChild(lineEl({ cls: 'ln-gap' }));
-    s.lines.push(l);
-    if (demo.shown !== s || reduceMotion) { if (demo.shown === s) els.term.appendChild(lineEl(l)); return wait(500); }
-    var d = node('div', '', 'ln t-prompt');
-    els.term.appendChild(d);
-    var full = t(key), i = 0;
+    if (demo.shown !== s || reduceMotion || !els.chatInput) { sendPrompt(s, key); return wait(500); }
+    var box = els.chatInput, full = t(key), i = 0;
     return new Promise(function (resolve) {
       (function next() {
         if (!running()) return setTimeout(next, 120);
         i = Math.min(full.length, i + 2);
-        d.textContent = full.slice(0, i);
-        if (i >= full.length) return setTimeout(resolve, 380);
+        box.value = full.slice(0, i);
+        els.chatSend.classList.toggle('empty', !i);
+        if (i >= full.length) return setTimeout(function () { sendPrompt(s, key); setTimeout(resolve, 380); }, 420);
         setTimeout(next, 45);
       })();
     });
   }
 
+  var TOOL = {
+    Read: ['file', 'chat.tool.read', true], Glob: ['search', 'chat.tool.glob', true], Grep: ['search', 'chat.tool.grep', true],
+    Edit: ['edit', 'chat.tool.edit', true], Write: ['edit', 'chat.tool.write', true], Bash: ['run', 'chat.tool.bash', true],
+    WebSearch: ['web', 'chat.tool.web', false], Agent: ['agent', 'chat.tool.agent', false]
+  };
+  function turnHead(s) {
+    if (s.turn && !s.turn.head) { s.turn.head = true; push(s, { k: 'head', time: clock(new Date()) }); }
+  }
   function tool(s, name, arg, result, terrain, extra) {
-    push(s, { cls: 't-tool', html: '<b>' + esc(name) + '</b>(' + esc(arg) + ')' });
+    var d = TOOL[name] || ['run', name, false];
+    turnHead(s);
+    push(s, { k: 'tool', icon: d[0], label: d[1], detail: name === 'WebSearch' ? arg.replace(/^"|"$/g, '') : arg, mono: d[2] });
+    if (s.turn) { s.turn.tools++; s.turn.steps++; }
     return wait(650).then(function () {
-      push(s, { cls: 't-res', text: result });
       return step(s, terrain, extra);
     }).then(function () { return wait(900); });
   }
 
-  function say(s, key) { push(s, { cls: 't-say', key: key }); return wait(400); }
+  function say(s, key) {
+    turnHead(s);
+    push(s, { k: 'say', key: key });
+    if (s.turn) { push(s, { k: 'foot', ms: Date.now() - s.turn.start, tools: s.turn.tools, steps: s.turn.steps }); s.turn = null; }
+    renderStatus();
+    return wait(400);
+  }
   function mood(s, m) { s.mood = m; update(s); }
 
   var a, b, d;
@@ -584,8 +682,6 @@
     a = newSession({ id: 'a', title: 'header-copy', project: 'spawn-site', branch: 'main', model: 'Opus', dex: 4, lv: 15, mood: 'idle', hp: 84, ctx: 200000 });
     b = newSession({ id: 'b', title: 'rank-api', project: 'server', branch: 'feat/rank', model: 'Sonnet', dex: 25, lv: 9, mood: 'working', hp: 63, ctx: 200000 });
     d = newSession({ id: 'd', title: 'migrate-db', project: 'server', branch: 'chore/db', model: 'Sonnet', dex: 143, lv: 23, mood: 'needs-you', hp: 24, ctx: 200000 });
-    a.lines = [{ cls: 't-status', text: 'claude --session-id 7f3a… ' }];
-    b.lines = []; d.lines = [];
     show(a);
     renderDex(); renderLimits();
   }
@@ -616,7 +712,6 @@
 
     // a new session: its Pokémon is there from the start
     var c = newSession({ id: 'c', titleKey: 'app.newTab', project: 'spawn-site', branch: 'fix/login', model: 'Opus', dex: 133, lv: 12, mood: 'idle', hp: 100, ctx: 200000 });
-    c.lines = [{ cls: 't-status', text: 'claude --session-id 2c91… ' }];
     show(c);
     await wait(1700);
     await typePrompt(c, 'term.prompt2');
@@ -646,7 +741,7 @@
       demo.sessions.forEach(function (s) { updateRow(s); });
       updateHead();
       renderCount();
-      renderTerm();
+      renderChat();
       els.toggle.textContent = t(demo.userPaused ? 'demo.play' : 'demo.pause');
     });
     els.toggle.addEventListener('click', function () {

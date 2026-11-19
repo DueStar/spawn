@@ -332,6 +332,11 @@ input, textarea { cursor: text; }
 .dl-alt { font-size: var(--step--1); line-height: 1.5; color: var(--ink-3); }
 .dl-alt[hidden], .step-note[hidden] { display: none; }
 .dl-alt a { color: var(--ink-3); }
+/* the other systems' downloads (2026-11-19): a quiet label and small outlined buttons, one per system, under the main one */
+.dl-alt:not([hidden]) { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.dl-alt-label { color: var(--ink-3); margin-right: 2px; }
+.dl-alt a.dl-alt-btn { min-height: 32px; padding: 0 12px; gap: 6px; font-size: 13px; color: var(--ink-2); }
+.dl-alt a.dl-alt-btn:hover { color: var(--ink); }
 .hero-head .dl-alt { margin-top: -10px; }
 .closing .dl-alt { margin-top: -14px; }
 .closing .dl-alt:not([hidden]) + .fine { margin-top: -22px; }
