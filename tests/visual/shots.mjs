@@ -2618,6 +2618,38 @@ const FLOWS = {
   // the left list's order (src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
   // list goes where it is put (the other rows slide aside on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
   // a list that scrolls while a row is dragged (twelve sessions): the slide still follows the row under the pointer
+  // 기록: the day line pinned at the top covers everything above it (no row shows through a gap over it)
+  'today-sticky': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { size: [1100, 560] })
+      const { page } = app
+      await page.getByRole('button', { name: '기록' }).first().click()
+      await page.waitForSelector('.today-list .today-row', { timeout: 10_000 })
+      await page.$eval('.today-list', el => { el.scrollTop = 140 })
+      await sleep(200)
+      const gap = await page.evaluate(() => {
+        const list = document.querySelector('.today-list').getBoundingClientRect()
+        const day = [...document.querySelectorAll('.today-day')].find(d => Math.abs(d.getBoundingClientRect().top - list.top) < 12)
+        if (!day) return 'no pinned day line'
+        const d = day.getBoundingClientRect()
+        // every point between the list's top and the pinned line's top belongs to the line, not a row
+        for (let y = Math.ceil(list.top); y < d.top; y++) {
+          const el = document.elementFromPoint(list.left + 40, y)
+          if (el && el.closest('.today-row')) return `a row shows ${Math.round(d.top - y)}px above the pinned line`
+        }
+        return d.top - list.top > 0.5 ? `the pinned line sits ${(d.top - list.top).toFixed(1)}px below the list's top` : ''
+      })
+      if (gap) bad(gap)
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-order-scroll': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -4152,9 +4184,32 @@ const FLOWS = {
       if (!decoded) bad('the large picture did not load (its URL was revoked?)')
       const after = await reads()
       if (after.length !== first.length) bad(`opening it read pictures again: ${after.length - first.length} more`)
+      // over the whole window (not only the chat pane), and large
+      const box = await page.$eval('.chat-lightbox', el => { const r = el.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height, top: el.parentElement === document.body } })
+      const vp = page.viewportSize()
+      if (!box.top || box.x !== 0 || box.y !== 0 || box.w !== vp.width || box.h !== vp.height) bad(`the viewer does not cover the window: ${JSON.stringify(box)}`)
+      const imgW = await page.$eval('.chat-lightbox img', img => img.getBoundingClientRect().width)
+      if (imgW < 0.7 * vp.width) bad(`the picture is ${Math.round(imgW)}px wide in a ${vp.width}px window`)
+      // one picture alone: no arrows
+      if (await page.locator('.chat-lightbox-nav').count()) bad('arrows on a picture shown alone')
       await page.keyboard.press('Escape')
       await sleep(200)
       if (await page.locator('.chat-lightbox').count()) bad('Esc did not close the large picture')
+      // pictures sent together: arrows and → / ← go through them, 1 / 2 says where
+      await page.locator('.chat .chat-shots').nth(1).locator('.chat-shot').first().click()
+      await page.waitForSelector('.chat-lightbox img', { timeout: 5_000 })
+      const where = () => page.$eval('.chat-lightbox figcaption', el => el.textContent)
+      if (!(await where()).includes('1 / 2')) bad(`first of two: ${await where()}`)
+      if ((await page.locator('.chat-lightbox-nav').count()) !== 2) bad('no arrows for pictures sent together')
+      await page.locator('.chat-lightbox-nav.next').click()
+      await sleep(150)
+      if (!(await where()).includes('2 / 2') || !(await where()).includes('connect-missing')) bad(`after →: ${await where()}`)
+      if (!(await page.$eval('.chat-lightbox img', img => img.complete && img.naturalWidth > 0))) bad('the second picture did not load')
+      await page.keyboard.press('ArrowLeft')
+      await sleep(150)
+      if (!(await where()).includes('1 / 2')) bad(`after ←: ${await where()}`)
+      await page.keyboard.press('Escape')
+      await sleep(200)
     } catch (err) {
       bad(String(err.message).split(String.fromCharCode(10))[0])
     } finally {
