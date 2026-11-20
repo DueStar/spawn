@@ -157,6 +157,7 @@ parentPort.on('message', async (m) => {
     case 'change-file': reply(m, lens ? await lens.changeFile(m.id, m.file, m.before) : { ok: false, reason: 'gone' }); return
     // "전체 보기": one item read again whole
     case 'full': reply(m, lens ? await lens.full(m.id, m.itemId) : { ok: false, reason: 'gone' }); return
+    case 'picture': reply(m, lens ? await lens.picture(m.id, m.path) : { ok: false, reason: 'gone' }); return
     // link previews (only while main says they are on)
     case 'preview': await preview(m); return
     case 'previews': setPreviews(m.on === true); return

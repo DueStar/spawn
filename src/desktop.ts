@@ -108,6 +108,8 @@ interface spawnBridge {
     agent(id: string, toolId: string): Promise<{ ok: boolean }>
     /** "전체 보기": one item read again whole from the transcript (main caps it at 2 000 000 characters) */
     full(id: string, itemId: string): Promise<{ ok: true; text: string; truncated: boolean; md: boolean } | { ok: false; reason: 'gone' | 'unknown' | 'none' }>
+    /** A picture this conversation names (electron/chatPictures.cjs), for its thumbnail */
+    localImage?(id: string, path: string): Promise<{ ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: 'type' | 'unnamed' | 'missing' | 'size' | 'gone' }>
     /** The changes panel: every file this conversation changed (the worker's index of the whole transcript) */
     changes(id: string): Promise<{ ok: true; summary: ChangeSummary; files: ChangeFile[]; agentsUnread: number } | { ok: false }>
     /** One file's edits, newest last (at most 20 with their diffs, read again from the transcript); `more` older ones */

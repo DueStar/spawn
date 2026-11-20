@@ -54,6 +54,7 @@ contextBridge.exposeInMainWorld('spawn', {
     resync: (id) => ipcRenderer.invoke('chat:resync', String(id)),
     agent: (id, toolId) => ipcRenderer.invoke('chat:agent', { id: String(id), toolId: String(toolId) }),
     full: (id, itemId) => ipcRenderer.invoke('chat:full', { id: String(id), itemId: String(itemId) }),
+    localImage: (id, path) => ipcRenderer.invoke('chat:local-image', { id: String(id), path: String(path) }),
     // the changes panel: the conversation's changed files, and one file's edits (read from the transcript)
     changes: (id) => ipcRenderer.invoke('chat:changes', String(id)),
     changeFile: (p) => ipcRenderer.invoke('chat:change-file', {
