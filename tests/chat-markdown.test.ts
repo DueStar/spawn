@@ -16,7 +16,7 @@ import { MD_CAP, parseMarkdown, type Block, type Inline } from '../src/chat/mark
 import { Markdown } from '../src/components/chat/Markdown'
 import { CodeBlock } from '../src/components/chat/CodeBlock'
 import { linesOf } from './chat-helpers'
-import { budget, growth, growthLimit, showGrowth } from './timing'
+import { budget, growthLimit, showGrowth, steadyGrowth } from './timing'
 
 vi.mock('../src/i18n', async (orig) => ({ ...(await orig<typeof import('../src/i18n')>()), t: (k: string, v?: Record<string, unknown>) => (v ? k.replace(/\{(\w+)\}/g, (_, n) => String(v[n])) : k) }))
 
@@ -245,10 +245,10 @@ describe('bounded work (adversarial)', () => {
   // fast machine.
   const linear = (make: (k: number) => string, n: number) => {
     expect(make(4 * n).length).toBeLessThanOrEqual(MD_CAP)
-    const g = growth(make, parseMarkdown, n)
+    const g = steadyGrowth(make, parseMarkdown, n)
     const what = `${make(4).slice(0, 12)}: ${showGrowth(g)}`
     expect(g.ratio, what).toBeLessThan(growthLimit())
-    expect(g.large, what).toBeLessThan(1000)
+    expect(g.large, what).toBeLessThan(budget(1000))
   }
 
   it('200 000 characters of * parse in linear time', () => {

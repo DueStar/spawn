@@ -17,7 +17,7 @@ import { createChatStore, EMPTY_CHAT } from '../src/chat/store'
 import { toolMeta } from '../src/chat/toolLabel'
 import { askChatFocus, forgetChatTerminal, onChatForget, takeChatFocus } from '../src/chat/lensMode'
 import type { ChatItem, ChatUpdate, LensStatus, ToolItem } from '../src/chat/types'
-import { growth, growthLimit, showGrowth } from './timing'
+import { budget, growthLimit, showGrowth, steadyGrowth } from './timing'
 
 const require = createRequire(import.meta.url)
 const { chatOpenPlan, vscodeUrl } = require('../electron/links.cjs')
@@ -71,9 +71,9 @@ describe('M10: a link with a title, an address in angle brackets', () => {
     // (each attack's size before, under MD_CAP) within a generous second
     for (const [unit, n] of [['[a](', 10_000], ['[a](x "', 5_000], ['<h', 20_000], ['<https://', 5_000]] as const) {
       expect(unit.repeat(4 * n).length).toBeLessThanOrEqual(MD_CAP)
-      const g = growth(k => unit.repeat(k), parseMarkdown, n)
+      const g = steadyGrowth(k => unit.repeat(k), parseMarkdown, n)
       expect(g.ratio, `${unit}: ${showGrowth(g)}`).toBeLessThan(growthLimit())
-      expect(g.large, `${unit}: ${showGrowth(g)}`).toBeLessThan(1000)
+      expect(g.large, `${unit}: ${showGrowth(g)}`).toBeLessThan(budget(1000))
     }
   })
 })

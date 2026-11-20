@@ -60,5 +60,19 @@ export function growth<T>(make: (n: number) => T, run: (input: T) => unknown, n:
   return { small: s, large: l, ratio: l / Math.max(s, FLOOR_MS) }
 }
 
+/**
+ * growth, measured again (up to `tries` times) while the ratio is over growthLimit(): a busy
+ * runner can stall one try (the Intel Mac runner measured ×14.9 once), a quadratic path stays
+ * over on every try. Returns the try with the lowest ratio.
+ */
+export function steadyGrowth<T>(make: (n: number) => T, run: (input: T) => unknown, n: number, tries = 3): Growth {
+  let best = growth(make, run, n)
+  for (let i = 1; i < tries && best.ratio >= growthLimit(); i++) {
+    const g = growth(make, run, n)
+    if (g.ratio < best.ratio) best = g
+  }
+  return best
+}
+
 /** "small → large ms (×ratio)" for a failure message or a log line */
 export const showGrowth = (g: Growth): string => `${g.small.toFixed(1)} → ${g.large.toFixed(1)} ms (×${g.ratio.toFixed(1)})`
