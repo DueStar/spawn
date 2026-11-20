@@ -26,6 +26,12 @@ describe('picturePaths', () => {
     expect(picturePaths(text(s))).toEqual(['C:\\Users\\me\\Temp\\shots\\connect-1100x720.png', '/home/me/x.gif'])
     expect(picturePaths(text(Array.from({ length: 9 }, (_, i) => `/p/${i}.png`).join(' ')))).toHaveLength(6)
   })
+  it('a web address is not a path; a network path is never taken from the text', () => {
+    expect(picturePaths(text('see https://example.com/a.png and ![x](http://h/x.jpg)'))).toEqual([])
+    const B = String.fromCharCode(92)
+    expect(picturePaths(text(`at ${'//attacker/s/logo.png'.split('/').join(B)} or //attacker/s/x.png`))).toEqual([])
+    expect(picturePaths(text('local /home/me/x.png'))).toEqual(['/home/me/x.png'])
+  })
   it('anything else shows none', () => {
     expect(picturePaths(tool('Bash', { command: 'ls a.png' }))).toEqual([])
     expect(picturePaths({ id: 'u', kind: 'user', text: '/a.png', images: 0 } as any)).toEqual([])

@@ -628,9 +628,9 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-ag-open.on { color: var(--ink); border-color: var(--line-hover); }
 
 /* Pictures Claude shows (a Read of a picture, a file it sent, a path in its answer): thumbnails under the row */
-.chat-pics { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
-.chat-pic { display: inline-flex; padding: 0; overflow: hidden; width: 160px; height: 100px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--card-2); cursor: zoom-in; }
-.chat-pic:hover { border-color: var(--line-hover); }
-.chat-pic img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
-.chat-pic-wait { cursor: default; }
-.chat-pic-none { font-size: var(--t-meta); color: var(--ink-3); }
+.chat-shots { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+.chat-shot { display: inline-flex; padding: 0; overflow: hidden; width: 160px; height: 100px; border: 1px solid var(--line); border-radius: var(--r-m); background: var(--card-2); cursor: zoom-in; }
+.chat-shot:hover { border-color: var(--line-hover); }
+.chat-shot img { width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.chat-shot-wait { cursor: default; }
+.chat-shot-none { font-size: var(--t-meta); color: var(--ink-3); }

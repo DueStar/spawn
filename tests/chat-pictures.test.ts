@@ -10,7 +10,7 @@ import { createRequire } from 'node:module'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { readPicture, namedIn, PICTURE_TYPES } = require('../electron/chatPictures.cjs')
+const { readPicture, namedIn, PICTURE_TYPES, askedPath } = require('../electron/chatPictures.cjs')
 
 const dir = mkdtempSync(join(tmpdir(), 'chat-pictures-'))
 const png = join(dir, 'shot one.png')
@@ -49,5 +49,41 @@ describe('readPicture', () => {
   })
   it('knows png, jpg, jpeg, gif, webp (any case)', () => {
     expect(Object.keys(PICTURE_TYPES).sort()).toEqual(['.gif', '.jpeg', '.jpg', '.png', '.webp'])
+  })
+})
+
+describe('the boundary (review): nothing named loosely, nothing on the network, no links', () => {
+  // Windows paths written with / and turned into backslashes (no escapes to get wrong)
+  const B = String.fromCharCode(92)
+  const w = (x: string) => x.split('/').join(B)
+  it('namedIn matches whole paths, not a piece of a longer one', () => {
+    expect(namedIn([{ text: `see ${w('C:/a/b.png.txt')} here` }], w('C:/a/b.png'))).toBe(false)
+    expect(namedIn([{ text: `from ${w('D:/x/proj/img/a.png')}` }], w('/proj/img/a.png'))).toBe(false)
+    expect(namedIn([{ text: `from ${w('D:/x/proj/img/a.png')}` }], w('img/a.png'))).toBe(false)
+    expect(namedIn([{ text: `shot: \`${w('D:/x/a.png')}\`, done` }], w('D:/x/a.png'))).toBe(true)
+    expect(namedIn([{ text: `${w('D:/x/a.png')}.` }], w('D:/x/a.png'))).toBe(true)
+    expect(namedIn([{ files: [w('D:/x/a.png')] }], w('D:/x/a.png'))).toBe(true)
+  })
+  it('a network or device path is never touched (no stat: Windows would connect)', async () => {
+    let touched = 0
+    const spy = { stat: async () => { touched++; throw new Error('x') }, lstat: async () => { touched++; throw new Error('x') }, readFile: async () => { touched++; return Buffer.from('') } }
+    for (const p of [w('//attacker/s/a.png'), '//attacker/s/a.png', w('//?/C:/a.png'), w('//./C:/a.png')]) {
+      expect(await readPicture(spy, { path: p, named: () => true })).toEqual({ ok: false, reason: 'type' })
+    }
+    expect(touched).toBe(0)
+  })
+  it('a symbolic link is refused, even one named and ending in .png', async () => {
+    const link = join(dir, 'link.png')
+    try { fs.symlinkSync(txt, link) } catch { return } // (no right to make links here: nothing to check)
+    expect(await readPicture(fs.promises, { path: link, named: () => true })).toEqual({ ok: false, reason: 'missing' })
+  })
+  it('askedPath: absolute stays; a relative one resolves in the folder, never with .., never on a network folder; drive-rooted refused on Windows', () => {
+    expect(askedPath(w('C:/p/a.png'), w('C:/p'), 'win32')).toBe(w('C:/p/a.png'))
+    expect(askedPath(w('img/a.png'), w('C:/p'), 'win32')).toBe(w('C:/p/img/a.png'))
+    expect(askedPath(w('../../a.png'), w('C:/p'), 'win32')).toBeNull()
+    expect(askedPath('img/../../a.png', w('C:/p'), 'win32')).toBeNull()
+    expect(askedPath(w('img/a.png'), w('//srv/share'), 'win32')).toBeNull()
+    expect(askedPath(w('/proj/a.png'), w('C:/p'), 'win32')).toBeNull()
+    expect(askedPath('img/a.png', '', 'win32')).toBeNull()
   })
 })

@@ -30,7 +30,7 @@ const { createTail } = require('./chatTail.cjs')
 const { CHANGE_CAPS, createChangeIndex, scanChanges, readEdit, hashOf } = require('./chatChanges.cjs')
 const { errWord } = require('./chatLog.cjs')
 const { readFull } = require('./chatFull.cjs')
-const { readPicture, namedIn } = require('./chatPictures.cjs')
+const { readPicture, namedIn, askedPath } = require('./chatPictures.cjs')
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const keep = (text) => !quickSkip(text)
@@ -2014,10 +2014,11 @@ function createLens({
   async function picture(id, p) {
     const t = terms.get(id)
     if (!t || !t.items) return { ok: false, reason: 'gone' }
-    // a Read inside the session's folder is listed relative to it (chatItems relFile): resolved there,
-    // and named as the item wrote it
+    // a Read inside the session's folder is listed relative to it (chatItems relFile): resolved there
+    // (never with .., never in a network folder), and named as the item wrote it
     const asked = typeof p === 'string' ? p : ''
-    const abs = asked && !path.isAbsolute(asked) && t.cwd ? path.resolve(t.cwd, asked) : asked
+    const abs = askedPath(asked, t.cwd)
+    if (!abs) return { ok: false, reason: 'type' }
     return readPicture(fs.promises, { path: abs, named: () => namedIn(t.items.values(), asked) })
   }
 

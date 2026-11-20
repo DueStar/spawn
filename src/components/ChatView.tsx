@@ -484,15 +484,21 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     if (ledger && sid && stateNow === 'working' && (before === 'idle' || before === 'starting')) ledger.onWorking(sid)
   }, [ledger, sid, stateNow])
   // a picture shown large (the composer's chips, a sent message's thumbnails)
-  const [shown, setShown] = useState<{ url: string; caption: string; from: HTMLElement | null } | null>(null)
-  const openImage = useCallback((url: string, caption: string, from: HTMLElement | null) => setShown({ url, caption, from }), [])
+  // (owned: a URL made for the Lightbox alone, revoked when it closes: a thumbnail's own can go with its row)
+  const [shown, setShown] = useState<{ url: string; caption: string; from: HTMLElement | null; owned?: boolean } | null>(null)
+  const openImage = useCallback((url: string, caption: string, from: HTMLElement | null, owned = false) => setShown({ url, caption, from, owned }), [])
   const closeImage = useCallback(() => {
     setShown(cur => {
+      if (cur?.owned) URL.revokeObjectURL(cur.url)
       const from = cur?.from
       if (from) requestAnimationFrame(() => { if (from.isConnected) from.focus({ preventScroll: true }) })
       return null
     })
   }, [])
+  // a picture the conversation names (electron/chatPictures.cjs), the same function while the session
+  // is the same, so a thumbnail is read once, not again with every change of the view; none on the QA page
+  const loadPicture = useMemo(() => (fixed || !bridge?.chat.localImage ? undefined
+    : (p: string) => bridge!.chat.localImage!(id, p).then(r => (r.ok ? { type: r.type, bytes: r.bytes } : null))), [id, fixed])
   // "전체 보기": one item read again whole (bridge.chat.full), shown over the view until closed
   const [full, setFull] = useState<FullState | null>(null)
   const openFull = useCallback((itemId: string, title: string) => {
@@ -532,7 +538,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     onPath: (file, line, col) => openFileFromChat(id, file, line, col),
     loadAgent: toolId => (fixed ? Promise.resolve({ ok: true }) : bridge?.chat.agent(id, toolId) ?? Promise.resolve({ ok: false })),
     // a picture the conversation names (electron/chatPictures.cjs); none on the QA page
-    loadPicture: fixed || !bridge?.chat.localImage ? undefined : (p: string) => bridge!.chat.localImage!(id, p).then(r => (r.ok ? { type: r.type, bytes: r.bytes } : null)),
+    loadPicture,
     waitingAgents: agentsKey ? agentsKey.split(',') : [],
     openImage,
     lightbox: !!shown,
@@ -547,7 +553,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     previews,
     openAgent,
     agentShown,
-  }), [id, onTerminal, fixed, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
+  }), [id, onTerminal, fixed, loadPicture, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
   const banner = status?.banner ?? null
   const reload = () => { if (!fixed) chatStore.reload(id) }
   const older = () => (fixed ? undefined : bridge?.chat.older(id))

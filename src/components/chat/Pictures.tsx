@@ -9,7 +9,7 @@ import { t } from '../../i18n'
 import { baseName } from '../../chat/mentions'
 import { useChatContext } from './context'
 
-type Shot = { state: 'loading' } | { state: 'ok'; url: string } | { state: 'none' }
+type Shot = { state: 'loading' } | { state: 'ok'; url: string; blob: Blob } | { state: 'none' }
 
 const Picture: React.FC<{ path: string }> = ({ path }) => {
   const { loadPicture, openImage } = useChatContext()
@@ -20,17 +20,19 @@ const Picture: React.FC<{ path: string }> = ({ path }) => {
     loadPicture?.(path).then(r => {
       if (gone) return
       if (!r) { setShot({ state: 'none' }); return }
-      url = URL.createObjectURL(new Blob([r.bytes as BlobPart], { type: r.type }))
-      setShot({ state: 'ok', url })
+      const blob = new Blob([r.bytes as BlobPart], { type: r.type })
+      url = URL.createObjectURL(blob)
+      setShot({ state: 'ok', url, blob })
     }, () => { if (!gone) setShot({ state: 'none' }) })
     return () => { gone = true; if (url) URL.revokeObjectURL(url) }
   }, [path, loadPicture])
   const name = baseName(path)
-  if (shot.state === 'none') return <span className="chat-pic-none" title={path}>{t('그림을 불러오지 못했어요: {name}', { name })}</span>
-  if (shot.state === 'loading') return <span className="chat-pic chat-pic-wait" aria-hidden="true" />
+  if (shot.state === 'none') return <span className="chat-shot-none" title={path}>{t('그림을 불러오지 못했어요: {name}', { name })}</span>
+  if (shot.state === 'loading') return <span className="chat-shot chat-shot-wait" aria-hidden="true" />
   return (
-    <button type="button" className="chat-pic" title={path} aria-label={`${t('크게 보기')}: ${name}`}
-      onClick={e => openImage?.(shot.url, name, e.currentTarget)}>
+    <button type="button" className="chat-shot" title={path} aria-label={`${t('크게 보기')}: ${name}`}
+      // the Lightbox gets a URL of its own (revoked when it closes): this row's may go while it is open
+      onClick={e => openImage?.(URL.createObjectURL(shot.blob), name, e.currentTarget, true)}>
       <img src={shot.url} alt="" draggable={false} />
     </button>
   )
@@ -39,5 +41,5 @@ const Picture: React.FC<{ path: string }> = ({ path }) => {
 export const Pictures: React.FC<{ paths: string[] }> = ({ paths }) => {
   const { loadPicture } = useChatContext()
   if (!paths.length || !loadPicture) return null
-  return <div className="chat-pics">{paths.map(p => <Picture key={p} path={p} />)}</div>
+  return <div className="chat-shots">{paths.map(p => <Picture key={p} path={p} />)}</div>
 }
