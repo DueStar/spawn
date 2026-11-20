@@ -636,7 +636,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
           onDrop={e => { const files = filesOf(e.dataTransfer); if (files.length) { e.preventDefault(); void attach(files) } }}
         >
           {!shell && <FileChips files={refs} onRemove={f => setRefList(refs.filter(x => x !== f))} />}
-          {!shell && <ImageChips chips={chips} onRemove={removeChip} onOpen={(c, from) => ctx.openImage?.(c.url, t('붙여넣은 이미지 {n}', { n: c.n }), from)} />}
+          {!shell && <ImageChips chips={chips} onRemove={removeChip} onOpen={(c, from) => ctx.openImages?.(chips.map(x => ({ url: x.url, caption: t('붙여넣은 이미지 {n}', { n: x.n }) })), chips.indexOf(c), from)} />}
           <textarea ref={twin} className="chat-input chat-input-twin" rows={1} readOnly tabIndex={-1} aria-hidden="true" defaultValue="" />
           <textarea
             ref={ta}

@@ -309,12 +309,18 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-thumb { display: inline-flex; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-s); background: none; cursor: zoom-in; }
 .chat-pending { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px 6px; font-size: var(--t-micro); color: var(--ink-3); }
 /* a picture shown large: over the view, nothing animates */
-.chat-lightbox { position: absolute; inset: 0; z-index: 60; display: grid; place-items: center; background: rgba(6, 7, 10, 0.8); cursor: zoom-out; }
-.chat-lightbox figure { display: flex; flex-direction: column; align-items: center; gap: 8px; margin: 0; }
-.chat-lightbox img { max-width: min(760px, 80vw); max-height: 80vh; border-radius: var(--r-m); background: #fff; }
-.chat-lightbox figcaption { font-size: var(--t-meta); color: var(--ink-2); }
-.chat-lightbox-x { position: absolute; top: 12px; right: 12px; display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--card); color: var(--ink-2); cursor: pointer; }
+.chat-lightbox { position: fixed; inset: 0; z-index: 8000; display: grid; place-items: center; background: rgba(6, 7, 10, 0.86); cursor: zoom-out; }
+.chat-lightbox figure { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; max-width: 92vw; }
+.chat-lightbox img { max-width: 92vw; max-height: 84vh; object-fit: contain; border-radius: var(--r-m); background: #fff; }
+.chat-lightbox figcaption { font-size: var(--t-ui); color: var(--ink-2); }
+.chat-lightbox-x { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--card); color: var(--ink-2); cursor: pointer; }
 .chat-lightbox-x:hover { color: var(--ink); border-color: var(--line-hover); }
+/* pictures that came together: one arrow on each side, the left one the right one turned */
+.chat-lightbox-nav { position: absolute; top: 50%; display: grid; place-items: center; width: 40px; height: 40px; margin-top: -20px; padding: 0; border: 1px solid var(--line); border-radius: 50%; background: var(--card); color: var(--ink-2); cursor: pointer; }
+.chat-lightbox-nav:hover { color: var(--ink); border-color: var(--line-hover); }
+.chat-lightbox-nav.prev { left: 16px; }
+.chat-lightbox-nav.prev svg { transform: rotate(180deg); }
+.chat-lightbox-nav.next { right: 16px; }
 /* the @ menu: above the composer, the textarea keeps the focus */
 .chat-menu { position: absolute; left: 0; bottom: calc(100% + 6px); z-index: 20; width: 300px; max-width: 100%; box-sizing: border-box; padding: 4px; background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); }
 .chat-menu-title { padding: 6px 8px 4px; font-size: var(--t-meta); color: var(--ink-3); }

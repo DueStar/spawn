@@ -20,7 +20,7 @@ import { FullButton } from './FullView'
 import { leadingRefs, splitMentions } from '../../chat/mentions'
 
 export const UserMessage: React.FC<{ item: UserItem; time: string | null }> = ({ item, time }) => {
-  const { id, thumbs, openImage, onTerminal } = useChatContext()
+  const { id, thumbs, openImages, onTerminal } = useChatContext()
   const pics = thumbs?.(item.id) ?? []
   // the files the composer's badges sent (`@path` first): pills over the bubble, as pictures are, not in its text
   const { refs, body } = leadingRefs(item.text)
@@ -30,7 +30,7 @@ export const UserMessage: React.FC<{ item: UserItem; time: string | null }> = ({
         ? (
           <div className="chat-user-thumbs">
             {pics.map((url, i) => (
-              <button key={url} type="button" className="chat-thumb" onClick={e => openImage?.(url, t('붙여넣은 이미지 {n}', { n: i + 1 }), e.currentTarget)} aria-label={`${t('크게 보기')}: ${t('붙여넣은 이미지 {n}', { n: i + 1 })}`} title={t('크게 보기')}>
+              <button key={url} type="button" className="chat-thumb" onClick={e => openImages?.(pics.map((u, k) => ({ url: u, caption: t('붙여넣은 이미지 {n}', { n: k + 1 }) })), i, e.currentTarget)} aria-label={`${t('크게 보기')}: ${t('붙여넣은 이미지 {n}', { n: i + 1 })}`} title={t('크게 보기')}>
                 <img src={url} alt="" draggable={false} />
               </button>
             ))}

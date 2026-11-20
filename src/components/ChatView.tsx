@@ -485,11 +485,14 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   }, [ledger, sid, stateNow])
   // a picture shown large (the composer's chips, a sent message's thumbnails)
   // (owned: a URL made for the Lightbox alone, revoked when it closes: a thumbnail's own can go with its row)
-  const [shown, setShown] = useState<{ url: string; caption: string; from: HTMLElement | null; owned?: boolean } | null>(null)
-  const openImage = useCallback((url: string, caption: string, from: HTMLElement | null, owned = false) => setShown({ url, caption, from, owned }), [])
+  const [shown, setShown] = useState<{ images: { url: string; caption: string }[]; index: number; from: HTMLElement | null; owned?: boolean } | null>(null)
+  const openImages = useCallback((images: { url: string; caption: string }[], index: number, from: HTMLElement | null, owned = false) => {
+    if (images.length) setShown({ images, index, from, owned })
+  }, [])
+  const openImage = useCallback((url: string, caption: string, from: HTMLElement | null) => setShown({ images: [{ url, caption }], index: 0, from }), [])
   const closeImage = useCallback(() => {
     setShown(cur => {
-      if (cur?.owned) URL.revokeObjectURL(cur.url)
+      if (cur?.owned) for (const im of cur.images) URL.revokeObjectURL(im.url)
       const from = cur?.from
       if (from) requestAnimationFrame(() => { if (from.isConnected) from.focus({ preventScroll: true }) })
       return null
@@ -541,6 +544,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     loadPicture,
     waitingAgents: agentsKey ? agentsKey.split(',') : [],
     openImage,
+    openImages,
     lightbox: !!shown,
     ...(fixed ? {} : { openFull }),
     thumbs,
@@ -553,7 +557,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     previews,
     openAgent,
     agentShown,
-  }), [id, onTerminal, fixed, loadPicture, agentsKey, openImage, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
+  }), [id, onTerminal, fixed, loadPicture, agentsKey, openImage, openImages, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
   const banner = status?.banner ?? null
   const reload = () => { if (!fixed) chatStore.reload(id) }
   const older = () => (fixed ? undefined : bridge?.chat.older(id))
@@ -655,7 +659,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
         {asks.length > 0 && !(termOnly && dialog) && <AnswerSurface id={id} asks={asks} who={who} answer={fixed ? qaAnswer : bridgeAnswer} onTerminal={onTerminal} announce={announce} />}
         {(!asks.length || termOnly) && dialog && dialogKey && <DialogCard id={id} dialog={dialog} dialogKey={dialogKey} />}
         {footer}
-        {shown && <Lightbox url={shown.url} caption={shown.caption} onClose={closeImage} />}
+        {shown && <Lightbox images={shown.images} start={shown.index} onClose={closeImage} />}
         {full && <FullView state={full} onClose={() => setFull(null)} />}
         {agentShown && <AgentPanel key={agentShown} toolId={agentShown} items={state.items} status={status} chips={chips} width={agentFit.width} over={agentFit.over} onWidth={agentFit.onWidth} onClose={() => setAgentShown(null)} />}
       </div>
