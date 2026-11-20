@@ -60,7 +60,7 @@ export interface SessionRowInput {
   level: number | null
   /** Box Pokémon helping its subagents */
   helpers: number
-  /** No Pokémon works it yet (none rested when it opened; one comes when one rests) */
+  /** A spawn tab no Pokémon works (none rested when it opened, or it lost its own): one can be placed */
   noPokemon?: boolean
   /** A plain shell tab */
   shell?: boolean
@@ -75,7 +75,7 @@ export interface SessionRowParts {
   label: string
   /** The helpers' pictures */
   helpers: boolean
-  /** The swap button (another Pokémon for the session) */
+  /** The swap button (another Pokémon for the session, or one for a tab that has none) */
   swap: boolean
   /** The context bar's label: 'HP', or in work mode '컨텍스트' (a Korean key, through t()) */
   barLabel: 'HP' | '컨텍스트'
@@ -92,7 +92,7 @@ export function sessionRowParts(row: SessionRowInput, workMode: boolean): Sessio
     return { picture: row.shell ? 'shell' : 'glyph', level: null, label: row.project, helpers: false, swap: false, barLabel: '컨텍스트' }
   }
   if (row.noPokemon && !row.shell) {
-    return { picture: 'glyph', level: null, label: row.project, helpers: row.helpers > 0, swap: false, barLabel: 'HP' }
+    return { picture: 'glyph', level: null, label: row.project, helpers: row.helpers > 0, swap: true, barLabel: 'HP' }
   }
   return {
     picture: row.shell ? 'shell' : 'pokemon', level: row.level, label: row.name,

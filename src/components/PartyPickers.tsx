@@ -1,7 +1,7 @@
 /**
  * PartyPickers — the two "who goes?" dialogs of the widget, both over every resting Pokémon (in the box, not working
  * a session, not helping a subagent), most recently worked first, with a name search:
- *   SwapPicker   another Pokémon for a running session
+ *   SwapPicker   another Pokémon for a running session (or one for a tab without one: currentDex 0)
  *   ThrowPicker  the Pokémon a new (or resumed) session is thrown out with
  */
 
@@ -61,7 +61,7 @@ const RestingGrid: React.FC<{ dex: DexState; onPick: (uid: string) => void }> = 
 }
 
 export const SwapPicker: React.FC<{ dex: DexState; currentDex: number; onPick: (uid: string) => void; onClose: () => void }> = ({ dex, currentDex, onPick, onClose }) => (
-  <Dialog label={t('포켓몬 교체')} title={t('{name} 대신 보낼 포켓몬', { name: nameOf(pokemonById(currentDex)) })} onClose={onClose}>
+  <Dialog label={currentDex ? t('포켓몬 교체') : t('포켓몬 넣기')} title={currentDex ? t('{name} 대신 보낼 포켓몬', { name: nameOf(pokemonById(currentDex)) }) : t('이 세션에 보낼 포켓몬')} onClose={onClose}>
     <RestingGrid dex={dex} onPick={onPick} />
   </Dialog>
 )

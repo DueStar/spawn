@@ -17,7 +17,7 @@ Shots of the real built UI (`dist/`) with fixture sessions, to compare each rest
     node tests/visual/shots.mjs --flow session-order [--out <dir>]   # the left list: 자동 / 직접, a row dragged within the list (insertion line), Alt+↑/↓, the saved order at a new start
     node tests/visual/shots.mjs --flow keyboard                 # the list's rows and the text-size menu from the keyboard; the rows' names for a screen reader
     node tests/visual/shots.mjs --flow seg-hover                # a hovered option looks unlike the chosen one (도감, 박스, 랭킹, 설정)
-    node tests/visual/shots.mjs --only resume,throw,swap,notes,find --out <dir>   # dialogs opened by a click
+    node tests/visual/shots.mjs --only resume,throw,swap,place,notes,find --out <dir>   # dialogs opened by a click (place: a tab without a Pokémon)
     node tests/visual/shots.mjs --only chat,chat-banner,chat-work --check fit --check work --out <dir>   # the chat view's surfaces
     node tests/visual/shots.mjs --flow chat-flip --flow chat-banner --flow chat-unarmed --flow chat-long   # 채팅 / 터미널, the banner, an unarmed session, 2000 items
     node tests/visual/shots.mjs --flow chat-off --out <dir>     # off = 1.4.0: no flip, no chat code; session ×2, session-work ×2, session-mac vs <dir>/../00-before/

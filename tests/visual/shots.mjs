@@ -299,6 +299,11 @@ const SURFACES = {
     view: 'terminal', ready: '.w-swap-cell',
     open: async page => { const row = page.locator('.w-party .w-row').first(); await row.hover(); await row.locator('.w-row-swap').click() },
   },
+  // a tab without a Pokémon: its row's button places one (the same picker, titled for placing)
+  place: {
+    view: 'terminal', noMon: 1, ready: '.w-swap-cell',
+    open: async page => { const row = page.locator('.w-party .w-row').filter({ hasText: '타입 정리' }); await row.hover(); await row.locator('.w-row-swap').click() },
+  },
   notes: { view: 'terminal', open: async page => { await page.locator('.w-side .w-brand').click() }, ready: '.w-notes-body h3' },
   find: {
     view: 'terminal', ready: '.term-search',

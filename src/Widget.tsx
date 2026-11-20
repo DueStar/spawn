@@ -663,7 +663,7 @@ const Widget: React.FC = () => {
   const pendingThrows = useRef<Set<string>>(new Set())
   /**
    * A session no Pokémon works yet: none rested when it opened, and the server sends it the next one
-   * to rest. Drawn with the plain glyph (as in 업무 모드), no Lv and no swap
+   * to rest. Drawn with the plain glyph (as in 업무 모드), no Lv; its swap button places one
    */
   const noPokemon = (r: Row): boolean =>
     !!dex && !r.shell && !!r.terminal && r.mood !== 'ended' && !dex.assign?.[r.sessionId] && !pendingThrows.current.has(r.sessionId)
@@ -1094,7 +1094,7 @@ const Widget: React.FC = () => {
     const r = await bridge.game.swap(sessionId, uid)
     if (!r.ok) {
       if (before) castSession(sessionId, before.dex, before.shiny)
-      setNote(t('교체하지 못했어요 ({reason})', { reason: r.reason === 'busy' ? t('다른 세션에서 일하는 중') : r.reason ?? t('알 수 없음') }))
+      setNote(t('교체하지 못했어요 ({reason})', { reason: r.reason === 'busy' ? t('다른 세션에서 일하는 중') : r.reason === 'ended' ? t('끝난 세션') : r.reason ?? t('알 수 없음') }))
     }
   }
 
@@ -1478,7 +1478,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                           <button className="w-row-edit" onClick={e => { e.stopPropagation(); startRename(r.sessionId, 'row') }} title={t('세션 이름 바꾸기')} aria-label={t('세션 이름 바꾸기')}>✎</button>
                         )}
                         {parts.swap && (
-                          <button className="w-row-swap" onClick={e => { e.stopPropagation(); setSwapFor(r.sessionId) }} title={t('교체: 이 세션에서 일할 포켓몬을 바꿔요')} aria-label={t('교체')}><SwapIcon size={13} /></button>
+                          <button className="w-row-swap" onClick={e => { e.stopPropagation(); setSwapFor(r.sessionId) }} title={noPokemon(r) ? t('포켓몬 넣기: 이 세션에서 일할 포켓몬을 골라요') : t('교체: 이 세션에서 일할 포켓몬을 바꿔요')} aria-label={noPokemon(r) ? t('포켓몬 넣기') : t('교체')}><SwapIcon size={13} /></button>
                         )}
                         {closeBtn}
                       </span>

@@ -81,8 +81,10 @@ describe('a session row', () => {
     expect(sessionRowParts(ROW, false)).toEqual({ picture: 'pokemon', level: 17, label: '모래두지', helpers: true, swap: true, barLabel: 'HP' })
   })
 
-  it('with no Pokémon (none rested when it opened): the plain glyph and the folder, helpers kept, no Lv or swap', () => {
-    expect(sessionRowParts({ ...ROW, noPokemon: true }, false)).toEqual({ picture: 'glyph', level: null, label: 'todo-cli', helpers: true, swap: false, barLabel: 'HP' })
+  it('with no Pokémon (a spawn tab none rested for, or one that lost its own): the plain glyph and the folder, helpers kept, no Lv, the button to place one', () => {
+    expect(sessionRowParts({ ...ROW, noPokemon: true }, false)).toEqual({ picture: 'glyph', level: null, label: 'todo-cli', helpers: true, swap: true, barLabel: 'HP' })
+    // a session started outside spawn (not a tab, so never noPokemon): nothing to place
+    expect(sessionRowParts({ ...ROW, level: null, noPokemon: false }, false).swap).toBe(false)
     expect(JSON.stringify(sessionRowParts({ ...ROW, noPokemon: true }, false))).not.toContain('모래두지')
     // 업무 모드: exactly a 업무 모드 row
     expect(sessionRowParts({ ...ROW, noPokemon: true }, true)).toEqual(sessionRowParts(ROW, true))
