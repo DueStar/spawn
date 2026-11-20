@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.10.7
+- 왼쪽 목록에서 세션을 끌어 순서를 바꿀 때 노란 줄 대신, 끄는 줄이 절반을 넘으면 다른 줄이 부드럽게 비켜나요. 목록이 길어서 끄는 도중 스크롤돼도 자리가 맞아요.
+- 채팅에서 Claude가 읽거나 보낸 그림, 답에 적은 그림 경로가 작은 미리보기로 보여요. 누르면 크게 볼 수 있어요. 대화에 적힌 이 PC의 그림만 열고, 네트워크 경로는 열지 않아요.
+
 ### 1.10.6
 - /clear를 하거나 이어하기로 연 세션에서 포켓몬이 빠지던 문제를 고쳤어요. 탭 하나가 왼쪽 목록에 세션 두 개로 보이던 것도 하나로 보여요.
 - 포켓몬이 없는 세션(박스보다 세션을 많이 열었거나 포켓몬이 빠진 세션)에 나중에 포켓몬을 넣을 수 있어요. 세션 줄의 "포켓몬 넣기" 버튼을 누르고 고르면 돼요.
@@ -514,6 +518,10 @@
 
 ## spawn (English)
 
+### 1.10.7
+- Dragging a session in the left list no longer draws a yellow line: once the row passes halfway, the others slide smoothly out of its way. It keeps its place even when a long list scrolls mid-drag.
+- Pictures Claude reads or sends, and picture paths in its answers, show as small previews in the chat; click one to see it large. Only pictures on this PC that the conversation names are opened, never a network path.
+
 ### 1.10.6
 - Fixed a session losing its Pokémon after /clear, or when it was opened with Resume. One tab no longer shows as two sessions in the left list.
 - A session without a Pokémon (more sessions open than Pokémon in the box, or one that lost its own) can get one later: press "Add a Pokémon" on its row and pick one.
@@ -885,6 +893,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.7
+- 左の一覧でセッションをドラッグして並べ替えるとき、黄色い線の代わりに、行が半分を越えるとほかの行がなめらかに道をあけます。長い一覧がドラッグ中にスクロールしても位置がずれません。
+- チャットで Claude が読んだり送ったりした画像、回答に書かれた画像のパスが小さなプレビューで表示されます。押すと大きく見られます。会話に書かれたこの PC の画像だけを開き、ネットワークのパスは開きません。
 
 ### 1.10.6
 - /clear した後や「続きから」で開いたセッションからポケモンがいなくなる問題を直しました。1つのタブが左の一覧に2つのセッションとして見えていたのも1つになります。
