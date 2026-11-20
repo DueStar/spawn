@@ -715,3 +715,88 @@ describe('a permission dialog answered or dismissed in the terminal (the registr
     office.server.registry.scan()
   })
 })
+
+describe('/clear in a spawn tab: the registry file takes the new conversation id, the tab stays one session', () => {
+  let office: Office
+  let regDir: string
+  const T = '23071273-0146-4f19-a804-f6e4f0c5bbd6' // the tab's own id (hooks report under it)
+  const NEW1 = '773dea67-a85e-4b01-a0ed-80f666c764ee'
+  const NEW2 = '49f62923-a537-45c3-854a-65945fb0a7fc'
+  const reg = () => office.server.registry
+  const session = (id: string) => office.server.sessions.get(id)
+  const listedIds = async () => (await request(office.server.app).get('/sessions')).body.sessions.filter((s: any) => s.state !== 'ended').map((s: any) => s.id)
+
+  beforeAll(async () => {
+    regDir = mkdtempSync(join(tmpdir(), 'claude-sessions-clear-'))
+    office = await loadServer({ env: { SPAWN_REGISTRY_DIR: regDir } })
+    await postEvent(office.server, { type: 'session_started', sessionId: T, project: 'spawn', cwd: '/home/me/spawn', source: 'startup' })
+    writeEntry(regDir, { pid: process.ppid, sessionId: T, cwd: '/home/me/spawn', name: 'Spawn', status: 'idle' })
+    reg().scan()
+  })
+  afterAll(() => {
+    reg().stop()
+    removeServer(office)
+    try { rmSync(regDir, { recursive: true, force: true }) } catch {}
+  })
+
+  it('registry first: the new id from the same process attaches to the tab, no unhooked session arrives', () => {
+    expect(session(T).registry).toMatchObject({ pid: process.ppid })
+    writeEntry(regDir, { pid: process.ppid, sessionId: NEW1, cwd: '/home/me/spawn', name: 'Spawn', status: 'busy' })
+    reg().scan()
+    expect(session(NEW1)).toBeUndefined()
+    expect(session(T)).toMatchObject({ state: 'active', hooked: true, registry: { pid: process.ppid, status: 'busy' } })
+  })
+
+  it('old entry gone keeps new registry: the tab is still active with the registry attached', async () => {
+    // the scan above already lost T's own entry (one file per pid); a later scan changes nothing
+    reg().scan()
+    expect(session(T)).toMatchObject({ state: 'active', registry: { pid: process.ppid } })
+    expect(await listedIds()).toEqual([T])
+  })
+
+  it('two clears in a row: still one session, the latest status follows', async () => {
+    writeEntry(regDir, { pid: process.ppid, sessionId: NEW2, cwd: '/home/me/spawn', name: 'Spawn', status: 'idle', statusUpdatedAt: 1792024890000 })
+    reg().scan()
+    expect(session(NEW1)).toBeUndefined()
+    expect(session(NEW2)).toBeUndefined()
+    expect(session(T)).toMatchObject({ state: 'active', registry: { status: 'idle' } })
+    expect(await listedIds()).toEqual([T])
+  })
+
+  it('other pid still arrives: Claude Code started outside spawn is a new unhooked session', () => {
+    const OUT = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+    writeFileSync(join(regDir, `${process.pid}.json`), JSON.stringify(entry({ pid: process.pid, sessionId: OUT, cwd: '/home/me/other', name: 'other' })))
+    reg().scan()
+    expect(session(OUT)).toMatchObject({ hooked: false, state: 'active' })
+    unlinkSync(join(regDir, `${process.pid}.json`))
+    reg().scan()
+    expect(session(OUT).state).toBe('ended')
+  })
+
+  it('resume: a tab opened on an older conversation is named by that id in the registry; its first hook event claims it (no extra session, the registry joins the tab)', async () => {
+    const TAB = '0b0b0b0b-1111-4222-8333-444444444444'
+    const RESUMED = '5e5e5e5e-6666-4777-8888-999999999999'
+    const AFTER_CLEAR = '6f6f6f6f-6666-4777-8888-999999999999'
+    const pid = process.pid
+    writeFileSync(join(regDir, `${pid}.json`), JSON.stringify(entry({ pid, sessionId: RESUMED, cwd: '/home/me/spawn', name: 'Spawn', status: 'busy' })))
+    reg().scan()
+    expect(session(RESUMED)).toMatchObject({ hooked: false, state: 'active' }) // before any hook nothing tells it is a tab
+    await postEvent(office.server, { type: 'session_started', sessionId: TAB, project: 'spawn', cwd: '/home/me/spawn', source: 'resume', transcriptPath: `/home/me/.claude/projects/spawn/${RESUMED}.jsonl` })
+    expect(session(RESUMED)).toBeUndefined()
+    expect(session(TAB)).toMatchObject({ hooked: true, state: 'active', registry: { pid, status: 'busy' } })
+    // then /clear on that tab: same process, new id
+    writeFileSync(join(regDir, `${pid}.json`), JSON.stringify(entry({ pid, sessionId: AFTER_CLEAR, cwd: '/home/me/spawn', name: 'Spawn', status: 'idle' })))
+    reg().scan()
+    expect(session(AFTER_CLEAR)).toBeUndefined()
+    expect(session(TAB).registry).toMatchObject({ status: 'idle' })
+    unlinkSync(join(regDir, `${pid}.json`))
+    reg().scan()
+  })
+
+  it('the tab\'s process going drops the registry from the tab (hooked session stays)', () => {
+    unlinkSync(join(regDir, `${process.ppid}.json`))
+    reg().scan()
+    expect(session(T)).toMatchObject({ state: 'active', hooked: true })
+    expect(session(T)).not.toHaveProperty('registry')
+  })
+})

@@ -365,6 +365,20 @@ export function mountRegistry(app, {
   const cache = new Map()
   /** @type {Map<string, object>} sessionId -> the live entry as of the last scan (own bot excluded) */
   const known = new Map()
+  /**
+   * A registry id that names a hooked session under another id -> that session's id.
+   * /clear in a spawn tab gives the conversation a new id, and Claude Code rewrites
+   * the process's registry file with it, while the hooks keep reporting under the
+   * tab's own id: the same process (pid) is the same tab, never a new session.
+   */
+  const aliasOf = new Map()
+  /** @type {Map<string, string>} hooked session id -> the registry id its `registry` came from */
+  const attachedFrom = new Map()
+  /** The active hooked session this process's registry entry already belongs to, if any */
+  const hookedByPid = pid => {
+    for (const s of sessions.values()) if (s.hooked !== false && s.state === 'active' && s.registry?.pid === pid) return s
+    return null
+  }
   let timer = null
   let watcher = null
   let debounce = null
@@ -395,11 +409,19 @@ export function mountRegistry(app, {
       seen.add(id)
       const prev = known.get(id)
       known.set(id, entry)
-      const session = sessions.get(id)
+      if (!aliasOf.has(id) && !sessions.has(id)) {
+        const tab = hookedByPid(entry.pid)
+        if (tab) {
+          aliasOf.set(id, tab.id)
+          log(`[registry] ${label(entry)}: new conversation id of ${tab.id} (same process)`)
+        }
+      }
+      const session = sessions.get(aliasOf.get(id) ?? id)
       if (!session) {
         arrive(entry, t)
         continue
       }
+      if (session.hooked !== false) attachedFrom.set(session.id, id)
       if (session.state === 'ended') {
         // A hooked session whose SessionEnd fired before its file went: nothing
         // to do, the file follows. An unhooked one that ended (file gone) and is
@@ -433,14 +455,17 @@ export function mountRegistry(app, {
     for (const [id, prev] of Array.from(known)) {
       if (seen.has(id)) continue
       known.delete(id)
-      const session = sessions.get(id)
+      const sid = aliasOf.get(id) ?? id
+      aliasOf.delete(id)
+      const session = sessions.get(sid)
       if (!session) continue
       if (session.hooked === false) {
         if (session.state === 'ended') continue
         log(`[registry] - ${label(prev)}: gone`)
         endSession(session, 'exited', t)
         broadcast(toEvent(session, 'session_ended'))
-      } else if (session.registry) {
+      } else if (session.registry && (attachedFrom.get(sid) ?? sid) === id) {
+        attachedFrom.delete(sid)
         // The hooks keep reporting this session; it just lost its registry entry
         const before = session.registry.status
         delete session.registry
@@ -525,7 +550,37 @@ export function mountRegistry(app, {
     res.json({ ...stats(), entries })
   })
 
-  const api = { start, stop, scan, stats, dir: registryDir, get running() { return timer !== null } }
+  /**
+   * A hooked session's hook payload names the conversation it runs (its transcript
+   * file): a spawn tab opened on an older conversation (resume) or after /clear is
+   * named by that id in the registry, not by the tab's. The id is the tab's from now
+   * on: an unhooked session listed under it goes (it was this tab all along), and
+   * its registry entry joins the tab.
+   */
+  function claim(registryId, sessionId, t = now()) {
+    if (!registryId || registryId === sessionId || aliasOf.get(registryId) === sessionId) return
+    const tab = sessions.get(sessionId)
+    if (!tab || tab.hooked === false) return
+    const ghost = sessions.get(registryId)
+    if (ghost && ghost.hooked !== false) return // a tab of its own
+    aliasOf.set(registryId, sessionId)
+    if (ghost) {
+      log(`[registry] ${ghost.registry?.name ?? registryId}: was ${sessionId} (same tab), not a session of its own`)
+      if (ghost.state !== 'ended') {
+        endSession(ghost, 'same tab', t)
+        broadcast(toEvent(ghost, 'session_ended'))
+      }
+      forgetSession(registryId)
+    }
+    const entry = known.get(registryId)
+    if (entry) {
+      attachedFrom.set(sessionId, registryId)
+      tab.registry = registryInfo(entry)
+      broadcast(toEvent(tab, 'session_registry'))
+    }
+  }
+
+  const api = { start, stop, scan, claim, stats, dir: registryDir, get running() { return timer !== null } }
   app.locals.registry = api
   return api
 }

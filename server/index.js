@@ -551,7 +551,20 @@ function touchSession(body, now = Date.now()) {
   if (!session.project) session.project = projectName(body.project, body.cwd)
   if (!session.cwd && body.cwd) session.cwd = body.cwd
   if (body.transcriptPath && session.transcriptPath !== body.transcriptPath) session.transcriptPath = body.transcriptPath
+  claimConversation(session, body.transcriptPath, now)
   return session
+}
+
+/** The conversation the tab runs (resume, /clear): the registry names the process by its id */
+function claimConversation(session, transcriptPath, now) {
+  const conversation = conversationOf(transcriptPath)
+  if (conversation && conversation !== session.id) registry.claim(conversation, session.id, now)
+}
+
+/** The conversation id a transcript path names (<id>.jsonl), or null */
+function conversationOf(transcriptPath) {
+  const m = typeof transcriptPath === 'string' ? transcriptPath.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\.jsonl$/i) : null
+  return m ? m[1].toLowerCase() : null
 }
 
 function clearSessionTimer(id) {
@@ -1148,6 +1161,7 @@ function processEvent(body) {
         if (body.transcriptPath) session.transcriptPath = body.transcriptPath
       }
       saveSessions()
+      claimConversation(session, body.transcriptPath, now)
       return sessionEvent(session)
     }
 
