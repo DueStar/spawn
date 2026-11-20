@@ -2615,7 +2615,7 @@ const FLOWS = {
   },
 
   // the left list's order (src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
-  // list goes where it is put (an insertion line on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
+  // list goes where it is put (the other rows slide aside on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
   'session-order': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -2641,15 +2641,18 @@ const FLOWS = {
       await dragAt('dragstart', 3, 0)
       await dragAt('dragover', 3, r2.y + r2.height - 4) // just above its own place: no line
       await sleep(100)
-      if (await page.locator('.w-row-drop').count()) bad('a line where the row already is')
+      if (await page.locator('.w-row[style*="translateY"]').count()) bad('rows moved while the row is over its own place')
       await dragAt('dragover', 3, to.y + 4)
       await sleep(150)
-      if (!(await page.locator('.w-row-drop').count())) bad('no insertion line while dragging within the list')
+      if (await page.locator('.w-row-drop').count()) bad('an insertion line is drawn (the rows slide instead)')
+      // over the first row: rows 0–2 step down, the dragged one's place goes to the top
+      const slid = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => getComputedStyle(el).transform))
+      if (slid.slice(0, 3).some(m => m === 'none') || slid[3] === 'none') bad(`the rows did not slide aside: ${slid.join(' | ')}`)
       if ((await page.locator('.w-row.lifted').count()) !== 1) bad('the dragged row is not marked')
       if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-order-drag.png'), animations: 'disabled', caret: 'hide' })
       await dragAt('dragend', 3, 0)
       await sleep(100)
-      if (await page.locator('.w-row-drop, .w-row.lifted').count()) bad('the line or the dimmed row stayed after the drag ended')
+      if (await page.locator('.w-row.lifted, .w-row[style*="translateY"]').count()) bad('a slid or dimmed row stayed after the drag ended')
       if ((await names(page)).join('|') !== before.join('|')) bad('a drag that ended without a drop moved a row')
       // the real drag (the pointer): onto the top of the first row
       await rows.nth(3).dragTo(rows.nth(0), { targetPosition: { x: 60, y: 4 } })
@@ -2658,7 +2661,7 @@ const FLOWS = {
       const want = [before[3], ...before.filter((_, i) => i !== 3)]
       if (after.join('|') !== want.join('|')) bad(`after a drag: ${after.join(', ')}; want ${want.join(', ')}`)
       if ((await sortOn(page)) !== '직접') bad(`a drag left the header at ${JSON.stringify(await sortOn(page))}, want 직접`)
-      if (await page.locator('.w-row-drop').count()) bad('the insertion line stayed after the drop')
+      if (await page.locator('.w-row[style*="translateY"]').count()) bad('a row stayed slid after the drop')
       if (await page.locator('.w-sess-bar.split .w-pane-head').count()) bad('a drag within the list opened a pane')
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('spawn-list-order') || 'null'))
       if (!Array.isArray(saved) || saved.length < after.length) bad(`the order was not saved: ${JSON.stringify(saved)}`)

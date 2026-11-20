@@ -74,7 +74,7 @@ function preloadViews() {
   else setTimeout(go, 500)
 }
 import { resetTextSize, stepTextSize, useTextStep } from './textSize'
-import { bucketOf, dropSlot, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, USED_KEY, type Bucket } from './sessionOrder'
+import { bucketOf, dropSlot, slideOffsets, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, USED_KEY, type Bucket } from './sessionOrder'
 import { TextSizeControl } from './components/TextSizeControl'
 import type { SessionInfo } from './types'
 import { t, josa, nameOf, locale, lang } from './i18n'
@@ -561,7 +561,11 @@ const Widget: React.FC = () => {
   }
   const [, bumpOrder] = useState(0)
   const setAutoSort = (on: boolean) => { if (on !== autoSort) void changeSettings({ session: { autoSort: on } }) }
-  const [rowDrop, setRowDrop] = useState<{ slot: number; top: number } | null>(null)
+  // A row dragged within the list: the rows as they stood when it was picked up, and where it
+  // would land now (dropSlot). The others slide aside as it passes their middle (slideOffsets)
+  const [rowSlide, setRowSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; slot: number } | null>(null)
+  // the frame a drop is applied in: no transition, so the rows do not slide back from their offsets
+  const [rowSettling, setRowSettling] = useState(false)
   const rowDragged = useRef<string | null>(null)
   const [lifted, setLifted] = useState<string | null>(null)
 
@@ -1308,40 +1312,41 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
-            <div className={`w-rows${compact ? ' compact' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
-              // a row dragged within the list: a line where it would go (none where it already is)
+            <div className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
+              // a row dragged within the list: the others slide aside as it passes their middle
+              // (measured against the rows as they stood when it was picked up, so the slide never feeds back)
               onDragOver={e => {
                 const sid = rowDragged.current
-                if (!sid || !e.dataTransfer.types.includes(SESSION_MIME)) return
+                if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
                 e.preventDefault()
                 e.dataTransfer.dropEffect = 'move'
-                const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
-                if (boxes.some(b => !b)) return
-                const slot = dropSlot(boxes.map(b => b!.top + b!.height / 2), e.clientY)
-                const from = listIds.indexOf(sid)
-                if (slot === from || slot === from + 1) { setRowDrop(null); return }
-                const top0 = e.currentTarget.getBoundingClientRect().top
-                const top = slot < boxes.length
-                  ? (slot ? (boxes[slot - 1]!.bottom + boxes[slot]!.top) / 2 : boxes[0]!.top - 2) - top0
-                  : boxes[boxes.length - 1]!.bottom + 2 - top0
-                setRowDrop(cur => (cur?.slot === slot && cur.top === top ? cur : { slot, top }))
+                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY)
+                if (slot !== rowSlide.slot) setRowSlide({ ...rowSlide, slot })
               }}
-              // (left for good: the pointer outside the list's box; Chromium gives a drag's dragleave no relatedTarget)
+              // (left for good: the pointer outside the list's box; Chromium gives a drag's dragleave no relatedTarget):
+              // the rows go back to their places
               onDragLeave={e => {
                 const b = e.currentTarget.getBoundingClientRect()
-                if (e.clientX < b.left || e.clientX >= b.right || e.clientY < b.top - 4 || e.clientY >= b.bottom + 4) setRowDrop(null)
+                if (!rowSlide || !(e.clientX < b.left || e.clientX >= b.right || e.clientY < b.top - 4 || e.clientY >= b.bottom + 4)) return
+                const from = listIds.indexOf(rowSlide.sid)
+                if (rowSlide.slot !== from) setRowSlide({ ...rowSlide, slot: from })
               }}
               onDrop={e => {
                 const sid = rowDragged.current
-                if (!sid || !e.dataTransfer.types.includes(SESSION_MIME)) return
+                if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
                 e.preventDefault()
-                setRowDrop(null)
-                const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
-                if (!boxes.some(b => !b)) reorderRow(sid, dropSlot(boxes.map(b => b!.top + b!.height / 2), e.clientY))
+                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY)
+                // the new order lands where the rows already slid to: no transition for that frame
+                setRowSettling(true)
+                setRowSlide(null)
+                reorderRow(sid, slot)
+                requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
               }}>
-            {rowDrop && <div className="w-row-drop" style={{ top: rowDrop.top }} aria-hidden="true" />}
-            {listIds.map((sid, i) => {
+            {(() => {
+              const slide = rowSlide ? slideOffsets(rowSlide.boxes, listIds.indexOf(rowSlide.sid), rowSlide.slot) : null
+              return listIds.map((sid, i) => {
               const r = rowById.get(sid)!
+              const slideY = slide?.[i] ?? 0
               const mon = monOf(r.sessionId)
               const parts = sessionRowParts({ title: r.title, name: r.name, project: r.project, level: mon ? levelOf(mon) : null, helpers: (dex?.helpers?.[r.sessionId] ?? []).length, noPokemon: noPokemon(r), shell: r.shell }, workMode)
               // What is left of the context window (the tick and the tooltip in 간략)
@@ -1401,6 +1406,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 key={r.sessionId}
                 ref={el => { if (el) rowEls.current.set(sid, el); else rowEls.current.delete(sid) }}
                 data-sid={sid}
+                style={slideY ? { transform: `translateY(${slideY}px)` } : undefined}
                 className={`w-row${lifted === sid ? ' lifted' : ''} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
                 // dragged onto the right side, or Ctrl+clicked: the session opens in a pane of its own;
                 // dragged within the list: it goes where it is put (the order is manual from then on)
@@ -1411,8 +1417,10 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   e.dataTransfer.effectAllowed = 'copyMove'
                   rowDragged.current = sid
                   setLifted(sid)
+                  const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
+                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top, height: b!.height })), slot: i })
                 }}
-                onDragEnd={() => { setDropHint(null); setRowDrop(null); rowDragged.current = null; setLifted(null) }}
+                onDragEnd={() => { setDropHint(null); setRowSlide(null); rowDragged.current = null; setLifted(null) }}
                 onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
                 // The keyboard and screen readers: a row is a button (Tab reaches it, Enter / Space
                 // open it, F2 renames it), the one in view is the current one, and its name says
@@ -1537,7 +1545,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 })()}
                 </>}
               </div>
-            ) })}
+            ) }) })()}
             </div>
           </section>
 

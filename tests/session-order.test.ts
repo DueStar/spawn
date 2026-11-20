@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bucketOf, dropSlot, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, ORDER_CAP, USED_KEY, type OrderInput } from '../src/sessionOrder'
+import { bucketOf, dropSlot, slideOffsets, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, ORDER_CAP, USED_KEY, type OrderInput } from '../src/sessionOrder'
 
 const rows = (...r: [string, string, boolean?][]): OrderInput[] => r.map(([id, mood, asking]) => ({ id, mood, asking }))
 const times = (o: Record<string, number>) => new Map(Object.entries(o))
@@ -102,5 +102,29 @@ describe('직접 정렬: the order the user dragged', () => {
     expect(dropSlot(mids, 25)).toBe(1)
     expect(dropSlot(mids, 49)).toBe(2)
     expect(dropSlot(mids, 99)).toBe(3)
+  })
+})
+
+describe('slideOffsets: the rows slide aside while one is dragged (no insertion line)', () => {
+  // four rows 40 px tall, 4 px apart: tops 0, 44, 88, 132
+  const boxes = [0, 44, 88, 132].map(top => ({ top, height: 40 }))
+  it('over its own place (slot from or from + 1): nothing moves', () => {
+    expect(slideOffsets(boxes, 1, 1)).toEqual([0, 0, 0, 0])
+    expect(slideOffsets(boxes, 1, 2)).toEqual([0, 0, 0, 0])
+  })
+  it('dragged up to the top: the rows it passed step down by its height and the gap, it takes the first place', () => {
+    expect(slideOffsets(boxes, 3, 0)).toEqual([44, 44, 44, -132])
+  })
+  it('dragged down to the end: the rows it passed step up, it takes the last place', () => {
+    expect(slideOffsets(boxes, 0, 4)).toEqual([132, -44, -44, -44])
+  })
+  it('rows of different heights: the dragged row lands where the last row it passes ends', () => {
+    const mixed = [{ top: 0, height: 60 }, { top: 64, height: 30 }, { top: 98, height: 30 }]
+    expect(slideOffsets(mixed, 0, 3)).toEqual([68, -64, -64])
+    expect(slideOffsets(mixed, 2, 0)).toEqual([34, 34, -98])
+  })
+  it('no rows or an unknown row: nothing moves', () => {
+    expect(slideOffsets([], 0, 0)).toEqual([])
+    expect(slideOffsets(boxes, -1, 0)).toEqual([0, 0, 0, 0])
   })
 })
