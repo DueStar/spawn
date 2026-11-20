@@ -402,7 +402,7 @@ describe('the guards: what the calm look allows', () => {
     // (the working Pokémon's halo and hop)
     // (the sub-agents at work — a chip comes in, a finished one goes, a running one's dot breathes on the
     // working Pokémon's beat, the panel slides in)
-    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head::before', '.chat-status.working .chat-pic.head > *',
+    expect(moving.map(r => r.sel)).toEqual(['.chat-wild.appear .chat-wild-mon', '.chat-status.working .chat-pic.head > *',
       '.chat-agent-chip', '.chat-agent-chip.gone', '.chat-agent-chip:not(.gone):not(.wait) .chat-agent-mark i', '.chat-ag-state.run i', '.chat-ag-panel'])
     // the wild Pokémon's entrance: 0.5 s, once
     expect(values(moving[0], 'animation')[0]).toMatch(/^chat-wild-in \.5s cubic-bezier\(\.2, \.8, \.2, 1\) both$/)
