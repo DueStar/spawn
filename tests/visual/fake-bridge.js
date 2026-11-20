@@ -23,7 +23,7 @@
   let settings = {
     notify: { catch: true, flee: true, evolve: true, levelup: true, rareOnly: false, duration: 'normal', quiet: false, quietFrom: '23:00', quietTo: '08:00', sound: true, sessions: true },
     privacy: { hidePrompts: false },
-    session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false, autoSort: true },
+    session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: false, linkPreviews: false, autoSort: false, manualOrderOn: true },
     app: { openAtLogin: false, startHidden: false, widgetOnTop: true, language: 'auto', workMode: !!shot.workMode },
     terminal: { scrollback: 5000, font: 'default' },
   }

@@ -33,7 +33,7 @@ const DEFAULTS = Object.freeze({
   // chatView: 채팅으로 보기, on by default since 1.10.5 (chatViewOn: that default given once to a settings file saved
   // before, whose off was only the old default); shown only behind features.json chatView (features.cjs);
   // linkPreviews: 링크 미리보기 (채팅), off by default, effective only with chatView on (main.cjs previewsOn)
-  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: true, chatViewOn: false, linkPreviews: false, autoSort: true },
+  session: { defaultCwd: '', model: '', permissionMode: '', confirmClose: true, restoreOnStart: true, tools: [], defaultTool: 'claude', chatView: true, chatViewOn: false, linkPreviews: false, autoSort: false, manualOrderOn: false },
   // language auto: the system's. workMode: 업무 모드, nothing Pokémon on screen (src/workMode.ts); the game goes on
   app: { openAtLogin: false, startHidden: false, widgetOnTop: true, language: 'auto', workMode: false },
   // the terminals' look, applied to open terminals at once (the text size stays per PC: src/termFont.ts)
@@ -120,6 +120,12 @@ function createSettingsStore(file) {
   // (after that the trainer's own choice holds, chatViewOn marks it)
   if (!current.session.chatViewOn) {
     current = applyPatch(current, { session: { chatView: true, chatViewOn: true } })
+    try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(current, null, 2)) } catch { /* once more next start */ }
+  }
+  // 1.10.11: the left list's order is the user's (the list's 자동 / 직접 switch is gone); a file saved with the old
+  // default's 자동 is turned to the dragged order once (manualOrderOn marks it; 설정 › 세션 can still turn 자동 on)
+  if (!current.session.manualOrderOn) {
+    current = applyPatch(current, { session: { autoSort: false, manualOrderOn: true } })
     try { fs.mkdirSync(path.dirname(file), { recursive: true }); fs.writeFileSync(file, JSON.stringify(current, null, 2)) } catch { /* once more next start */ }
   }
   return {

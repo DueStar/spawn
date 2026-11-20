@@ -78,8 +78,8 @@ describe('settings', () => {
     const dir = mkdtempSync(join(tmpdir(), 'spawn-settings-'))
     const file = join(dir, 'settings.json')
     const store = createSettingsStore(file)
-    // (a first start gives the chat view's default once: 1.10.5)
-    const FIRST = { ...DEFAULTS, session: { ...DEFAULTS.session, chatViewOn: true } }
+    // (a first start gives the chat view's default once: 1.10.5; and the user's own list order: 1.10.11)
+    const FIRST = { ...DEFAULTS, session: { ...DEFAULTS.session, chatViewOn: true, manualOrderOn: true } }
     expect(store.get()).toEqual(FIRST)
     store.set({ app: { startHidden: true } })
     expect(JSON.parse(readFileSync(file, 'utf8')).app.startHidden).toBe(true)
@@ -257,6 +257,18 @@ describe('the chat view setting', () => {
     }
     const view = readFileSync(join(__dirname, '..', 'src', 'components', 'SettingsView.tsx'), 'utf8')
     expect(view).toContain(`t('${hint}')`)
+  })
+})
+
+describe("the list's order is the user's (1.10.11)", () => {
+  it('a file saved with the old default 자동 gets the dragged order once; turning 자동 on later holds', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'spawn-settings-'))
+    const file = join(dir, 'settings.json')
+    writeFileSync(file, JSON.stringify({ session: { autoSort: true, chatViewOn: true } }))
+    const a = createSettingsStore(file)
+    expect(a.get().session).toMatchObject({ autoSort: false, manualOrderOn: true })
+    a.set({ session: { autoSort: true } })
+    expect(createSettingsStore(file).get().session.autoSort).toBe(true)
   })
 })
 

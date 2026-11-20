@@ -42,11 +42,12 @@ describe('the effort control', () => {
 })
 
 describe('the update button, downloaded vs one to get', () => {
-  it('shows a restart arrow and 재시작 once downloaded, the plain down arrow before', () => {
+  it('every state in words as well (1.10.11): 업데이트, 받는 중 n%, a restart arrow and 재시작', () => {
     const w = readFileSync(join(__dirname, '..', 'src', 'Widget.tsx'), 'utf8')
-    expect(w).toContain("update.status === 'ready' ? <><RestartIcon size={12} /><span className=\"w-update-word\">{t('재시작')}</span></> : <UpdateIcon size={12} />")
+    expect(w).toContain("update.status === 'ready' ? <><RestartIcon size={12} /><span className=\"w-update-word\">{t('재시작')}</span></>")
+    expect(w).toContain("<><UpdateIcon size={12} /><span className=\"w-update-word\">{t('업데이트')}</span></>")
     const css = readFileSync(join(__dirname, '..', 'src', 'styles', 'widget.css'), 'utf8')
-    expect(css).toMatch(/\.w-update\.ready \{ width: auto;/)
+    expect(css).toMatch(/\.w-update\.available, \.w-update\.downloading, \.w-update\.ready \{ width: auto;/)
   })
 })
 

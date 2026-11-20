@@ -497,7 +497,8 @@ const Widget: React.FC = () => {
     }
   }, [rows, settings.notify.sessions, workMode])
 
-  // The left panel's order: with 자동 정렬 (설정 › 세션, on by default) by what each session does —
+  // The left panel's order is the user's (1.10.11): the order they dragged, new sessions on top. 자동 정렬 (설정 ›
+  // 세션, off by default; the list's own switch is gone) sorts by what each session does instead —
   // 확인 필요 on top, then working in the order they started, then resting (the latest to rest first), then ended
   // (src/sessionOrder.ts). While the pointer is over the list the order holds still, so a row never moves under
   // a click; only a session that comes to need the user goes to the top at once. Off (직접 정렬): the dragged order.
@@ -566,7 +567,6 @@ const Widget: React.FC = () => {
     else bumpOrder(n => n + 1) // (draw again with the new order)
   }
   const [, bumpOrder] = useState(0)
-  const setAutoSort = (on: boolean) => { if (on !== autoSort) void changeSettings({ session: { autoSort: on } }) }
   // A row dragged within the list: the rows as they stood when it was picked up, and where it
   // would land now (dropSlot). The others slide aside as it passes their middle (slideOffsets)
   // (boxes: tops from the list's own top, so a list that scrolls mid-drag keeps its slots; order: the list
@@ -605,6 +605,9 @@ const Widget: React.FC = () => {
     let frame = 0
     let last: DragEvent | null = null
     const over = (e: DragEvent) => {
+      // the row in hand may pass over anything: no "not allowed" sign on the way (a drop outside the list and
+      // the panes does nothing: dragend puts the row back)
+      if (e.dataTransfer?.types.includes('application/x-spawn-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }
       last = e
       if (frame) return
       frame = requestAnimationFrame(() => {
@@ -1357,14 +1360,9 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </button>}
 
           <section className="w-card w-party">
-            {/* The list's header: how many, 자동 / 직접, 간략 / 상세, a new shell, a new session */}
+            {/* The list's header: how many, 간략 / 상세, a new shell, a new session (the order is the user's: drag a row) */}
             <div className="w-list-head">
               <span className="w-list-count" title={t('세션 {n}', { n: rows.length })}><span className="w-list-count-full">{t('세션 {n}', { n: rows.length })}</span><span className="w-list-count-short">{rows.length}</span></span>
-              {/* 자동 / 직접: the same switch as 설정 › 세션 › 왼쪽 목록 자동 정렬 (a drag in the list turns 직접 on) */}
-              <span className="w-list-sort" role="group" aria-label={t('목록 정렬')}>
-                <button className={autoSort ? 'on' : ''} aria-pressed={autoSort} onClick={() => setAutoSort(true)} title={t('상태별로 묶고, 그 안에서 마지막으로 쓴 세션이 위로')}>{t('자동')}</button>
-                <button className={autoSort ? '' : 'on'} aria-pressed={!autoSort} onClick={() => setAutoSort(false)} title={t('끌어서 정한 순서 그대로 (새 세션은 맨 위)')}>{t('직접')}</button>
-              </span>
               <span className="w-list-mode" role="group" aria-label={t('목록 보기')}>
                 <button className={compact ? 'on' : ''} aria-pressed={compact} onClick={() => setListMode('compact')} title={t('한 줄씩 (많이 보기)')}>{t('간략')}</button>
                 <button className={compact ? '' : 'on'} aria-pressed={!compact} onClick={() => setListMode('detail')} title={t('이름·상태·컨텍스트·모델까지')}>{t('상세')}</button>
@@ -1492,7 +1490,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 onDragStart={e => {
                   if (!r.terminal) return
                   e.dataTransfer.setData(SESSION_MIME, r.sessionId)
-                  e.dataTransfer.effectAllowed = 'copyMove'
+                  // (a move, everywhere: no "+" copy badge under the pointer)
+                  e.dataTransfer.effectAllowed = 'move'
                   // no picture of the row under the pointer: the row itself moves (and, off the list, a card)
                   if (BLANK_DRAG) e.dataTransfer.setDragImage(BLANK_DRAG, 0, 0)
                   rowDragged.current = sid
@@ -1780,7 +1779,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             onDragOver={e => {
               if (!e.dataTransfer.types.includes(SESSION_MIME)) return
               e.preventDefault()
-              e.dataTransfer.dropEffect = 'copy'
+              e.dataTransfer.dropEffect = 'move'
               const narrow = tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom
               const hint = tabs.length >= MAX_TABS ? t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS }) : narrow ? t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요') : t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS })
               if (hint !== dropHint) setDropHint(hint)

@@ -98,9 +98,9 @@ describe('rows from the keyboard and for screen readers (final review I2)', () =
     expect(w).toContain('openInTab(r.sessionId); return } open() }}')
   })
 
-  it('the focus ring is a quiet hairline (no yellow, none on a click); 간략 shows its × on keyboard focus; an ended 간략 row is dimmed', () => {
+  it('the focus ring is the one ring of the app (no yellow, none on a click); 간략 shows its × on keyboard focus; an ended 간략 row is dimmed', () => {
     const c = css()
-    expect(c).toContain('.w-row:focus-visible { outline: 1px solid var(--ink-3); outline-offset: -1px; }')
+    expect(c).toContain('.w-row:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }')
     expect(c).not.toMatch(/\.w-row:focus-visible[^}]*accent/)
     expect(c).toContain('.w-rows.compact .w-row:is(:focus-visible, :has(.w-row-close:focus-visible)) .w-row-state > .w-row-close { display: inline-grid; place-items: center; }')
     // a click's focus never shows the × (only :focus-visible does)

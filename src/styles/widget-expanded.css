@@ -682,7 +682,7 @@
 .w-sess-tab:hover .w-sess-tab-x, .w-sess-tab.on .w-sess-tab-x, .w-sess-tab-x:focus-visible { opacity: 1; }
 .w-sess-tab-x:hover { color: var(--ink); background: var(--hover); }
 /* a session dragged from the left list over the right side: where it would go */
-.w-tab-drop { position: absolute; inset: 8px; z-index: 50; display: grid; place-items: center; border: 1.5px dashed var(--line-hover); border-radius: var(--r-l); background: color-mix(in srgb, var(--bg) 70%, transparent); pointer-events: none; }
+.w-tab-drop { position: absolute; inset: 8px; z-index: 50; display: grid; place-items: center; border: 1.5px dashed var(--line-hover); border-radius: var(--r-l); background: none; pointer-events: none; }
 .w-tab-drop span { padding: 8px 14px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink); }
 .w-tab-drop.full span { color: var(--red-text); }
 .w-tab-note { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); z-index: 50; padding: 7px 12px; border-radius: var(--r-m); background: var(--card); border: 1px solid var(--line-hover); font-size: var(--t-ui); color: var(--ink-2); }

@@ -2746,12 +2746,11 @@ const FLOWS = {
     const bad = m => problems.push(m)
     let app
     const names = async page => page.locator('.w-party .w-row .w-row-name').allInnerTexts()
-    const sortOn = async page => (await page.locator('.w-list-sort button.on').innerText().catch(() => '')).trim()
     try {
       app = await openApp(browser, {})
       const { page } = app
       const rows = page.locator('.w-party .w-row')
-      if ((await sortOn(page)) !== '자동') bad(`the header says ${JSON.stringify(await sortOn(page))}, want 자동`)
+      if (await page.locator('.w-list-sort').count()) bad('the list header still has the 자동 / 직접 switch')
       const before = await names(page)
       if (before.length < 4) throw new Error(`only ${before.length} rows`)
       // drag the fourth row above the first: a line on the way, then it is first and the list is 직접
@@ -2763,9 +2762,15 @@ const FLOWS = {
       }, [type, row, y])
       const to = await rows.nth(0).boundingBox()
       const r2 = await rows.nth(2).boundingBox()
+      // (a synthetic drag's DataTransfer drops what the page sets: what it asked for is read from the setter)
+      await page.evaluate(() => { const d = Object.getOwnPropertyDescriptor(DataTransfer.prototype, 'effectAllowed'); Object.defineProperty(DataTransfer.prototype, 'effectAllowed', { configurable: true, get() { return d.get.call(this) }, set(v) { window.__ALLOWED__ = v; d.set.call(this, v) } }) })
       const r3 = await rows.nth(3).boundingBox()
       // picked up at its middle (the pointer's travel is what the row follows)
       await dragAt('dragstart', 3, r3.y + r3.height / 2)
+      // a move, everywhere: no "+" copy badge and no "not allowed" sign under the pointer
+      if ((await page.evaluate(() => window.__ALLOWED__)) !== 'move') bad(`the drag allows ${await page.evaluate(() => window.__ALLOWED__)}, want move only`)
+      const anywhere = await page.evaluate(() => { const ev = new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: 700, clientY: 20, dataTransfer: window.__DT__ }); document.querySelector('.w-view-tabs')?.dispatchEvent(ev); return ev.defaultPrevented })
+      if (!anywhere) bad('over the top bar the drag shows "not allowed"')
       await dragAt('dragover', 3, r3.y + r3.height / 2 - 6) // a little up, still over its own place
       await sleep(120)
       const own = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => new DOMMatrix(getComputedStyle(el).transform).m42))
@@ -2802,7 +2807,6 @@ const FLOWS = {
       const after = await names(page)
       const want = [before[3], ...before.filter((_, i) => i !== 3)]
       if (after.join('|') !== want.join('|')) bad(`after a drag: ${after.join(', ')}; want ${want.join(', ')}`)
-      if ((await sortOn(page)) !== '직접') bad(`a drag left the header at ${JSON.stringify(await sortOn(page))}, want 직접`)
       if (await page.locator('.w-row[style*="translateY"]').count()) bad('a row stayed slid after the drop')
       if (await page.locator('.w-sess-bar.split .w-pane-head').count()) bad('a drag within the list opened a pane')
       const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('spawn-list-order') || 'null'))
@@ -2814,16 +2818,6 @@ const FLOWS = {
       const moved = await names(page)
       if (moved[1] !== after[0] || moved[0] !== after[1]) bad(`Alt+↓: ${moved.join(', ')}`)
       if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-order-manual.png'), animations: 'disabled', caret: 'hide' })
-      // 자동 again: the 1.7.0 groups (nothing used differently in a fixed clock: the order from before)
-      await page.locator('.w-list-sort button').first().click()
-      await sleep(300)
-      if ((await sortOn(page)) !== '자동') bad('자동 did not switch back')
-      const auto = await names(page)
-      if (auto.join('|') !== before.join('|')) bad(`자동 again: ${auto.join(', ')}; want ${before.join(', ')}`)
-      // 직접 by its button: the order on screen stays as it is
-      await page.locator('.w-list-sort button').nth(1).click()
-      await sleep(300)
-      if ((await names(page)).join('|') !== auto.join('|')) bad('switching to 직접 moved the rows')
       await app.ctx.close()
       // a new start with 직접 and a saved order: that order, and a session not in it on top
       const ids = await (async () => {
@@ -2834,10 +2828,9 @@ const FLOWS = {
       })()
       if (ids.some(x => !x)) throw new Error('rows carry no data-sid')
       const keep = [ids[2], ids[0], ids[3], ...ids.slice(4)] // ids[1] left out: a new one, on top
-      app = await openApp(browser, { settings: { session: { autoSort: false } }, local: { 'spawn-list-order': JSON.stringify(keep) } })
+      app = await openApp(browser, { local: { 'spawn-list-order': JSON.stringify(keep) } })
       const again = await app.page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => el.getAttribute('data-sid')))
       if (again.join('|') !== [ids[1], ...keep].join('|')) bad(`a new start in 직접: ${again.join(', ')}; want ${[ids[1], ...keep].join(', ')}`)
-      if ((await sortOn(app.page)) !== '직접') bad('a new start in 직접 shows 자동')
     } catch (err) { bad(String(err.message).split('\n')[0]) } finally { if (app) await app.ctx.close().catch(() => {}) }
     return problems
   },
@@ -4342,6 +4335,13 @@ const FLOWS = {
       await page.waitForSelector('.chat .chat-wild', { timeout: 15_000 })
       await page.evaluate(() => document.querySelector('.chat .chat-wild').closest('.chat-row').scrollIntoView({ block: 'center' }))
       await sleep(800)
+      // the box holds its Pokémon whole (not cut at its edges) and spans the conversation's width
+      const fit = await page.$eval('.chat .chat-wild', el => {
+        const b = el.getBoundingClientRect(), m = el.querySelector('.chat-wild-mon').getBoundingClientRect(), row = el.parentElement.getBoundingClientRect()
+        return { inside: m.top >= b.top && m.bottom <= b.bottom && m.left >= b.left, full: Math.abs(b.width - row.width) <= 1, box: Math.round(b.height), mon: Math.round(m.height), w: Math.round(b.width), rw: Math.round(row.width) }
+      })
+      if (!fit.inside) no(`the Pokémon (${fit.mon}px) does not fit in its box (${fit.box}px)`)
+      if (!fit.full) no(`the box is ${fit.w}px in a ${fit.rw}px row, want the full width`)
       const first = await wildRows(page)
       const shape = first.map(r => r.key.replace(/^wild:(\w+):\d+:(\d+)$/, '$1:$2'))
       if (shape.join(' ') !== 'catch:19 flee:147 catch:133') no(`the rows at load: ${JSON.stringify(shape)} (want the Rattata, the Dratini, the shiny Eevee; not the other session's Pidgey or the level-up)`)
