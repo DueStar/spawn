@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.10.8
+- 왼쪽 목록에서 세션을 끌면 잔상 없이 그 줄 자체가 손을 따라 움직여요. 다른 줄은 절반을 넘을 때 비켜나고, 놓으면 제자리로 쏙 들어가요. 오른쪽 화면으로 끌면 작은 세션 카드가 따라와요.
+- 채팅 그림을 누르면 앱 전체를 덮는 큰 화면으로 보여요. 함께 보낸 그림은 좌우 화살표나 ←/→ 키로 넘겨요.
+- 기록 화면에서 스크롤할 때 고정된 날짜 줄 위로 글이 비쳐 보이던 문제를 고쳤어요.
+
 ### 1.10.7
 - 왼쪽 목록에서 세션을 끌어 순서를 바꿀 때 노란 줄 대신, 끄는 줄이 절반을 넘으면 다른 줄이 부드럽게 비켜나요. 목록이 길어서 끄는 도중 스크롤돼도 자리가 맞아요.
 - 채팅에서 Claude가 읽거나 보낸 그림, 답에 적은 그림 경로가 작은 미리보기로 보여요. 누르면 크게 볼 수 있어요. 대화에 적힌 이 PC의 그림만 열고, 네트워크 경로는 열지 않아요.
@@ -518,6 +523,11 @@
 
 ## spawn (English)
 
+### 1.10.8
+- Dragging a session in the left list moves the row itself with your pointer, with no ghost image. The others step aside once it passes halfway, and it slides into place when you let go. Dragged onto the right side, a small session card follows the pointer.
+- Clicking a picture in the chat shows it large over the whole app. Pictures that came together go through with the side arrows or the ←/→ keys.
+- In the log, rows no longer show through above the pinned day line while scrolling.
+
 ### 1.10.7
 - Dragging a session in the left list no longer draws a yellow line: once the row passes halfway, the others slide smoothly out of its way. It keeps its place even when a long list scrolls mid-drag.
 - Pictures Claude reads or sends, and picture paths in its answers, show as small previews in the chat; click one to see it large. Only pictures on this PC that the conversation names are opened, never a network path.
@@ -893,6 +903,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.8
+- 左の一覧でセッションをドラッグすると、残像なしでその行そのものがポインタについて動きます。ほかの行は半分を越えると道をあけ、離すとその場所にすっと収まります。右側へドラッグすると小さなセッションカードがついてきます。
+- チャットの画像を押すと、アプリ全体をおおう大きな画面で表示されます。一緒に送られた画像は左右の矢印か ←/→ キーで切り替えます。
+- 記録画面でスクロールしたとき、固定された日付の行の上に文字が透けて見えていた問題を直しました。
 
 ### 1.10.7
 - 左の一覧でセッションをドラッグして並べ替えるとき、黄色い線の代わりに、行が半分を越えるとほかの行がなめらかに道をあけます。長い一覧がドラッグ中にスクロールしても位置がずれません。
