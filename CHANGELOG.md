@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.10.10
+- 앱을 다시 켜도 채팅에서 보낸 이미지가 "이미지 1개" 대신 그림으로 보여요. 대화 기록에 이미 있는 그림을, 그 메시지가 화면에 보일 때만 읽어 와요.
+- Claude가 보낸 HTML·PDF 같은 파일이 채팅에 칩으로 보이고, 누르면 열려요. 페이지·PDF·그림은 브라우저나 뷰어로 열리고, 실행될 수 있는 파일은 열지 않고 폴더에서 보여 줘요.
+
 ### 1.10.9
 - 채팅에서 보낸 이미지 미리보기를 크게(160×100) 보여 줘요. 전에는 아주 작아서 알아보기 어려웠어요. 입력란의 작은 칩은 그대로예요.
 
@@ -526,6 +530,10 @@
 
 ## spawn (English)
 
+### 1.10.10
+- Pictures you sent in the chat still show after the app restarts, instead of "1 image". They are read from the conversation's own record, only when that message is on screen.
+- Files Claude sends, like HTML or PDF, show as chips in the chat and open with a click. Pages, PDFs and pictures open in the browser or a viewer; anything that could run is never opened, only shown in its folder.
+
 ### 1.10.9
 - Pictures you send in the chat show as larger previews (160×100) over your message; they were too small to make out. The small chips in the input stay as they were.
 
@@ -909,6 +917,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.10
+- アプリを再起動しても、チャットで送った画像が「画像 1 件」ではなく画像のまま表示されます。会話の記録にある画像を、そのメッセージが画面に見えるときだけ読み込みます。
+- Claude が送った HTML や PDF などのファイルがチャットにチップで表示され、押すと開きます。ページ・PDF・画像はブラウザやビューアで開き、実行されうるファイルは開かずにフォルダで表示します。
 
 ### 1.10.9
 - チャットで送った画像のプレビューを大きく(160×100)表示します。以前は小さすぎて見分けにくかったです。入力欄の小さなチップはそのままです。
