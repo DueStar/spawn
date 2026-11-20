@@ -314,7 +314,8 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-lightbox { position: fixed; inset: 0; z-index: 8000; -webkit-app-region: no-drag; display: grid; place-items: center; background: rgba(6, 7, 10, 0.86); cursor: zoom-out; }
 .chat-lightbox figure { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 0; max-width: 92vw; }
 .chat-lightbox img { max-width: 92vw; max-height: 84vh; object-fit: contain; border-radius: var(--r-m); background: #fff; }
-.chat-lightbox figcaption { font-size: var(--t-ui); color: var(--ink-2); }
+/* (a portal on the body, outside .widget: the app's type, not the browser's serif) */
+.chat-lightbox figcaption { font-family: 'W Uncut', 'Uncut Sans Variable', 'W Pretendard', 'Pretendard Variable', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Hiragino Sans', system-ui, sans-serif; font-size: var(--t-ui); color: var(--ink-2); }
 .chat-lightbox-x { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: var(--r-s); background: var(--card); color: var(--ink-2); cursor: pointer; }
 .chat-lightbox-x:hover { color: var(--ink); border-color: var(--line-hover); }
 /* pictures that came together: one arrow on each side, the left one the right one turned */
