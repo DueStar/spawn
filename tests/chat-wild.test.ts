@@ -275,8 +275,10 @@ describe('the view: wild rows only outside 업무 모드, from the page\'s own g
 
   it('its look in chat-game.css; chat.css has none of it', () => {
     const game = read('src', 'styles', 'chat-game.css').replace(/\/\*[\s\S]*?\*\//g, '')
-    expect(game).toMatch(/\.chat-wild \{[^}]*display: flex;[^}]*align-items: center;[^}]*min-height: 34px;[^}]*font-size: var\(--t-ui\);[^}]*color: var\(--ink-3\);/)
-    expect(game).toMatch(/\.chat-wild-mon \{[^}]*width: 34px; height: 34px;/)
+    expect(game).toMatch(/\.chat-wild \{[^}]*display: flex;[^}]*align-items: center;[^}]*width: 100%;[^}]*min-height: 52px;[^}]*font-size: var\(--t-ui\);[^}]*color: var\(--ink-3\);/)
+    // (1.10.11) the box spans the conversation and holds its Pokémon whole
+    expect(game).toMatch(/\.chat-wild-mon \{[^}]*width: 40px; height: 40px;/)
+    expect(game).not.toMatch(/\.chat-wild-mon \{[^}]*margin: -/)
     expect(game).toMatch(/\.chat-wild b \{[^}]*color: var\(--ink-2\);[^}]*font-weight: var\(--w-name\);/)
     // the tag: a hairline, no fill (not the "now" style's filled yellow pill)
     const tag = /\.chat-wild-tag \{([^}]*)\}/.exec(game)
