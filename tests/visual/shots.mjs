@@ -350,7 +350,7 @@ const SURFACES = {
   // Density (seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the reference design's turn (each thinking
   // block a row: its time and 생각한 내용은 기록에 남지 않았어요, the one with text shown); 전부 over the chat conversation
   // (the read group, the outputs and the diff opened, as in the reference design)
-  'chat-pictures': { view: 'terminal', chat: 'chat-pictures', ready: '.chat .chat-pic img' },
+  'chat-pictures': { view: 'terminal', chat: 'chat-pictures', ready: '.chat .chat-shot img' },
   'chat-thinking': { view: 'terminal', chat: 'chat-thinking', local: { 'spawn-chat-density': 'thinking' }, ready: '.chat .chat-think',
     // (the turns of thinking.jsonl and the reference turn's thinking row above its answer in view)
     // (the list's own scroll only: scrollIntoView would also move the page when the list cannot scroll that far)
@@ -2617,6 +2617,40 @@ const FLOWS = {
 
   // the left list's order (src/sessionOrder.ts): 자동 / 직접 in the list's header, a row dragged within the
   // list goes where it is put (the other rows slide aside on the way) and turns 직접 on, Alt+↑/↓ moves one, the order is kept
+  // a list that scrolls while a row is dragged (twelve sessions): the slide still follows the row under the pointer
+  'session-order-scroll': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { twelve: true, size: [1100, 560] })
+      const { page } = app
+      await page.locator('.w-party .w-row').nth(5).waitFor({ timeout: 10_000 })
+      const dragAt = (type, row, y) => page.evaluate(([type, row, y]) => {
+        window.__DT__ = type === 'dragstart' ? new DataTransfer() : window.__DT__
+        const el = type === 'dragstart' || type === 'dragend' ? document.querySelectorAll('.w-party .w-row')[row] : document.querySelector('.w-party .w-rows')
+        el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: 80, clientY: y, dataTransfer: window.__DT__ }))
+      }, [type, row, y])
+      await dragAt('dragstart', 1, 0)
+      // the list scrolls 3 rows down (as Chromium scrolls a list a drag nears the edge of)
+      const step = await page.evaluate(() => { const r = document.querySelectorAll('.w-party .w-row'); return r[1].getBoundingClientRect().top - r[0].getBoundingClientRect().top })
+      await page.evaluate(s => { document.querySelector('.w-party').scrollTop += s }, step * 3)
+      await sleep(100)
+      // the pointer just above row 6's middle, as it now stands: the dragged row (1) would land before row 6
+      const y = await page.evaluate(() => { const b = document.querySelectorAll('.w-party .w-row')[6].getBoundingClientRect(); return b.top + 4 })
+      await dragAt('dragover', 1, y)
+      await sleep(300)
+      const moved = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => getComputedStyle(el).transform !== 'none'))
+      const want = moved.map((_, i) => i >= 1 && i <= 5)
+      if (moved.join() !== want.join()) bad(`after scrolling, rows moved: ${moved.map((m, i) => (m ? i : '')).filter(String).join(',')}; want 1–5`)
+      await dragAt('dragend', 1, 0)
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-order': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -4094,6 +4128,40 @@ const FLOWS = {
    * adds one row with `appear` (its picture's animation running; under reduced motion none); another session's catch
    * and a level-up add none. A reload shows them all, none with `appear`. 업무 모드: no .chat-wild, ever.
    */
+  // pictures Claude shows (src/chat/pictures.ts): each read once; a click shows it large from a URL of its own
+  // (the Lightbox's picture is decoded, and nothing is read again when the view changes)
+  'chat-pictures': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat-pictures' })
+      const { page } = app
+      await page.waitForSelector('.chat .chat-shot img', { timeout: 15_000 })
+      await sleep(400)
+      const reads = async () => page.evaluate(() => window.__CALLS__.filter(c => c.fn === 'chat.localImage').map(c => c.args[1]))
+      const first = await reads()
+      // one read per picture per row (connect-out.png is in two rows: sent, then named in the answer)
+      if (first.length !== 5) bad(`want 5 reads (one per picture per row), got ${first.length}: ${first.join(', ')}`)
+      if ((await page.locator('.chat .chat-shot img').count()) !== 4) bad(`want 4 thumbnails, got ${await page.locator('.chat .chat-shot img').count()}`)
+      if ((await page.locator('.chat .chat-shot-none').count()) !== 1) bad('the missing picture does not say so')
+      await page.locator('.chat .chat-shot').first().click()
+      await page.waitForSelector('.chat-lightbox img', { timeout: 5_000 })
+      await sleep(300)
+      const decoded = await page.$eval('.chat-lightbox img', img => img.complete && img.naturalWidth > 0)
+      if (!decoded) bad('the large picture did not load (its URL was revoked?)')
+      const after = await reads()
+      if (after.length !== first.length) bad(`opening it read pictures again: ${after.length - first.length} more`)
+      await page.keyboard.press('Escape')
+      await sleep(200)
+      if (await page.locator('.chat-lightbox').count()) bad('Esc did not close the large picture')
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'chat-wild': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)

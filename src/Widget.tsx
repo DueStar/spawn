@@ -563,9 +563,21 @@ const Widget: React.FC = () => {
   const setAutoSort = (on: boolean) => { if (on !== autoSort) void changeSettings({ session: { autoSort: on } }) }
   // A row dragged within the list: the rows as they stood when it was picked up, and where it
   // would land now (dropSlot). The others slide aside as it passes their middle (slideOffsets)
-  const [rowSlide, setRowSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; slot: number } | null>(null)
+  // (boxes: tops from the list's own top, so a list that scrolls mid-drag keeps its slots; order: the list
+  // as it stood, a drag ends its slide when the list changes under it)
+  const [rowSlide, setRowSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; slot: number; order: string } | null>(null)
+  const rowsRef = useRef<HTMLDivElement>(null)
   // the frame a drop is applied in: no transition, so the rows do not slide back from their offsets
   const [rowSettling, setRowSettling] = useState(false)
+  // a drag that ends where React does not hear it (its row went, the drop landed outside the window):
+  // the rows go back all the same
+  useEffect(() => {
+    if (!rowSlide) return
+    const end = () => { setRowSlide(null); setLifted(null); rowDragged.current = null }
+    window.addEventListener('dragend', end, true)
+    window.addEventListener('drop', end)
+    return () => { window.removeEventListener('dragend', end, true); window.removeEventListener('drop', end) }
+  }, [rowSlide !== null])
   const rowDragged = useRef<string | null>(null)
   const [lifted, setLifted] = useState<string | null>(null)
 
@@ -1312,7 +1324,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
-            <div className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
+            <div ref={rowsRef} className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
               // a row dragged within the list: the others slide aside as it passes their middle
               // (measured against the rows as they stood when it was picked up, so the slide never feeds back)
               onDragOver={e => {
@@ -1320,7 +1332,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
                 e.preventDefault()
                 e.dataTransfer.dropEffect = 'move'
-                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY)
+                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY - e.currentTarget.getBoundingClientRect().top)
                 if (slot !== rowSlide.slot) setRowSlide({ ...rowSlide, slot })
               }}
               // (left for good: the pointer outside the list's box; Chromium gives a drag's dragleave no relatedTarget):
@@ -1335,7 +1347,9 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 const sid = rowDragged.current
                 if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
                 e.preventDefault()
-                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY)
+                // a list that changed under the drag drops nothing (its slots were measured on the old one)
+                if (rowSlide.order !== listIds.join(' ')) { setRowSlide(null); return }
+                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY - e.currentTarget.getBoundingClientRect().top)
                 // the new order lands where the rows already slid to: no transition for that frame
                 setRowSettling(true)
                 setRowSlide(null)
@@ -1343,7 +1357,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
               }}>
             {(() => {
-              const slide = rowSlide ? slideOffsets(rowSlide.boxes, listIds.indexOf(rowSlide.sid), rowSlide.slot) : null
+              // (the list changed under the drag — a status re-sorted it, a session came or went: no slide, the rows stand)
+              const slide = rowSlide && rowSlide.order === listIds.join(' ') ? slideOffsets(rowSlide.boxes, listIds.indexOf(rowSlide.sid), rowSlide.slot) : null
               return listIds.map((sid, i) => {
               const r = rowById.get(sid)!
               const slideY = slide?.[i] ?? 0
@@ -1418,7 +1433,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   rowDragged.current = sid
                   setLifted(sid)
                   const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
-                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top, height: b!.height })), slot: i })
+                  const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
+                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' ') })
                 }}
                 onDragEnd={() => { setDropHint(null); setRowSlide(null); rowDragged.current = null; setLifted(null) }}
                 onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
