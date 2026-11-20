@@ -339,6 +339,20 @@ const SURFACES = {
   'chat-compose': { view: 'terminal', chat: 'chat', ready: '.chat-composer .chat-ichip + .chat-ichip', open: async page => composeDraft(page) },
   'chat-compose-fail': { view: 'terminal', chat: 'chat', ready: '.chat-cnote .chat-btn', open: async page => composeFail(page) },
   'chat-compose-pending': { view: 'terminal', chat: 'chat', ready: '.chat-user.pending.sending', open: async page => composePending(page) },
+  // a message sent with two pasted pictures: they show over its bubble, as large as Claude's pictures
+  'chat-compose-sent-pics': { view: 'terminal', chat: 'chat', ready: '.chat-user .chat-thumb img', open: async page => {
+    const id = await firstTerm(page)
+    await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
+    await screenTo(page, id, 'idle-empty')
+    await chatScript(page, { send: { ok: true }, submit: 'hang' })
+    await composerField(page).click()
+    await page.keyboard.type('이 두 화면 비교해 줘')
+    await pasteImage(page, 2)
+    await page.waitForSelector('.chat-ichip + .chat-ichip', { timeout: 3000 })
+    await page.keyboard.press('Enter')
+    await page.waitForSelector('.chat-user .chat-thumb img', { timeout: 5000 })
+    await sleep(300)
+  } },
   // The 변경 사항 panel: open (spawn-changes-open), changes.jsonl's index built by the real
   // electron/chatChanges.cjs (chatFixture.mjs changes()); the latest changed file (src/math.js: four edits, the third a
   // sub-agent's, the second two hunks 41 lines apart); the patchless edit of src/config.js; a conversation with no edit;
@@ -1057,10 +1071,12 @@ const FLOWS = {
         floor: [30, 34],
         why: 'narrower, so the folder and resume icons read as one pair beside 새로운 세션 시작하기',
       },
-      // the update button is an icon, the header's own 26 × 26, so the profile never shrinks
-      'update button': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
-      'update button (en)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
-      'update button (ja)': { floor: [26, 26], why: 'an icon button now (1.6.1), the size of the header\'s other icons' },
+      // the update button is an icon in the top bar (moved from the side header), made smaller on request in 1.10.1
+      'update button': { floor: [22, 22], why: 'an icon in the top bar, 22 like its other icons (smaller on request, 1.10.1)' },
+      'update button (en)': { floor: [22, 22], why: 'an icon in the top bar, 22 like its other icons (smaller on request, 1.10.1)' },
+      'update button (ja)': { floor: [22, 22], why: 'an icon in the top bar, 22 like its other icons (smaller on request, 1.10.1)' },
+      // a sent picture is shown, not hinted at: as large as the pictures Claude shows (160 × 100)
+      'composer thumbnail': { floor: [160, 100], why: 'a sent picture reads at a glance (was 34 × 22, the size of the chip in the input)' },
     }
     const NEW = ['list mode', 'list button', 'session header ×', 'text size', '간략 row ×',
       // the chat view
@@ -1096,7 +1112,7 @@ const FLOWS = {
       await take(page, 'widget toggle', '.w-widget-toggle')
       await take(page, 'header icon', '.w-side .w-head .w-icon')
       await take(page, 'header 로그인', '.w-side .w-head .w-signin')
-      await take(page, 'update button', '.w-side .w-head .w-update')
+      await take(page, 'update button', '.w-term-tabs .w-update')
       await take(page, 'launcher main', '.w-side .w-launch-main')
       await take(page, 'launcher side', '.w-side .w-launch-alt')
       await take(page, 'list mode', '.w-list-mode button', { hitAfter: true })
@@ -1125,8 +1141,8 @@ const FLOWS = {
         await take(app.page, `header 로그인 (${lang})`, '.w-side .w-head .w-signin')
         await app.ctx.close()
         app = await openApp(browser, { update, lang })
-        await app.page.waitForSelector('.w-side .w-head .w-update', { timeout: 10_000 })
-        await take(app.page, `update button (${lang})`, '.w-side .w-head .w-update')
+        await app.page.waitForSelector('.w-term-tabs .w-update', { timeout: 10_000 })
+        await take(app.page, `update button (${lang})`, '.w-term-tabs .w-update')
         await app.ctx.close()
       }
       app = await openApp(browser, { local: { 'spawn-side-hidden': '1' } })

@@ -265,7 +265,9 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chat-ichip { display: inline-flex; align-items: center; gap: 6px; height: 30px; max-width: 220px; padding: 0 4px 0 3px; box-sizing: border-box; border: 1px solid var(--line); border-radius: var(--r-s); font-size: var(--t-meta); color: var(--ink-2); }
 .chat-ichip-pic { flex: none; display: inline-flex; padding: 0; border: 0; border-radius: var(--r-xs); background: none; cursor: zoom-in; }
-.chat-ichip-pic img, .chat-thumb img { display: block; width: 34px; height: 22px; object-fit: cover; border-radius: var(--r-xs); background: #fff; }
+.chat-ichip-pic img { display: block; width: 34px; height: 22px; object-fit: cover; border-radius: var(--r-xs); background: #fff; }
+/* a sent picture, over its bubble: as large as the pictures Claude shows (the chip in the input stays small) */
+.chat-thumb img { display: block; width: 160px; height: 100px; object-fit: cover; object-position: top left; background: #fff; }
 .chat-ichip-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chat-ichip-x { flex: none; display: grid; place-items: center; width: 22px; height: 22px; padding: 0; border: 0; border-radius: var(--r-xs); background: none; color: var(--ink-3); cursor: pointer; }
 .chat-ichip-x:hover { color: var(--ink); background: var(--hover); }
@@ -306,7 +308,8 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-btn kbd { font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: var(--t-micro); color: inherit; opacity: 0.55; }
 /* a message sent from here: its pictures, and while the record does not show it yet, a quiet word */
 .chat-user-thumbs { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; }
-.chat-thumb { display: inline-flex; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-s); background: none; cursor: zoom-in; }
+.chat-thumb { display: inline-flex; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--r-m); background: none; cursor: zoom-in; }
+.chat-thumb:hover { border-color: var(--line-hover); }
 .chat-pending { display: inline-flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 2px 6px; font-size: var(--t-micro); color: var(--ink-3); }
 /* a picture shown large: over the view, nothing animates */
 /* over the whole window (a portal on the body), the top bar too: no-drag, so a click over the bar's
