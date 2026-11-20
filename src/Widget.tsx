@@ -1087,10 +1087,11 @@ const Widget: React.FC = () => {
   const doSwap = async (sessionId: string, uid: string) => {
     setSwapFor(null)
     if (!bridge) return
-    // Drawn as the new Pokémon at once; the server's update confirms it (or it goes back)
+    // Drawn as the new Pokémon at once; the server's update confirms it (or it goes back).
+    // A tab placing its first one waits for the server: a refusal leaves no picture to undo
     const before = monOf(sessionId)
     const next = dex?.mons?.[uid]
-    if (next) castSession(sessionId, next.dex, next.shiny)
+    if (next && before) castSession(sessionId, next.dex, next.shiny)
     const r = await bridge.game.swap(sessionId, uid)
     if (!r.ok) {
       if (before) castSession(sessionId, before.dex, before.shiny)

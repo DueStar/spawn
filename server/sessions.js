@@ -374,6 +374,15 @@ export function mountRegistry(app, {
   const aliasOf = new Map()
   /** @type {Map<string, string>} hooked session id -> the registry id its `registry` came from */
   const attachedFrom = new Map()
+  /**
+   * An alias stands while its tab is open and the entry comes from the tab's own
+   * process (or the tab has none yet): a tab that ended or went lets the process be
+   * listed as itself, and another process resuming that conversation is its own session.
+   */
+  const aliasHolds = (id, entry) => {
+    const tab = sessions.get(aliasOf.get(id))
+    return !!tab && tab.state !== 'ended' && (!tab.registry || tab.registry.pid === entry.pid)
+  }
   /** The active hooked session this process's registry entry already belongs to, if any */
   const hookedByPid = pid => {
     for (const s of sessions.values()) if (s.hooked !== false && s.state === 'active' && s.registry?.pid === pid) return s
@@ -409,6 +418,7 @@ export function mountRegistry(app, {
       seen.add(id)
       const prev = known.get(id)
       known.set(id, entry)
+      if (aliasOf.has(id) && !aliasHolds(id, entry)) aliasOf.delete(id)
       if (!aliasOf.has(id) && !sessions.has(id)) {
         const tab = hookedByPid(entry.pid)
         if (tab) {
@@ -560,7 +570,7 @@ export function mountRegistry(app, {
   function claim(registryId, sessionId, t = now()) {
     if (!registryId || registryId === sessionId || aliasOf.get(registryId) === sessionId) return
     const tab = sessions.get(sessionId)
-    if (!tab || tab.hooked === false) return
+    if (!tab || tab.hooked === false || tab.state === 'ended') return
     const ghost = sessions.get(registryId)
     if (ghost && ghost.hooked !== false) return // a tab of its own
     aliasOf.set(registryId, sessionId)

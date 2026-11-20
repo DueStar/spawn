@@ -800,3 +800,71 @@ describe('/clear in a spawn tab: the registry file takes the new conversation id
     expect(session(T)).not.toHaveProperty('registry')
   })
 })
+
+describe('aliases stay honest (review of the /clear fix)', () => {
+  let office: Office
+  let regDir: string
+  const reg = () => office.server.registry
+  const session = (id: string) => office.server.sessions.get(id)
+  const transcript = (id: string) => `/home/me/.claude/projects/spawn/${id}.jsonl`
+
+  beforeAll(async () => {
+    regDir = mkdtempSync(join(tmpdir(), 'claude-sessions-alias-'))
+    office = await loadServer({ env: { SPAWN_REGISTRY_DIR: regDir } })
+  })
+  afterAll(() => {
+    reg().stop()
+    removeServer(office)
+    try { rmSync(regDir, { recursive: true, force: true }) } catch {}
+  })
+
+  it('an alias whose tab is gone lets the process arrive once, not on every scan', async () => {
+    const TAB = '10101010-1111-4222-8333-444444444444'
+    const R = '20202020-1111-4222-8333-444444444444'
+    writeFileSync(join(regDir, `${process.ppid}.json`), JSON.stringify(entry({ pid: process.ppid, sessionId: R, cwd: '/home/me/spawn' })))
+    reg().scan()
+    await postEvent(office.server, { type: 'session_started', sessionId: TAB, project: 'spawn', cwd: '/home/me/spawn', source: 'resume', transcriptPath: transcript(R) })
+    expect(session(R)).toBeUndefined()
+    office.server.processEvent({ type: 'session_ended', sessionId: TAB, reason: 'terminal closed' })
+    office.server.sessions.delete(TAB) // forgotten, while its (orphaned) process lives on
+    reg().scan()
+    const first = session(R)
+    expect(first).toMatchObject({ hooked: false })
+    reg().scan()
+    reg().scan()
+    expect(session(R)).toBe(first) // the same record: no second arrival
+    unlinkSync(join(regDir, `${process.ppid}.json`))
+    reg().scan()
+  })
+
+  it('a claimed id never seen in the registry does not hide an outside terminal resuming it (another process)', async () => {
+    const TAB = '30303030-1111-4222-8333-444444444444'
+    const X = '40404040-1111-4222-8333-444444444444'
+    await postEvent(office.server, { type: 'session_started', sessionId: TAB, project: 'spawn', cwd: '/home/me/spawn', source: 'startup' })
+    writeFileSync(join(regDir, `${process.ppid}.json`), JSON.stringify(entry({ pid: process.ppid, sessionId: TAB, cwd: '/home/me/spawn', status: 'waiting' })))
+    reg().scan()
+    // hook first: /clear names X before any scan sees it
+    await postEvent(office.server, { type: 'session_started', sessionId: TAB, project: 'spawn', cwd: '/home/me/spawn', source: 'clear', transcriptPath: transcript(X) })
+    // X turns up from another process: `claude --resume X` outside spawn
+    writeFileSync(join(regDir, `${process.pid}.json`), JSON.stringify(entry({ pid: process.pid, sessionId: X, cwd: '/home/me/other', status: 'busy' })))
+    reg().scan()
+    expect(session(X)).toMatchObject({ hooked: false, state: 'active' })
+    expect(session(TAB).registry).toMatchObject({ pid: process.ppid, status: 'waiting' })
+    unlinkSync(join(regDir, `${process.pid}.json`))
+    unlinkSync(join(regDir, `${process.ppid}.json`))
+    reg().scan()
+  })
+
+  it('an ended tab claims nothing', async () => {
+    const TAB = '50505050-1111-4222-8333-444444444444'
+    const Y = '60606060-1111-4222-8333-444444444444'
+    await postEvent(office.server, { type: 'session_started', sessionId: TAB, project: 'spawn', cwd: '/home/me/spawn', source: 'startup' })
+    office.server.processEvent({ type: 'session_ended', sessionId: TAB, reason: 'other' })
+    writeFileSync(join(regDir, `${process.pid}.json`), JSON.stringify(entry({ pid: process.pid, sessionId: Y, cwd: '/home/me/other' })))
+    reg().scan()
+    reg().claim(Y, TAB)
+    expect(session(Y)).toMatchObject({ hooked: false, state: 'active' })
+    unlinkSync(join(regDir, `${process.pid}.json`))
+    reg().scan()
+  })
+})
