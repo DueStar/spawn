@@ -231,8 +231,35 @@ describe('pokedex', () => {
     expect(dex.swap('s1', elsewhere)).toEqual({ ok: false, reason: 'busy' })
     expect(dex.swap('s1', 'nope')).toEqual({ ok: false, reason: 'unknown-pokemon' })
     expect(dex.swap('s1', other)).toEqual({ ok: false, reason: 'same' })
-    expect(dex.swap('none', other)).toEqual({ ok: false, reason: 'no-pokemon' })
     expect(dex.publicState().box).toEqual(order)
+  })
+
+  it('places a resting Pokémon on an open session that has none (a sendout); refuses an ended session or a busy Pokémon', () => {
+    const open = new Set(['s1', 'empty'])
+    const { dex, sent } = setup([0], 0.99, (sid: string) => open.has(sid))
+    attended(dex)
+    dex.noteEvent({ type: 'session_started', sessionId: 's1' }, {})
+    const st0 = (dex as any)._state()
+    const busy = st0.assign.s1
+    const resting = st0.box.find((u: string) => u !== busy)
+    expect(resting).toBeTruthy()
+    expect(dex.swap('empty', busy)).toEqual({ ok: false, reason: 'busy' })
+    expect(dex.swap('gone', resting)).toEqual({ ok: false, reason: 'ended' })
+    sent.length = 0
+    expect(dex.swap('empty', resting)).toEqual({ ok: true })
+    expect(dex.publicState().assign.empty).toBe(resting)
+    expect(sent.at(-1).event).toMatchObject({ kind: 'sendout', sessionId: 'empty', uid: resting })
+    // it holds it: the next event keeps the same one
+    dex.noteEvent(work('empty'), {})
+    expect(dex.publicState().assign.empty).toBe(resting)
+  })
+
+  it('an unhooked session (Claude Code started outside spawn) is never given a Pokémon', () => {
+    const { dex } = setup([0])
+    attended(dex)
+    dex.noteEvent({ type: 'session_started', sessionId: 'outside' }, { hooked: false })
+    dex.noteEvent(work('outside'), { hooked: false })
+    expect(dex.publicState().assign.outside).toBeUndefined()
   })
 
   it('throws any resting Pokémon, and holds it', () => {

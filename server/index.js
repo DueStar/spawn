@@ -779,7 +779,9 @@ const pokedex = createPokedex({
   natures: (() => { const f = join(dirname(fileURLToPath(import.meta.url)), 'natures.json'); return existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) : [] })(),
   broadcast,
   // A session that ended hands its Pokémon back to rest
-  isActive: (sessionId) => { const s = sessions.get(sessionId); return !!s && s.state !== 'ended' },
+  // Open and the app's own (hooked): a session started outside spawn holds no Pokémon,
+  // not even one its id was given before
+  isActive: (sessionId) => { const s = sessions.get(sessionId); return !!s && s.state !== 'ended' && s.hooked !== false },
   onChange: game => cloud?.noteGameChanged(game),
   // Steps wait their turn (a burst of tool calls is met one step at a time), and
   // a working session with no tool call for a minute takes a thinking step

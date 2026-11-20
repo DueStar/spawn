@@ -1052,6 +1052,8 @@ ${agentId}`
       assignWaiting()
       save(); publish(null); return
     }
+    // Claude Code started outside spawn: listed, never given a Pokémon
+    if (session?.hooked === false) return
     // A subagent finished: its helper goes back to the box
     if (ev.type === 'agent_completed' && ev.agentId) {
       noteFinished(helperKey(sessionId, ev.agentId))
@@ -1111,8 +1113,8 @@ ${agentId}`
     const current = state.assign[sessionId]
     const cur = current && state.mons[current]
     const next = state.mons[uid]
-    if (!cur) return { ok: false, reason: 'no-pokemon' }
     if (!next || !state.box.includes(uid)) return { ok: false, reason: 'unknown-pokemon' }
+    if (!cur || !holding(sessionId)) return place(sessionId, uid)
     if (uid === current) return { ok: false, reason: 'same' }
     if (busyElsewhere(uid, sessionId)) return { ok: false, reason: 'busy' }
     state.assign[sessionId] = uid
@@ -1124,6 +1126,25 @@ ${agentId}`
     publish(event)
     // The one swapped out rests now: the oldest waiting session takes it
     if (assignWaiting()) save()
+    return { ok: true }
+  }
+
+  /**
+   * A session open without a Pokémon (none rested when it started, or it lost its
+   * own) gets `uid` by hand: a sendout, as when it starts with one.
+   */
+  function place(sessionId, uid) {
+    if (!isActive(sessionId)) return { ok: false, reason: 'ended' }
+    if (busyElsewhere(uid, sessionId)) return { ok: false, reason: 'busy' }
+    ensureTrainer()
+    const mon = state.mons[uid]
+    state.assign[sessionId] = uid
+    mon.outAt = now()
+    waiting.delete(sessionId)
+    const event = { kind: 'sendout', id: mon.dex, name: byId.get(mon.dex)?.ko, sessionId, uid, shiny: mon.shiny, at: now() }
+    pushLog(event)
+    save()
+    publish(event)
     return { ok: true }
   }
 
