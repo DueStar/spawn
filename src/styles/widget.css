@@ -264,8 +264,8 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-update { -webkit-app-region: no-drag; flex: none; width: 22px; height: 22px; padding: 0; display: inline-grid; place-items: center; border-radius: var(--r-s); border: 0; background: var(--accent); color: var(--accent-ink); cursor: pointer; }
 .w-update:hover:not(:disabled) { background: var(--accent-hover); }
 .w-update.downloading { opacity: 0.5; cursor: default; }
-/* downloaded: restart to apply, in words as well (a pill, not the square of 'one to get') */
-.w-update.ready { width: auto; padding: 0 7px 0 6px; gap: 3px; display: inline-flex; align-items: center; font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); line-height: 1; white-space: nowrap; }
+/* every state in words as well, a pill: 업데이트 · 받는 중 n% · 재시작 (an arrow alone read as 'download what?') */
+.w-update.available, .w-update.downloading, .w-update.ready { width: auto; padding: 0 7px 0 6px; gap: 3px; display: inline-flex; align-items: center; font: inherit; font-size: var(--t-meta); font-weight: var(--w-name); line-height: 1; white-space: nowrap; }
 .w-update.failed { background: none; box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--danger) 45%, transparent); color: var(--red-text); }
 .w-update.failed:hover { background: var(--hover); }
 .widget.expanded .w-term-tabs .w-update { align-self: center; margin-left: 4px; }

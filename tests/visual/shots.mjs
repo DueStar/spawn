@@ -2611,16 +2611,20 @@ const FLOWS = {
   'update-button': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
-    for (const status of ['available', 'ready']) {
+    for (const status of ['available', 'downloading', 'ready']) {
       let app
       try {
-        app = await openApp(browser, { update: { status, latest: '9.9.9' } })
+        app = await openApp(browser, { update: { status, latest: '9.9.9', progress: 0.4 } })
         const { page } = app
         const btn = page.locator('.w-term-tabs .w-update')
         await btn.waitFor({ timeout: 10_000 })
         const b = await btn.boundingBox()
         const icon = await page.locator('.w-term-tabs .w-widget-toggle').boundingBox()
         if (b && icon && b.height > icon.height + 1) bad(`${status}: the button is ${b.height}px tall, the bar's icons ${icon.height}px`)
+        // every state says what it is in words, not an icon alone (a bare download arrow read as 'download what?')
+        const want = { available: '업데이트', downloading: '받는 중 40%', ready: '재시작' }[status]
+        const said = (await btn.innerText()).trim()
+        if (said !== want) bad(`${status}: the button says ${JSON.stringify(said)}, want ${JSON.stringify(want)}`)
         if (opts?.out) {
           const bar = await page.locator('.w-term-tabs').boundingBox()
           await page.screenshot({ path: join(opts.out, `flow-update-${status}.png`), clip: { x: bar.x + bar.width - 420, y: bar.y, width: 420, height: bar.height }, animations: 'disabled' })

@@ -1190,9 +1190,10 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
         else if (update.status === 'ready') bridge?.update.restart()
       }}
     >
-      {/* an icon, so the header never squeezes the profile (1.6.1); the words are the tooltip's. A downloaded update
-          (ready) is told apart from one to get (they looked the same): a restart arrow and 재시작 */}
-      {update.status === 'ready' ? <><RestartIcon size={12} /><span className="w-update-word">{t('재시작')}</span></> : <UpdateIcon size={12} />}
+      {/* an icon and a word for every state: an arrow alone did not say what it would download (1.10.11) */}
+      {update.status === 'ready' ? <><RestartIcon size={12} /><span className="w-update-word">{t('재시작')}</span></>
+        : update.status === 'downloading' ? <><UpdateIcon size={12} /><span className="w-update-word">{t('받는 중 {pct}%', { pct: Math.round((update.progress ?? 0) * 100) })}</span></>
+        : <><UpdateIcon size={12} /><span className="w-update-word">{t('업데이트')}</span></>}
     </button>
   ) : null
 
