@@ -93,6 +93,18 @@
     // has a conversation or a session carrying the chat key, off otherwise (the 1.4.0 surfaces)
     features: { chatView: !!shot.chat || terminals.some(t => t.chat !== undefined) },
     chat: {
+      // a picture the conversation names: drawn here (a missing one, 'gone', cannot be read)
+      localImage: (id, path) => {
+        record('chat.localImage', [id, path])
+        if (/gone/.test(path)) return Promise.resolve({ ok: false, reason: 'missing' })
+        const c = new OffscreenCanvas(640, 400)
+        const g = c.getContext('2d')
+        const hue = [...path].reduce((a, ch) => a + ch.charCodeAt(0), 0) % 360
+        g.fillStyle = `hsl(${hue} 30% 16%)`; g.fillRect(0, 0, 640, 400)
+        g.fillStyle = `hsl(${hue} 60% 70%)`; g.fillRect(40, 40, 560, 60)
+        g.fillStyle = '#d7dae3'; g.font = '28px sans-serif'; g.fillText(path.split(/[\/]/).pop(), 48, 160)
+        return c.convertToBlob({ type: 'image/png' }).then(b => b.arrayBuffer()).then(buf => ({ ok: true, type: 'image/png', bytes: new Uint8Array(buf) }))
+      },
       open: (id) => {
         record('chat.open', [id])
         if (chatOpts.openFails) return Promise.resolve(typeof chatOpts.openFails === 'string' ? { ok: false, reason: chatOpts.openFails } : { ok: false })

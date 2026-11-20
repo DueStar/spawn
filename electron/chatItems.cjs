@@ -24,7 +24,7 @@
  * @typedef {'running' | 'done' | 'failed' | 'rejected' | 'interrupted' | 'unknown'} ToolState
  * @typedef {{ file?: string, command?: string, description?: string, pattern?: string, path?: string, url?: string,
  *   query?: string, question?: string, options?: string[], plan?: string, todos?: { done: number, total: number },
- *   agentType?: string, background?: true, server?: string, mcpTool?: string }} ToolInput
+ *   agentType?: string, background?: true, server?: string, mcpTool?: string, files?: string[] }} ToolInput
  * @typedef {{ text: string, lines: number, truncated: boolean, error: boolean }} ToolOutput
  * @typedef {{ t: '+' | '-' | ' ', old: number | null, new: number | null, text: string }} DiffLine
  * @typedef {{ oldStart: number, newStart: number, lines: DiffLine[] }} DiffHunk
@@ -125,6 +125,11 @@ function toolInput(name, input, cwd, caps = CAPS) {
       return clean({ plan: str(input.plan, caps.plan) })
     case 'TodoWrite':
       return Array.isArray(input.todos) ? { todos: { done: input.todos.filter(t => isObj(t) && t.status === 'completed').length, total: input.todos.length } } : {}
+    // the files Claude sent the user: their paths (the chat shows the pictures among them)
+    case 'SendUserFile': {
+      const files = Array.isArray(input.files) ? input.files.filter(x => typeof x === 'string' && x).slice(0, 6).map(f) : []
+      return files.length ? { files } : {}
+    }
     default: {
       const m = typeof name === 'string' ? /^mcp__(.+?)__(.+)$/.exec(name) : null
       return m ? { server: cut(m[1], caps.field), mcpTool: cut(m[2], caps.field) } : {}

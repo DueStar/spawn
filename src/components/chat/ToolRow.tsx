@@ -16,6 +16,8 @@ import { initialOpen } from '../../chat/density'
 import type { TextItem, ToolItem } from '../../chat/types'
 import { ChevIcon, ToolGlyph } from './ChatIcons'
 import { useChatContext, useRowOpen } from './context'
+import { Pictures } from './Pictures'
+import { picturePaths } from '../../chat/pictures'
 import { Markdown } from './Markdown'
 import { DiffBlock } from './DiffBlock'
 import { AgentGroup } from './AgentGroup'
@@ -93,6 +95,7 @@ export const ToolRow: React.FC<{ item: ToolItem }> = ({ item }) => {
       {planBlocks && (
         <div className="chat-tool-body chat-plan chat-prose"><Markdown blocks={planBlocks} onLink={ctx.onLink} onPath={ctx.onPath} /></div>
       )}
+      <Pictures paths={picturePaths(item)} />
       {foldable && open && out && (
         <div className="chat-tool-body">
           <pre className="chat-tool-out" tabIndex={0} aria-label={label}>{out.text}</pre>

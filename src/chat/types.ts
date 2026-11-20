@@ -34,6 +34,7 @@ export interface ToolInput {   // a whitelisted, capped excerpt — never the wh
   query?: string; question?: string; options?: string[]; plan?: string; todos?: { done: number; total: number }
   agentType?: string; background?: true                 // Agent / Task: run_in_background
   server?: string; mcpTool?: string
+  files?: string[]                                       // SendUserFile: the files it sent (paths)
 }
 export interface ToolOutput { text: string; lines: number; truncated: boolean; error: boolean }
 /** `truncated`: a line or the block's text was cut (a minified file, a long line); the counts are still whole */

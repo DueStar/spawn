@@ -426,6 +426,8 @@ const CONVERSATIONS = {
   'chat-find-long': () => ({ items: findLongItems(), status: status({ hasOlder: true }) }),
   // density: thinking blocks with what the record holds of them (shown from 생각 포함)
   'chat-thinking': () => ({ items: thinkingItems(), status: status() }),
+  // pictures Claude shows: a Read of a picture, files it sent, a path in its answer (one gone)
+  'chat-pictures': () => ({ items: build(timed(lineObjs('pictures.jsonl'), minutes(3))), status: status() }),
   'chat-tools': () => ({ items: build(timed(lineObjs('tools.jsonl'), minutes(6))), status: status() }),
   'chat-diff': () => ({ items: build(workTurn(minutes(6)).slice(0, 3)), status: status() }),
   'chat-failed': () => ({ items: build([...workTurn(minutes(12)).slice(0, 7), ...timed(lineObjs('interrupt.jsonl'), minutes(4))]), status: status() }),

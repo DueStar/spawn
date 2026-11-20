@@ -23,6 +23,8 @@ import '../styles/chat.css'
 import '../styles/chat-game.css'
 import type { TerminalInfo } from '../desktop'
 import { bridge } from '../desktop'
+import { Pictures } from './chat/Pictures'
+import { picturePaths } from '../chat/pictures'
 import { josa, locale, t, useLang } from '../i18n'
 import { buildRows, footCopies, type Row } from '../chat/rows'
 import { sameEntries, wildEntries, wildWindow, type WildEntry } from '../chat/wild'
@@ -153,6 +155,7 @@ const TextRow: React.FC<{ item: TextItem; copy?: boolean }> = ({ item, copy = tr
   return (
     <div className="chat-prose chat-text">
       <Markdown blocks={blocks} onLink={onLink} onPath={onPath} afterBlock={afterBlock} />
+      {!item.partial && <Pictures paths={picturePaths(item)} />}
       {item.partial && <p className="chat-stopped">{t('(멈춤)')}</p>}
       {item.truncated && <p className="chat-cut">{t('글이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={t('답 전체')} /></p>}
       {/* the whole answer as its markdown (a selection across rows the list unmounted would lose its start);
@@ -528,6 +531,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     onLink: openUrlFromChat,
     onPath: (file, line, col) => openFileFromChat(id, file, line, col),
     loadAgent: toolId => (fixed ? Promise.resolve({ ok: true }) : bridge?.chat.agent(id, toolId) ?? Promise.resolve({ ok: false })),
+    // a picture the conversation names (electron/chatPictures.cjs); none on the QA page
+    loadPicture: fixed || !bridge?.chat.localImage ? undefined : (p: string) => bridge!.chat.localImage!(id, p).then(r => (r.ok ? { type: r.type, bytes: r.bytes } : null)),
     waitingAgents: agentsKey ? agentsKey.split(',') : [],
     openImage,
     lightbox: !!shown,

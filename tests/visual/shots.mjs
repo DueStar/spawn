@@ -350,6 +350,7 @@ const SURFACES = {
   // Density (seeded spawn-chat-density): 생각 포함 over thinking.jsonl and the reference design's turn (each thinking
   // block a row: its time and 생각한 내용은 기록에 남지 않았어요, the one with text shown); 전부 over the chat conversation
   // (the read group, the outputs and the diff opened, as in the reference design)
+  'chat-pictures': { view: 'terminal', chat: 'chat-pictures', ready: '.chat .chat-pic img' },
   'chat-thinking': { view: 'terminal', chat: 'chat-thinking', local: { 'spawn-chat-density': 'thinking' }, ready: '.chat .chat-think',
     // (the turns of thinking.jsonl and the reference turn's thinking row above its answer in view)
     // (the list's own scroll only: scrollIntoView would also move the page when the list cannot scroll that far)

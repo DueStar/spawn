@@ -2014,7 +2014,11 @@ function createLens({
   async function picture(id, p) {
     const t = terms.get(id)
     if (!t || !t.items) return { ok: false, reason: 'gone' }
-    return readPicture(fs.promises, { path: p, named: (x) => namedIn(t.items.values(), x) })
+    // a Read inside the session's folder is listed relative to it (chatItems relFile): resolved there,
+    // and named as the item wrote it
+    const asked = typeof p === 'string' ? p : ''
+    const abs = asked && !path.isAbsolute(asked) && t.cwd ? path.resolve(t.cwd, asked) : asked
+    return readPicture(fs.promises, { path: abs, named: () => namedIn(t.items.values(), asked) })
   }
 
   /** Every queued read finished (tests; an orderly stop) */
