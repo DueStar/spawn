@@ -13,6 +13,9 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 }
 
 /* The design values live in tokens.css (on :root). */
+/* One focus ring for every control the keyboard reaches: 2px, the second ink. A control with no rule of its own
+   fell back to the browser's two-colour ring (dark and light, read as white and yellow beside the app's) */
+:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
 .widget {
   height: 100vh;
   display: flex;
@@ -164,7 +167,7 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-row.chosen .w-row-name { color: var(--ink); }
 /* Focused from the keyboard: a hairline ring in the quiet grey (no yellow; a click shows none) */
 .w-row:focus { outline: none; }
-.w-row:focus-visible { outline: 1px solid var(--ink-3); outline-offset: -1px; }
+.w-row:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
 .w-row-project { color: var(--ink-3); font-size: var(--t-meta); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* The status: a dot and grey words, no fill */
 .w-pill { display: inline-flex; align-items: center; gap: 5px; font-size: var(--t-meta); font-weight: var(--w-body); padding: 0; border-radius: 0; background: none; color: var(--ink-3); white-space: nowrap; }
@@ -316,7 +319,7 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
    focus does not count (:focus-visible), so the mouse sees exactly what it did */
 .w-rows.compact .w-row:is(:focus-visible, :has(.w-row-close:focus-visible)) .w-row-state > .w-pill { display: none; }
 .w-rows.compact .w-row:is(:focus-visible, :has(.w-row-close:focus-visible)) .w-row-state > .w-row-close { display: inline-grid; place-items: center; }
-.w-rows.compact .w-row-close:focus-visible { outline: 1px solid var(--ink-3); outline-offset: -1px; }
+.w-rows.compact .w-row-close:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
 /* an ended session, dimmed as the rail does (its dot alone looks like 쉬는 중) */
 .w-rows.compact .w-row.mood-ended { opacity: 0.45; }
 /* the × a 22px target; the negative margins keep the line as it was (the dot's 14px slot, the 20px line) */

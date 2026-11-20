@@ -80,7 +80,7 @@
   color: var(--ink-3); font: inherit; font-size: var(--t-ui); cursor: pointer;
 }
 .fb-spot-acts button:hover { background: var(--hover); color: var(--ink); }
-.fb-spot-btn:focus-visible, .fb-spot-acts button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fb-spot-btn:focus-visible, .fb-spot-acts button:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
 /* The screenshot: a hairline box, not a fill */
 .fb-shot { display: block; margin-top: 6px; padding: 8px; border-radius: var(--r-m); background: none; border: 1px solid var(--line); cursor: pointer; font-size: var(--t-ui); color: var(--ink-2); }
 .fb-shot img { display: block; width: 100%; height: 120px; object-fit: contain; border-radius: var(--r-s); background: var(--bg); border: 1px solid var(--line); }
@@ -101,7 +101,7 @@
 /* The one to press: solid --ink (yellow is for send in the session view) */
 .fb-btn.primary { background: var(--ink); border-color: transparent; color: var(--accent-ink); }
 .fb-btn.primary:hover { background: var(--ink); filter: brightness(1.08); }
-.fb-btn:focus-visible, .fb-kind:focus-visible, .fb-x:focus-visible, .fb-bar-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.fb-btn:focus-visible, .fb-kind:focus-visible, .fb-x:focus-visible, .fb-bar-btn:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 2px; }
 
 .fb-msg { margin-top: 8px; font-size: var(--t-ui); line-height: 1.45; }
 .fb-msg.ok { color: var(--green); }

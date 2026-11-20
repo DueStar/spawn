@@ -2670,6 +2670,44 @@ const FLOWS = {
     }
     return problems
   },
+  // one focus ring everywhere: Tab through the window and read each stop's ring (outline and any ring-like shadow)
+  'focus-rings': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat' })
+      const { page } = app
+      await page.waitForSelector('.chat .chat-row, .chat .chat-empty', { timeout: 15_000 })
+      await page.mouse.click(5, 300)
+      const seen = new Map()
+      for (let i = 0; i < 70; i++) {
+        await page.keyboard.press('Tab')
+        const r = await page.evaluate(() => {
+          const el = document.activeElement
+          if (!el || el === document.body) return null
+          // (a text field shows its caret; the panel's edge shows its own bar: no ring needed there)
+          if (el.matches('input, textarea, .w-side-resize')) return null
+          const cs = getComputedStyle(el)
+          const name = `${el.tagName.toLowerCase()}.${[...el.classList].slice(0, 2).join('.')}`
+          const ring = cs.outlineStyle === 'none' || cs.outlineWidth === '0px' ? 'none' : `${cs.outlineStyle} ${cs.outlineWidth} ${cs.outlineColor}`
+          return { name, ring, shadow: cs.boxShadow }
+        })
+        if (r && !seen.has(r.name)) seen.set(r.name, r)
+      }
+      const rings = new Map()
+      for (const r of seen.values()) { const k = r.ring; if (!rings.has(k)) rings.set(k, []); rings.get(k).push(r.name) }
+      for (const [k, v] of rings) console.log(`   ${k.padEnd(36)} ${v.length}: ${v.slice(0, 6).join(', ')}`)
+      if (rings.size !== 1) bad(`${rings.size} different focus rings: ${[...rings.keys()].join(' | ')}`)
+      if (rings.has('none')) bad(`no visible ring on: ${rings.get('none').join(', ')}`)
+      if ([...rings.keys()].some(k => k.startsWith('auto'))) bad(`the browser's own two-colour ring on: ${[...rings].filter(([k]) => k.startsWith('auto')).flatMap(([, v]) => v).join(', ')}`)
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-order-scroll': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)

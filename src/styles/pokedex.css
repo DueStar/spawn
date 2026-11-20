@@ -120,7 +120,7 @@
 .dex-cell.unknown { background: var(--unknown-bg); }
 .dex-cell:hover { background: var(--mon-bg-hover); }
 .dex-cell.picked { box-shadow: inset 0 0 0 1px var(--accent); }
-.dex-cell:focus-visible { outline: 2px solid #ffd84a; outline-offset: 1px; }
+.dex-cell:focus-visible { outline: 2px solid var(--ink-2); outline-offset: 1px; }
 .dex-q { color: var(--q-ink); font-weight: var(--w-name); font-size: 14px; }
 .dex-q.big { font-size: 48px; }
 .dex-no { position: absolute; left: 6px; top: 4px; font-size: var(--t-micro); color: var(--ink-3); opacity: 0.8; font-variant-numeric: tabular-nums; }
