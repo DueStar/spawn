@@ -278,8 +278,11 @@ describe('the chat view on a Mac', () => {
     const css = readFileSync(join(ROOT, 'src/styles/chat.css'), 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     expect(css).toMatch(/\.chat button\s*\{[^}]*-webkit-app-region:\s*no-drag/)
     expect(css).not.toMatch(/-webkit-app-region:\s*drag/)
-    // the view lives in the terminal's place (below the session bar), not in the window's top corner
-    expect(css).not.toMatch(/position:\s*fixed/)
+    // the view lives in the terminal's place (below the session bar), not in the window's top corner; the
+    // one exception, the picture viewer over the whole window, is no-drag (a click there closes it, never drags)
+    const fixed = [...css.matchAll(/([^{}]+)\{([^}]*position:\s*fixed[^}]*)\}/g)]
+    expect(fixed.map(m => m[1].trim())).toEqual(['.chat-lightbox'])
+    expect(fixed[0][2]).toMatch(/-webkit-app-region:\s*no-drag/)
     const widget = readFileSync(join(ROOT, 'src/Widget.tsx'), 'utf8')
     expect(widget).toMatch(/<div className="w-term-body"[^]*?<div className="w-chat-pane">/)
   })
