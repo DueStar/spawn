@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.10.6
+- /clear를 하거나 이어하기로 연 세션에서 포켓몬이 빠지던 문제를 고쳤어요. 탭 하나가 왼쪽 목록에 세션 두 개로 보이던 것도 하나로 보여요.
+- 포켓몬이 없는 세션(박스보다 세션을 많이 열었거나 포켓몬이 빠진 세션)에 나중에 포켓몬을 넣을 수 있어요. 세션 줄의 "포켓몬 넣기" 버튼을 누르고 고르면 돼요.
+- spawn 밖에서 연 Claude Code 세션은 목록에만 보이고 포켓몬을 데려가지 않아요.
+
 ### 1.10.5
 - 채팅 보기가 기본이 됐어요. 이전에 꺼져 있던 경우도 한 번 켜지고, 그다음부터는 설정 › 세션 › 채팅으로 보기에서 고른 대로 따라요.
 - 채팅에서 일하는 보조 에이전트가 입력란 위에 칩으로 보이고, 누르면 오른쪽에서 그 에이전트가 하는 일을 실시간으로 볼 수 있어요. 끝난 에이전트도 "열어 보기"로 열려요.
@@ -509,6 +514,11 @@
 
 ## spawn (English)
 
+### 1.10.6
+- Fixed a session losing its Pokémon after /clear, or when it was opened with Resume. One tab no longer shows as two sessions in the left list.
+- A session without a Pokémon (more sessions open than Pokémon in the box, or one that lost its own) can get one later: press "Add a Pokémon" on its row and pick one.
+- Claude Code sessions started outside spawn are only listed; they never take a Pokémon.
+
 ### 1.10.5
 - The chat view is now the default. If it was off, it is turned on once; after that, Settings › Sessions › View sessions as chat decides.
 - Working sub-agents show as chips above the chat box; click one to follow its work live in a side panel. Finished ones open with "Open".
@@ -875,6 +885,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.6
+- /clear した後や「続きから」で開いたセッションからポケモンがいなくなる問題を直しました。1つのタブが左の一覧に2つのセッションとして見えていたのも1つになります。
+- ポケモンのいないセッション(ボックスのポケモンより多くセッションを開いた、またはポケモンがいなくなったセッション)に、あとからポケモンを入れられます。セッション行の「ポケモンを入れる」を押して選んでください。
+- spawn の外で開いた Claude Code のセッションは一覧に出るだけで、ポケモンを連れて行きません。
 
 ### 1.10.5
 - チャット表示が既定になりました。オフだった場合も一度オンになり、その後は 設定 › セッション › セッションをチャットで表示 の選択に従います。
