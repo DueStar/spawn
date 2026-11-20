@@ -490,6 +490,10 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 /* a file in a sent message: the badge, inline */
 .chat-fref { display: inline-flex; align-items: center; gap: 4px; margin: 0 1px; padding: 0 6px; border-radius: var(--r-xs); background: rgba(255, 255, 255, 0.06); color: var(--ink); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-weight: var(--w-mono); font-size: calc(var(--t-code) - 1px); line-height: 1.6; vertical-align: baseline; white-space: nowrap; }
 .chat-fref svg { flex: none; color: var(--ink-3); }
+/* the files Claude sent: chips that open with a click */
+.chat-sent-files { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+.chat-sent-file { padding: 3px 8px; border: 1px solid var(--line); background: none; color: var(--ink); cursor: pointer; }
+.chat-sent-file:hover { border-color: var(--line-hover); background: rgba(255, 255, 255, 0.04); }
 /* the next-prompt suggestion is the placeholder: Tab (or →) takes it */
 .chat-sugg-key { flex: none; margin-left: auto; padding: 0 5px; border: 1px solid var(--line); border-radius: var(--r-xs); font: inherit; font-size: var(--t-micro); line-height: 16px; color: var(--ink-3); }
 .chat-sugg-key + .chat-send { margin-left: 6px; }

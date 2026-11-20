@@ -32,8 +32,13 @@ function vscodeUrl(abs, { scheme = 'vscode', platform = process.platform } = {})
  * answers vscode:// or cursor:// (at its line), else shown in its folder. Never the default app:
  * from the chat a click must not run a script (.cmd, .bat, .ps1, .js, .sh …), and the prose that
  * names a file can be steered by what Claude read. (A terminal's Ctrl+click keeps its own way.)
+ * The one exception: a page, a PDF or a picture named without a line is opened to be looked at, in
+ * its default app (the browser, a viewer), as a Ctrl+click on one does — nothing on this list runs.
  */
+const VIEW_ONLY = new Set(['.html', '.htm', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'])
 function chatOpenPlan(abs, { line, col, hasScheme, platform = process.platform } = {}) {
+  const ext = (platform === 'win32' ? path.win32 : path.posix).extname(String(abs)).toLowerCase()
+  if (!(Number(line) > 0) && VIEW_ONLY.has(ext)) return { view: abs }
   const at = `${Number(line) > 0 ? `:${Math.floor(Number(line))}` : ''}${Number(line) > 0 && Number(col) > 0 ? `:${Math.floor(Number(col))}` : ''}`
   for (const scheme of ['vscode', 'cursor']) {
     if (hasScheme?.(scheme)) return { url: `${vscodeUrl(abs, { scheme, platform })}${at}` }
@@ -55,14 +60,15 @@ const isRemotePath = (p) => typeof p === 'string' && /^[\\/]{2}/.test(p)
  * UNC or device path, also once resolved against the session's folder), then a regular file
  * that exists, opened as chatOpenPlan says. Never runs it. Resolves true when something opened.
  */
-async function openFromChat(term, file, { line, col, hasScheme, openExternal, showItemInFolder, statSync = require('node:fs').statSync, platform = process.platform, home } = {}) {
+async function openFromChat(term, file, { line, col, hasScheme, openExternal, showItemInFolder, openView = async () => false, statSync = require('node:fs').statSync, platform = process.platform, home } = {}) {
   if (!term || typeof file !== 'string' || !file || file.length > 1024 || file.includes('\0')) return false
   if (isRemotePath(file)) return false
   const abs = resolveRef(term.cwd, file, { platform, ...(home ? { home } : {}) })
   if (isRemotePath(abs)) return false
   try { if (!statSync(abs).isFile()) return false } catch { return false }
   const plan = chatOpenPlan(abs, { line, col, hasScheme, platform })
-  if (plan.url) await openExternal(plan.url)
+  if (plan.view) { if (!(await openView(abs))) showItemInFolder(abs) }
+  else if (plan.url) await openExternal(plan.url)
   else showItemInFolder(abs)
   return true
 }

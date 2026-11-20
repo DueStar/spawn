@@ -250,6 +250,17 @@ describe('I7: a path chip in the chat never runs a file', () => {
     expect(chatOpenPlan(abs, { hasScheme: (s: string) => s === 'cursor', platform: 'win32' })).toEqual({ url: vscodeUrl(abs, { scheme: 'cursor', platform: 'win32' }) })
     expect(chatOpenPlan(abs, { line: 3, hasScheme: () => false, platform: 'win32' })).toEqual({ folder: abs })
   })
+  it('a page, a PDF or a picture (no line) opens to be looked at, in its default app; nothing that runs ever does', () => {
+    const at = (f: string) => ['C:', 'Users', 'user', 'work', 'demo', f].join(String.fromCharCode(92))
+    for (const f of ['report.html', 'page.HTM', 'doc.pdf', 'shot.png', 'a.jpg', 'b.jpeg', 'c.gif', 'd.webp']) {
+      expect(chatOpenPlan(at(f), { hasScheme: (s: string) => s === 'vscode', platform: 'win32' }), f).toEqual({ view: at(f) })
+    }
+    // with a line it is code to read: the editor
+    expect(chatOpenPlan(at('report.html'), { line: 4, hasScheme: (s: string) => s === 'vscode', platform: 'win32' })).toEqual({ url: `${vscodeUrl(at('report.html'), { platform: 'win32' })}:4` })
+    for (const f of ['setup.cmd', 'run.bat', 'x.ps1', 'a.js', 'a.exe', 'a.lnk', 'a.url', 'a.svg', 'a.hta', 'a.html.cmd', 'a.vbs', 'a.msi']) {
+      expect(chatOpenPlan(at(f), { hasScheme: () => false, platform: 'win32' }), f).toEqual({ folder: at(f) })
+    }
+  })
   it('main: a chat-origin call takes that way before anything else, and calls no shell.openPath', () => {
     const main = read('electron', 'main.cjs')
     const at = main.indexOf("ipcMain.handle('terminals:open-path'")
@@ -260,7 +271,9 @@ describe('I7: a path chip in the chat never runs a file', () => {
     expect(body.indexOf("if (from === 'chat')")).toBeLessThan(body.indexOf('fs.statSync'))
     expect(chat).toMatch(/return openFromChat\(term, file, \{/)
     expect(chat).toMatch(/shell\.showItemInFolder\(abs\)/)
-    expect(chat).not.toMatch(/shell\.openPath|statSync|resolveRef/)
+    // (the default app only through openView, which links.cjs calls for a page, a PDF or a picture alone)
+    expect(chat).toMatch(/openView: \(abs\) => shell\.openPath\(abs\)/)
+    expect(chat.replace(/openView: \(abs\) => shell\.openPath\(abs\)/, '')).not.toMatch(/shell\.openPath|statSync|resolveRef/)
     expect(body).toContain(`    if (!term || typeof file !== 'string' || file.length > 1024) return false
     const abs = resolveRef(term.cwd, file)
     try { if (!fs.statSync(abs).isFile()) return false } catch { return false }

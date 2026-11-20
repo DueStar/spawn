@@ -218,7 +218,7 @@
       move: (id, index) => { record('move', [id, index]); return Promise.resolve(true) },
       pathForFile: () => '',
       openUrl: () => Promise.resolve(),
-      openPath: () => Promise.resolve(false),
+      openPath: (...args) => { record('terminals.openPath', args); return Promise.resolve(false) },
       onData: (fn) => { dataListeners.add(fn); return () => dataListeners.delete(fn) },
       onList: off,
     },

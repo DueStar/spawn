@@ -1299,7 +1299,7 @@ function registerTerminalIpc() {
     // from the chat view: its own checks before any file system call (no UNC or device path is ever
     // looked up), then the code editor, else the file shown in its folder; never run (links.cjs openFromChat)
     if (from === 'chat') {
-      return openFromChat(term, file, { line, col, hasScheme: (scheme) => !!app.getApplicationNameForProtocol(`${scheme}://`), openExternal: (url) => shell.openExternal(url), showItemInFolder: (abs) => shell.showItemInFolder(abs) })
+      return openFromChat(term, file, { line, col, hasScheme: (scheme) => !!app.getApplicationNameForProtocol(`${scheme}://`), openExternal: (url) => shell.openExternal(url), showItemInFolder: (abs) => shell.showItemInFolder(abs), openView: (abs) => shell.openPath(abs).then(err => err === '') })
     }
     if (!term || typeof file !== 'string' || file.length > 1024) return false
     const abs = resolveRef(term.cwd, file)

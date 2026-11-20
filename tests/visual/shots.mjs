@@ -4213,6 +4213,16 @@ const FLOWS = {
       const userReads = await page.evaluate(() => window.__CALLS__.filter(c => c.fn === 'chat.userImage').map(c => c.args[2]))
       if (userReads.join() !== '0,1') bad(`its pictures were read ${JSON.stringify(userReads)}, want [0,1] once each`)
       if (await page.locator('.chat-user .chat-img-chip').count()) bad('the past message still says "이미지 n" instead of showing them')
+      // a page Claude sent: a chip under its row, a click asks main to open it from the chat
+      const chip = page.locator('.chat .chat-sent-file')
+      if ((await chip.count()) !== 1 || !(await chip.first().innerText()).includes('report.html')) bad(`want one report.html chip, got ${await chip.count()}`)
+      else {
+        await chip.first().click()
+        await sleep(150)
+        const opened = await page.evaluate(() => window.__CALLS__.filter(c => c.fn === 'terminals.openPath').map(c => [c.args[1], c.args[4] && c.args[4].from]))
+        const want = ['C:', 'Users', 'user', 'work', 'demo', 'report.html'].join(String.fromCharCode(92))
+        if (JSON.stringify(opened.at(-1)) !== JSON.stringify([want, 'chat'])) bad(`the chip opened ${JSON.stringify(opened)}`)
+      }
       const first = await reads()
       // one read per picture per row (connect-out.png is in two rows: sent, then named in the answer)
       if (first.length !== 5) bad(`want 5 reads (one per picture per row), got ${first.length}: ${first.join(', ')}`)

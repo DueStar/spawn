@@ -32,4 +32,11 @@ export const FileRef: React.FC<{ path: string }> = ({ path }) => (
   <span className="chat-fref" title={path}><FileIcon size={12} /><span>{baseName(path)}</span></span>
 )
 
+/** A file Claude sent: a button that opens it (a page, a PDF or a picture in its viewer; else the editor or its folder) */
+export const SentFile: React.FC<{ path: string; onOpen(path: string): void }> = ({ path, onOpen }) => (
+  <button type="button" className="chat-fref chat-sent-file" title={`${path} · ${t('눌러서 열기')}`} onClick={() => onOpen(path)}>
+    <FileIcon size={12} /><span>{baseName(path)}</span>
+  </button>
+)
+
 export default FileChips
