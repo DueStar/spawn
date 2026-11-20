@@ -130,10 +130,14 @@ export function dropSlot(mids: readonly number[], y: number): number {
  * passed step aside by its height and the gap, and the dragged row's place moves to where it
  * would land. `boxes` are the rows as they stood when the drag began (top down); `slot` is
  * dropSlot's. Over its own place (slot from or from + 1) nothing moves.
+ * `follow`: the pointer's travel since pickup — the dragged row is drawn there (it moves with the
+ * pointer, the others slide); without it the dragged row's offset is where it would land.
  */
-export function slideOffsets(boxes: readonly { top: number; height: number }[], from: number, slot: number): number[] {
+export function slideOffsets(boxes: readonly { top: number; height: number }[], from: number, slot: number, follow?: number): number[] {
   const out = boxes.map(() => 0)
-  if (from < 0 || from >= boxes.length || slot === from || slot === from + 1) return out
+  if (from < 0 || from >= boxes.length) return out
+  if (follow !== undefined) out[from] = follow
+  if (slot === from || slot === from + 1) return out
   const own = boxes[from]
   const next = boxes[from + 1]
   const prev = boxes[from - 1]
@@ -141,11 +145,11 @@ export function slideOffsets(boxes: readonly { top: number; height: number }[], 
   const step = own.height + gap
   if (slot < from) {
     for (let i = slot; i < from; i++) out[i] = step
-    out[from] = boxes[slot].top - own.top
+    if (follow === undefined) out[from] = boxes[slot].top - own.top
   } else {
     const to = Math.min(boxes.length, slot) - 1
     for (let i = from + 1; i <= to; i++) out[i] = -step
-    out[from] = boxes[to].top + boxes[to].height - (own.top + own.height)
+    if (follow === undefined) out[from] = boxes[to].top + boxes[to].height - (own.top + own.height)
   }
   return out
 }

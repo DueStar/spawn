@@ -128,3 +128,15 @@ describe('slideOffsets: the rows slide aside while one is dragged (no insertion 
     expect(slideOffsets(boxes, -1, 0)).toEqual([0, 0, 0, 0])
   })
 })
+
+describe('slideOffsets with the pointer: the dragged row itself follows it, only the others slide', () => {
+  const boxes = [0, 44, 88, 132].map(top => ({ top, height: 40 }))
+  it('the dragged row is where the pointer took it, the rows it passed step aside', () => {
+    expect(slideOffsets(boxes, 3, 0, -120)).toEqual([44, 44, 44, -120])
+    expect(slideOffsets(boxes, 0, 4, 100)).toEqual([100, -44, -44, -44])
+  })
+  it('over its own place: only the dragged row moves, with the pointer', () => {
+    expect(slideOffsets(boxes, 1, 1, 10)).toEqual([0, 10, 0, 0])
+    expect(slideOffsets(boxes, 1, 2, -8)).toEqual([0, -8, 0, 0])
+  })
+})

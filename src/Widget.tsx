@@ -107,6 +107,9 @@ function moodOf(s: SessionInfo | undefined, t: TerminalInfo | undefined): Mood {
 /** A pending /rename is tried again at most this often (1.6.2: each try reads the terminal's last lines) */
 const RENAME_RETRY_MS = 1000
 
+/** A transparent picture for a list row's drag: the row itself moves, no picture of it under the pointer */
+const BLANK_DRAG: HTMLImageElement | null = typeof Image === 'undefined' ? null : Object.assign(new Image(), { src: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' })
+
 const PREREQ_LABEL = {
   claude: { name: 'Claude Code', why: '포켓몬이 일할 Claude 세션' },
   git: { name: 'Git for Windows', why: 'Claude Code가 쓰는 Git Bash' },
@@ -547,6 +550,9 @@ const Widget: React.FC = () => {
     if (rows.length && keepOrder(listIds, manualRef.current).join('\n') !== (manualRef.current ?? []).join('\n')) saveManual(keepOrder(listIds, manualRef.current))
   }
   const rowById = new Map(rows.map(r => [r.sessionId, r]))
+  // (the list as drawn now, for the drag's window listener)
+  const listIdsRef = useRef<string[]>([])
+  listIdsRef.current = listIds
   // A row dragged within the list (or moved with Alt+↑/↓) goes where it was put, and the list is 직접 정렬 from then
   // on; dragged onto the right side it opens beside (the drop there: SESSION_MIME)
   const reorderRow = (sid: string, slot: number) => {
@@ -565,7 +571,27 @@ const Widget: React.FC = () => {
   // would land now (dropSlot). The others slide aside as it passes their middle (slideOffsets)
   // (boxes: tops from the list's own top, so a list that scrolls mid-drag keeps its slots; order: the list
   // as it stood, a drag ends its slide when the list changes under it)
-  const [rowSlide, setRowSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; slot: number; order: string } | null>(null)
+  // (startY / y: the pointer from the list's top at pickup and now — the row itself follows it; out: the
+  // pointer is off the list, over the window, where a small card follows it instead)
+  const [rowSlide, setRowSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; slot: number; order: string; startY: number; y: number; out: { x: number; y: number } | null } | null>(null)
+  // a drop: the dragged row glides from where it was let go into its place (FLIP, after the new order is drawn)
+  const rowSettle = useRef<{ sid: string; top: number } | null>(null)
+  useLayoutEffect(() => {
+    const s = rowSettle.current
+    if (!s) return
+    rowSettle.current = null
+    const el = rowEls.current.get(s.sid)
+    if (!el || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    const dy = s.top - el.getBoundingClientRect().top
+    if (Math.abs(dy) < 1) return
+    el.style.transition = 'none'
+    el.style.transform = `translateY(${dy}px)`
+    void el.offsetHeight
+    el.style.transition = 'transform 160ms cubic-bezier(0.2, 0, 0, 1)'
+    el.style.transform = ''
+    const done = () => { el.style.transition = ''; el.removeEventListener('transitionend', done) }
+    el.addEventListener('transitionend', done)
+  })
   const rowsRef = useRef<HTMLDivElement>(null)
   // the frame a drop is applied in: no transition, so the rows do not slide back from their offsets
   const [rowSettling, setRowSettling] = useState(false)
@@ -574,9 +600,32 @@ const Widget: React.FC = () => {
   useEffect(() => {
     if (!rowSlide) return
     const end = () => { setRowSlide(null); setLifted(null); rowDragged.current = null }
+    // the pointer, wherever it is in the window: on the list the row follows it and the slot is taken
+    // from it; off the list the row goes home and the card follows (one update a frame)
+    let frame = 0
+    let last: DragEvent | null = null
+    const over = (e: DragEvent) => {
+      last = e
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        const ev = last
+        const list = rowsRef.current?.getBoundingClientRect()
+        if (!ev || !list) return
+        const inside = ev.clientX >= list.left && ev.clientX < list.right && ev.clientY >= list.top - 4 && ev.clientY < list.bottom + 4
+        setRowSlide(cur => {
+          if (!cur) return cur
+          if (!inside) return { ...cur, slot: listIdsRef.current.indexOf(cur.sid), out: { x: ev.clientX, y: ev.clientY } }
+          const y = ev.clientY - list.top
+          const slot = dropSlot(cur.boxes.map(b => b.top + b.height / 2), y)
+          return cur.y === y && cur.slot === slot && !cur.out ? cur : { ...cur, y, slot, out: null }
+        })
+      })
+    }
+    window.addEventListener('dragover', over)
     window.addEventListener('dragend', end, true)
     window.addEventListener('drop', end)
-    return () => { window.removeEventListener('dragend', end, true); window.removeEventListener('drop', end) }
+    return () => { cancelAnimationFrame(frame); window.removeEventListener('dragover', over); window.removeEventListener('dragend', end, true); window.removeEventListener('drop', end) }
   }, [rowSlide !== null])
   const rowDragged = useRef<string | null>(null)
   const [lifted, setLifted] = useState<string | null>(null)
@@ -1332,16 +1381,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
                 e.preventDefault()
                 e.dataTransfer.dropEffect = 'move'
-                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY - e.currentTarget.getBoundingClientRect().top)
-                if (slot !== rowSlide.slot) setRowSlide({ ...rowSlide, slot })
-              }}
-              // (left for good: the pointer outside the list's box; Chromium gives a drag's dragleave no relatedTarget):
-              // the rows go back to their places
-              onDragLeave={e => {
-                const b = e.currentTarget.getBoundingClientRect()
-                if (!rowSlide || !(e.clientX < b.left || e.clientX >= b.right || e.clientY < b.top - 4 || e.clientY >= b.bottom + 4)) return
-                const from = listIds.indexOf(rowSlide.sid)
-                if (rowSlide.slot !== from) setRowSlide({ ...rowSlide, slot: from })
+                // (where the row goes is followed from the window's dragover, on and off the list)
               }}
               onDrop={e => {
                 const sid = rowDragged.current
@@ -1350,15 +1390,37 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 // a list that changed under the drag drops nothing (its slots were measured on the old one)
                 if (rowSlide.order !== listIds.join(' ')) { setRowSlide(null); return }
                 const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY - e.currentTarget.getBoundingClientRect().top)
-                // the new order lands where the rows already slid to: no transition for that frame
+                // the new order lands where the rows already slid to: no transition for that frame; the dragged
+                // row glides from where it was let go into its place (rowSettle, after the new order is drawn)
+                const el = rowEls.current.get(sid)
+                if (el) rowSettle.current = { sid, top: el.getBoundingClientRect().top }
                 setRowSettling(true)
                 setRowSlide(null)
                 reorderRow(sid, slot)
                 requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
               }}>
+            {/* off the list (over the panes on the right), a small card of the session follows the pointer */}
+            {rowSlide?.out && (() => {
+              const d = rowById.get(rowSlide.sid)
+              if (!d) return null
+              return (
+                <div className="w-drag-card" style={{ left: rowSlide.out.x + 14, top: rowSlide.out.y + 10 }} aria-hidden="true">
+                  {workMode || noPokemon(d) || d.shell ? <TerminalIcon size={14} /> : <img src={d.sprite} alt="" />}
+                  <span>{d.title || d.name || d.project}</span>
+                </div>
+              )
+            })()}
             {(() => {
               // (the list changed under the drag — a status re-sorted it, a session came or went: no slide, the rows stand)
-              const slide = rowSlide && rowSlide.order === listIds.join(' ') ? slideOffsets(rowSlide.boxes, listIds.indexOf(rowSlide.sid), rowSlide.slot) : null
+              const slide = rowSlide && rowSlide.order === listIds.join(' ') ? (() => {
+                const from = listIds.indexOf(rowSlide.sid)
+                const own = rowSlide.boxes[from]
+                const first = rowSlide.boxes[0]
+                const last = rowSlide.boxes[rowSlide.boxes.length - 1]
+                // the row moves with the pointer, kept inside the list; off the list it goes home
+                const follow = rowSlide.out || !own ? 0 : Math.max(first.top - own.top, Math.min(last.top + last.height - own.top - own.height, rowSlide.y - rowSlide.startY))
+                return slideOffsets(rowSlide.boxes, from, rowSlide.slot, follow)
+              })() : null
               return listIds.map((sid, i) => {
               const r = rowById.get(sid)!
               const slideY = slide?.[i] ?? 0
@@ -1422,7 +1484,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 ref={el => { if (el) rowEls.current.set(sid, el); else rowEls.current.delete(sid) }}
                 data-sid={sid}
                 style={slideY ? { transform: `translateY(${slideY}px)` } : undefined}
-                className={`w-row${lifted === sid ? ' lifted' : ''} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
+                className={`w-row${lifted === sid ? ` lifted${rowSlide?.out ? ' home' : ''}` : ''} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
                 // dragged onto the right side, or Ctrl+clicked: the session opens in a pane of its own;
                 // dragged within the list: it goes where it is put (the order is manual from then on)
                 draggable={!!r.terminal && renaming?.id !== r.sessionId}
@@ -1430,11 +1492,16 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                   if (!r.terminal) return
                   e.dataTransfer.setData(SESSION_MIME, r.sessionId)
                   e.dataTransfer.effectAllowed = 'copyMove'
+                  // no picture of the row under the pointer: the row itself moves (and, off the list, a card)
+                  if (BLANK_DRAG) e.dataTransfer.setDragImage(BLANK_DRAG, 0, 0)
                   rowDragged.current = sid
                   setLifted(sid)
                   const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
                   const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
-                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' ') })
+                  const own = boxes[i]
+                  // (a synthetic drag may carry no pointer: the row's own middle)
+                  const startY = e.clientY ? e.clientY - top0 : own ? own.top + own.height / 2 - top0 : 0
+                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' '), startY, y: startY, out: null })
                 }}
                 onDragEnd={() => { setDropHint(null); setRowSlide(null); rowDragged.current = null; setLifted(null) }}
                 onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
