@@ -29,7 +29,7 @@ const { createItemBuilder, toolInput, CAPS, LIVE_BASE, LIVE_ORDER, unwrapPasted,
 const { createTail } = require('./chatTail.cjs')
 const { CHANGE_CAPS, createChangeIndex, scanChanges, readEdit, hashOf } = require('./chatChanges.cjs')
 const { errWord } = require('./chatLog.cjs')
-const { readFull } = require('./chatFull.cjs')
+const { readFull, readUserImage } = require('./chatFull.cjs')
 const { readPicture, namedIn, askedPath } = require('./chatPictures.cjs')
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -2010,6 +2010,21 @@ function createLens({
     return readFull(fs.promises, t.path, item)
   }
 
+  /**
+   * chat:user-image — a picture the user sent with a message, read again from its transcript line when
+   * its row is drawn (so it shows after a restart too), only while the transcript is the one the items came from
+   */
+  async function userImage(id, itemId, index) {
+    const t = terms.get(id)
+    if (!t || !t.path || !t.tail || typeof itemId !== 'string') return { ok: false, reason: 'gone' }
+    const item = t.items.get(itemId)
+    if (!item) return { ok: false, reason: 'unknown' }
+    let intact = false
+    try { intact = await t.tail.verify() } catch { intact = false }
+    if (!intact) return { ok: false, reason: 'gone' }
+    return readUserImage(fs.promises, t.path, item, index)
+  }
+
   /** chat:local-image — a picture this session's items name (chatPictures.cjs), for its thumbnail */
   async function picture(id, p) {
     const t = terms.get(id)
@@ -2083,7 +2098,7 @@ function createLens({
     return false
   }
 
-  return { setTerminals, hook, holdState, open, close, older, reload, resync, agent, changes, changeFile, full, picture, idle, dispose, sizes, setVersion, linkInView }
+  return { setTerminals, hook, holdState, open, close, older, reload, resync, agent, changes, changeFile, full, picture, userImage, idle, dispose, sizes, setVersion, linkInView }
 }
 
 module.exports = { createLens, conversationOf, terminalFor, transcriptAllowed, findTranscript, liveMatches, LIVE_BASE, LIVE_ORDER }

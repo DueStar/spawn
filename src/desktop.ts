@@ -110,6 +110,8 @@ interface spawnBridge {
     full(id: string, itemId: string): Promise<{ ok: true; text: string; truncated: boolean; md: boolean } | { ok: false; reason: 'gone' | 'unknown' | 'none' }>
     /** A picture this conversation names (electron/chatPictures.cjs), for its thumbnail */
     localImage?(id: string, path: string): Promise<{ ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: 'type' | 'unnamed' | 'missing' | 'size' | 'gone' }>
+    /** A picture the user sent with a message, read again from its transcript line (electron/chatFull.cjs readUserImage) */
+    userImage?(id: string, itemId: string, index: number): Promise<{ ok: true; type: string; bytes: Uint8Array } | { ok: false; reason: 'unknown' | 'gone' | 'type' | 'size' }>
     /** The changes panel: every file this conversation changed (the worker's index of the whole transcript) */
     changes(id: string): Promise<{ ok: true; summary: ChangeSummary; files: ChangeFile[]; agentsUnread: number } | { ok: false }>
     /** One file's edits, newest last (at most 20 with their diffs, read again from the transcript); `more` older ones */

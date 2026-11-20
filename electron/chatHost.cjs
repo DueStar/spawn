@@ -1108,6 +1108,8 @@ function createChatHost({
     ipcMain.handle('chat:changes', guard((id) => request('changes', { id: idOf(id) }, { ok: false })))
     // "전체 보기": an item read again whole from the transcript, in place of "see the terminal"
     // a picture the conversation names, for its thumbnail (chatPictures.cjs: picture types, named by the items, 8 MB)
+    // a picture the user sent, read again from its message's transcript line (chatFull.cjs readUserImage)
+    ipcMain.handle('chat:user-image', guard((arg) => request('user-image', { id: idOf(arg?.id), itemId: String(arg?.itemId ?? '').slice(0, 200), index: Number.isInteger(arg?.index) ? arg.index : -1 }, { ok: false, reason: 'gone' })))
     ipcMain.handle('chat:local-image', guard((arg) => request('picture', { id: idOf(arg?.id), path: String(arg?.path ?? '').slice(0, 1024) }, { ok: false, reason: 'gone' })))
     ipcMain.handle('chat:full', guard((arg) => request('full', { id: idOf(arg?.id), itemId: String(arg?.itemId ?? '').slice(0, 200) }, { ok: false, reason: 'gone' })))
     ipcMain.handle('chat:change-file', guard((arg) => request('change-file', {

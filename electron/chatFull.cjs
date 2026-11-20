@@ -107,4 +107,28 @@ async function readFull(fs, file, item) {
   }
 }
 
-module.exports = { FULL_CAPS, lineAt, lineAfter, readFull }
+const PICTURE_MEDIA = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
+const PICTURE_MAX = 8 * 1024 * 1024
+
+/**
+ * A picture the user sent with a message, read again from that message's transcript line (its
+ * `order`) when the row is drawn: the n-th image block, decoded. Only a user message of the main
+ * thread, only a picture type, at most maxBytes. { ok, type, bytes } or { ok: false, reason }.
+ */
+async function readUserImage(fs, file, item, index, maxBytes = PICTURE_MAX) {
+  if (!isObj(item) || item.kind !== 'user' || item.parent || typeof item.order !== 'number' || item.order < 0) return { ok: false, reason: 'unknown' }
+  if (!Number.isInteger(index) || index < 0) return { ok: false, reason: 'unknown' }
+  let obj = null
+  try { obj = JSON.parse(await lineAt(fs, file, Math.floor(item.order)) ?? '') } catch { return { ok: false, reason: 'gone' } }
+  const content = obj?.message?.content
+  const pics = Array.isArray(content) ? content.filter(b => isObj(b) && b.type === 'image' && isObj(b.source)) : []
+  const block = pics[index]
+  if (!block) return { ok: false, reason: 'gone' }
+  const { type, media_type: media, data } = block.source
+  if (type !== 'base64' || typeof data !== 'string' || !PICTURE_MEDIA.has(media)) return { ok: false, reason: 'type' }
+  // (base64: 4 characters per 3 bytes, checked before decoding)
+  if (Math.floor(data.length * 3 / 4) > maxBytes) return { ok: false, reason: 'size' }
+  return { ok: true, type: media, bytes: new Uint8Array(Buffer.from(data, 'base64')) }
+}
+
+module.exports = { FULL_CAPS, lineAt, lineAfter, readFull, readUserImage }

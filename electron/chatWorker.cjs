@@ -158,6 +158,7 @@ parentPort.on('message', async (m) => {
     // "전체 보기": one item read again whole
     case 'full': reply(m, lens ? await lens.full(m.id, m.itemId) : { ok: false, reason: 'gone' }); return
     case 'picture': reply(m, lens ? await lens.picture(m.id, m.path) : { ok: false, reason: 'gone' }); return
+    case 'user-image': reply(m, lens ? await lens.userImage(m.id, m.itemId, m.index) : { ok: false, reason: 'gone' }); return
     // link previews (only while main says they are on)
     case 'preview': await preview(m); return
     case 'previews': setPreviews(m.on === true); return

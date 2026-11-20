@@ -502,6 +502,9 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   // is the same, so a thumbnail is read once, not again with every change of the view; none on the QA page
   const loadPicture = useMemo(() => (fixed || !bridge?.chat.localImage ? undefined
     : (p: string) => bridge!.chat.localImage!(id, p).then(r => (r.ok ? { type: r.type, bytes: r.bytes } : null))), [id, fixed])
+  // a picture the user sent, read again from its message's transcript line (the same function for the session)
+  const loadUserImage = useMemo(() => (fixed || !bridge?.chat.userImage ? undefined
+    : (itemId: string, index: number) => bridge!.chat.userImage!(id, itemId, index).then(r => (r.ok ? { type: r.type, bytes: r.bytes } : null))), [id, fixed])
   // "전체 보기": one item read again whole (bridge.chat.full), shown over the view until closed
   const [full, setFull] = useState<FullState | null>(null)
   const openFull = useCallback((itemId: string, title: string) => {
@@ -542,6 +545,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     loadAgent: toolId => (fixed ? Promise.resolve({ ok: true }) : bridge?.chat.agent(id, toolId) ?? Promise.resolve({ ok: false })),
     // a picture the conversation names (electron/chatPictures.cjs); none on the QA page
     loadPicture,
+    loadUserImage,
     waitingAgents: agentsKey ? agentsKey.split(',') : [],
     openImage,
     openImages,
@@ -557,7 +561,7 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
     previews,
     openAgent,
     agentShown,
-  }), [id, onTerminal, fixed, loadPicture, agentsKey, openImage, openImages, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
+  }), [id, onTerminal, fixed, loadPicture, loadUserImage, agentsKey, openImage, openImages, shown, openFull, thumbs, cardHere, onChanges, density, workMode, ledger, game, wildNew, wildPlayed, previews, openAgent, agentShown])
   const banner = status?.banner ?? null
   const reload = () => { if (!fixed) chatStore.reload(id) }
   const older = () => (fixed ? undefined : bridge?.chat.older(id))

@@ -94,6 +94,15 @@
     features: { chatView: !!shot.chat || terminals.some(t => t.chat !== undefined) },
     chat: {
       // a picture the conversation names: drawn here (a missing one, 'gone', cannot be read)
+      // a picture the user sent, read again from its message (drawn here: the message and its place)
+      userImage: (id, itemId, index) => {
+        record('chat.userImage', [id, itemId, index])
+        const c = new OffscreenCanvas(1600, 1000)
+        const g = c.getContext('2d')
+        g.fillStyle = index ? '#24344d' : '#3a2433'; g.fillRect(0, 0, 1600, 1000)
+        g.fillStyle = '#d7dae3'; g.font = '72px sans-serif'; g.fillText(`sent picture ${index + 1}`, 96, 320)
+        return c.convertToBlob({ type: 'image/png' }).then(b => b.arrayBuffer()).then(buf => ({ ok: true, type: 'image/png', bytes: new Uint8Array(buf) }))
+      },
       localImage: (id, path) => {
         record('chat.localImage', [id, path])
         if (/gone/.test(path)) return Promise.resolve({ ok: false, reason: 'missing' })

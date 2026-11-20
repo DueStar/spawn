@@ -24,6 +24,8 @@ export interface ChatContextValue {
   openImage?(url: string, caption: string, from: HTMLElement | null): void
   /** Pictures that came together shown large, from `index` (← / → go through them); owned: URLs made for the viewer, revoked when it closes */
   openImages?(images: { url: string; caption: string }[], index: number, from: HTMLElement | null, owned?: boolean): void
+  /** A picture the user sent with a message (its n-th), read again from its transcript line; absent: none here */
+  loadUserImage?(itemId: string, index: number): Promise<{ type: string; bytes: Uint8Array } | null>
   /** A picture the conversation names, read for its thumbnail (null: it cannot be); absent: none here */
   loadPicture?(path: string): Promise<{ type: string; bytes: Uint8Array } | null>
   /** Whether an image is shown large now */

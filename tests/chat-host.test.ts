@@ -275,7 +275,7 @@ describe('IPC', () => {
     await s.host.enable()
     const ipc = fakeIpc()
     s.host.registerIpc(ipc.ipcMain, ipc.guard)
-    expect([...ipc.handlers.keys()].sort()).toEqual(['chat:agent', 'chat:answer', 'chat:change-file', 'chat:changes', 'chat:close', 'chat:commands', 'chat:cycle-mode', 'chat:diag', 'chat:dialog-key', 'chat:files', 'chat:full', 'chat:image', 'chat:image-drop', 'chat:interrupt', 'chat:local-image', 'chat:older', 'chat:open', 'chat:preview', 'chat:redraw', 'chat:reload', 'chat:resync', 'chat:send', 'chat:stranded', 'chat:submit', 'chat:visible'])
+    expect([...ipc.handlers.keys()].sort()).toEqual(['chat:agent', 'chat:answer', 'chat:change-file', 'chat:changes', 'chat:close', 'chat:commands', 'chat:cycle-mode', 'chat:diag', 'chat:dialog-key', 'chat:files', 'chat:full', 'chat:image', 'chat:image-drop', 'chat:interrupt', 'chat:local-image', 'chat:older', 'chat:open', 'chat:preview', 'chat:redraw', 'chat:reload', 'chat:resync', 'chat:send', 'chat:stranded', 'chat:submit', 'chat:user-image', 'chat:visible'])
     const before = s.workers[0].posted.length
     expect(await ipc.call('chat:open', 's1')).toEqual({ ok: false, reason: 'not-claude' })
     expect(await ipc.call('chat:open', 'nope')).toEqual({ ok: false, reason: 'not-claude' })
