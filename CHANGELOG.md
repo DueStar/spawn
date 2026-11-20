@@ -2,6 +2,9 @@
 
 ## spawn
 
+### 1.10.9
+- 채팅에서 보낸 이미지 미리보기를 크게(160×100) 보여 줘요. 전에는 아주 작아서 알아보기 어려웠어요. 입력란의 작은 칩은 그대로예요.
+
 ### 1.10.8
 - 왼쪽 목록에서 세션을 끌면 잔상 없이 그 줄 자체가 손을 따라 움직여요. 다른 줄은 절반을 넘을 때 비켜나고, 놓으면 제자리로 쏙 들어가요. 오른쪽 화면으로 끌면 작은 세션 카드가 따라와요.
 - 채팅 그림을 누르면 앱 전체를 덮는 큰 화면으로 보여요. 함께 보낸 그림은 좌우 화살표나 ←/→ 키로 넘겨요.
@@ -523,6 +526,9 @@
 
 ## spawn (English)
 
+### 1.10.9
+- Pictures you send in the chat show as larger previews (160×100) over your message; they were too small to make out. The small chips in the input stay as they were.
+
 ### 1.10.8
 - Dragging a session in the left list moves the row itself with your pointer, with no ghost image. The others step aside once it passes halfway, and it slides into place when you let go. Dragged onto the right side, a small session card follows the pointer.
 - Clicking a picture in the chat shows it large over the whole app. Pictures that came together go through with the side arrows or the ←/→ keys.
@@ -903,6 +909,9 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.9
+- チャットで送った画像のプレビューを大きく(160×100)表示します。以前は小さすぎて見分けにくかったです。入力欄の小さなチップはそのままです。
 
 ### 1.10.8
 - 左の一覧でセッションをドラッグすると、残像なしでその行そのものがポインタについて動きます。ほかの行は半分を越えると道をあけ、離すとその場所にすっと収まります。右側へドラッグすると小さなセッションカードがついてきます。
