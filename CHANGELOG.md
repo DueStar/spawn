@@ -2,6 +2,13 @@
 
 ## spawn
 
+### 1.10.11
+- 채팅에서 일하는 포켓몬 뒤의 후광을 없앴어요. 통통 튀는 움직임은 그대로예요.
+- 업데이트 버튼이 언제나 글자로 상태를 알려 줘요: 업데이트 · 받는 중 n% · 재시작.
+- 키보드로 이동할 때 보이는 테두리가 어디서나 같은 한 가지로 통일됐어요.
+- 왼쪽 목록의 자동/직접 스위치를 없앴어요. 순서는 끌어 놓은 그대로 유지되고 새 세션은 맨 위에 와요. 자동 정렬은 설정 › 세션에서 켤 수 있어요. 끌 때 복사·금지 표시가 더 이상 뜨지 않아요.
+- 포켓몬을 잡거나 놓친 상자가 대화 너비를 꽉 채우고, 포켓몬이 상자 안에 온전히 들어가요.
+
 ### 1.10.10
 - 앱을 다시 켜도 채팅에서 보낸 이미지가 "이미지 1개" 대신 그림으로 보여요. 대화 기록에 이미 있는 그림을, 그 메시지가 화면에 보일 때만 읽어 와요.
 - Claude가 보낸 HTML·PDF 같은 파일이 채팅에 칩으로 보이고, 누르면 열려요. 페이지·PDF·그림은 브라우저나 뷰어로 열리고, 실행될 수 있는 파일은 열지 않고 폴더에서 보여 줘요.
@@ -530,6 +537,13 @@
 
 ## spawn (English)
 
+### 1.10.11
+- The working Pokémon in the chat no longer has a halo behind it; it still bounces.
+- The update button always says what it does, in words: Update · Downloading n% · Restart.
+- The keyboard focus ring is now one and the same everywhere.
+- The Auto/Manual switch above the session list is gone. The order stays as you drag it, and new sessions go on top. Auto sorting can be turned on in Settings › Sessions. Dragging no longer shows a copy or no-entry sign.
+- The box for a caught or fled Pokémon spans the chat's width and holds the Pokémon fully inside.
+
 ### 1.10.10
 - Pictures you sent in the chat still show after the app restarts, instead of "1 image". They are read from the conversation's own record, only when that message is on screen.
 - Files Claude sends, like HTML or PDF, show as chips in the chat and open with a click. Pages, PDFs and pictures open in the browser or a viewer; anything that could run is never opened, only shown in its folder.
@@ -917,6 +931,13 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.11
+- チャットで作業中のポケモンの後ろの光をなくしました。ぴょんぴょん跳ねる動きはそのままです。
+- アップデートボタンがいつも文字で状態を表示します: アップデート · ダウンロード中 n% · 再起動。
+- キーボード操作時のフォーカス枠がどこでも同じ一種類になりました。
+- 左のリストの自動/手動スイッチをなくしました。順番はドラッグしたとおりに保たれ、新しいセッションは一番上に来ます。自動並べ替えは 設定 › セッション でオンにできます。ドラッグ時にコピーや禁止のマークが出なくなりました。
+- ポケモンを捕まえた・逃げられたときのボックスがチャットの幅いっぱいに広がり、ポケモンがボックス内にきちんと収まります。
 
 ### 1.10.10
 - アプリを再起動しても、チャットで送った画像が「画像 1 件」ではなく画像のまま表示されます。会話の記録にある画像を、そのメッセージが画面に見えるときだけ読み込みます。
