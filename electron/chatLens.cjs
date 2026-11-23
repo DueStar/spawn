@@ -629,6 +629,16 @@ function createLens({
     if (item.kind === 'turn-end') { setState(t, 'idle'); t.turnOpen = false; clearLive(t, removes); queueIdle(t) }
     // Esc writes "[Request interrupted by user…" (FINDINGS §1); a partial text alone only marks that text
     if (item.kind === 'notice' && item.notice === 'interrupted') interrupted(t, upserts, removes)
+    // a prompt another plugin's hook blocked: it never reached Claude, no turn follows (no Stop): the hook's early
+    // bubble goes, the session is idle, and nothing waits for the record to grow
+    if (item.kind === 'notice' && item.notice === 'prompt-blocked') {
+      setState(t, 'idle')
+      t.turnOpen = false
+      clearCanary(t)
+      stopTimer(t, 'missing')
+      if (t.status.banner?.reason === 'missing') t.status.banner = null
+      clearLive(t, removes)
+    }
     // a call's result in the transcript (done, failed, rejected …): its cards are over
     if (item.kind === 'tool' && item.state !== 'running') { settle(t, a => a.card.toolId === item.id, 'result'); askingOff(t, item.id) }
     if (t.canary && item.order < LIVE_BASE) {

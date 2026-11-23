@@ -48,14 +48,13 @@ describe('m12: the context meter with no number yet', () => {
   })
 })
 
-describe('m6: an unconfirmed bubble does not float for good', () => {
-  it('offers 터미널에서 확인하기 and 지우기 (the outbox\'s own dismissal)', () => {
+describe('m6: a bubble the record never shows does not float for good', () => {
+  it('no "not in the record yet" note (2026-11-23); it goes once the session is idle a while (tests/chat-prompt-blocked.test.ts)', () => {
     const item = { id: 'pending:x', order: 1, at: 0, kind: 'user' as const, text: 'hi', images: 0, pending: 'unconfirmed' as const, local: 'x' }
     const ctx = { id: 'T', onTerminal() {}, onLink() {}, onPath() {}, loadAgent: async () => ({ ok: false }), waitingAgents: [] }
     const html = renderToStaticMarkup(React.createElement(ChatContext.Provider, { value: ctx }, React.createElement(UserMessage, { item, time: null })))
-    expect(html).toContain('터미널에서 확인하기')
-    expect(html).toContain('지우기')
-    expect(src('components/chat/UserMessage.tsx')).toContain('outboxFor(id).dismiss(item.local)')
+    expect(html).not.toContain('기록에서 아직 보이지 않아요')
+    expect(html).toContain('hi')
   })
 })
 

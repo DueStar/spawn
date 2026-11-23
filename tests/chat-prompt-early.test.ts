@@ -120,7 +120,7 @@ describe('the composer\'s bubble and the prompt from its hook', () => {
   const hookRow: ChatItem = { id: 'prompt:p2', order: LIVE_BASE + 1, at: 0, kind: 'user', text: '두 번째 질문이에요', images: 0, pending: 'sent' }
 
   it('is never "unconfirmed" while Claude Code has taken it (its line is only late)', () => {
-    expect(reconcile([entry()], [], null, UNCONFIRMED_MS + 1).entries[0].state).toBe('unconfirmed')
+    expect(reconcile([entry()], [], null, UNCONFIRMED_MS + 1).entries[0].state).toBe('sent')
     const r = reconcile([entry()], [hookRow], null, 12_000)
     expect(r.entries).toEqual([entry()])
     expect(r.matched).toEqual([])

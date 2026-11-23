@@ -1,8 +1,9 @@
 /**
  * The chat composer's outbox: a provisional bubble for each message sent from this
  * page, until the session transcript's own user line replaces it (or Claude Code's queue strip
- * shows it while it holds the prompt). A bubble the record does not confirm within 8 s says so
- * ("기록에서 아직 보이지 않아요 · 터미널로 보기") and stays: never silently gone, never a lie.
+ * shows it while it holds the prompt). A prompt another plugin's hook blocked: the record's notice says so and
+ * the bubble goes. One the record never shows stays as it is (no "not in the record yet": a slow hook of another
+ * plugin held the line back almost every time, 2026-11-23) and goes once the session has been idle a while.
  *
  * It also keeps the thumbnails of images sent from this composer in this run (the page's own
  * blob URLs, at most 30 per terminal), moved to the user line they became. Older messages keep
@@ -10,7 +11,7 @@
  */
 
 import { onChatForget } from './lensMode'
-import { LIVE_BASE, PENDING_BASE, type ChatItem, type LensStatus, type UserItem } from './types'
+import { LIVE_BASE, PENDING_BASE, type ChatItem, type LensStatus, type NoticeItem, type UserItem } from './types'
 
 export interface OutboxImage { token: string; url: string }
 export interface OutboxEntry {
@@ -27,6 +28,8 @@ export interface OutboxEntry {
 }
 
 export const UNCONFIRMED_MS = 8000
+/** a bubble the record never showed goes after this long, with the session idle (spawn's MISSING_MS: 65 s) */
+export const STALE_MS = 70_000
 export const THUMBS_KEPT = 30
 
 /** The largest order of the record (transcript lines; hook rows and bubbles aside), -1 for none */
@@ -80,19 +83,29 @@ const record = (items: readonly ChatItem[]) => items.filter((i): i is UserItem =
 export function reconcile(entries: readonly OutboxEntry[], items: readonly ChatItem[], status: LensStatus | null, now: number): { entries: OutboxEntry[]; matched: { local: string; itemId: string | null }[] } {
   const users = record(items)
   const taken = new Set<string>()
+  // the record's word that a prompt was blocked: for the bubble with its words, else (its words mangled) the oldest one sent before it
+  const blocks = items.filter((i): i is NoticeItem => i.kind === 'notice' && i.notice === 'prompt-blocked' && !i.parent && i.order < LIVE_BASE)
+  const blockedFor = new Map<string, string>()
+  for (const b of blocks) {
+    const open = entries.filter(e => e.state !== 'sending' && b.order > e.baseline && ![...blockedFor.keys()].includes(e.local))
+    const e = (b.text ? open.find(x => sentMatches(x.text, b.text!)) : undefined) ?? (b.text ? undefined : open[0])
+    if (e) blockedFor.set(e.local, b.id)
+  }
   const queued = status?.queued ?? []
   const out: OutboxEntry[] = []
   const matched: { local: string; itemId: string | null }[] = []
   for (const e of entries) {
     if (e.state === 'sending') { out.push(e); continue }
+    if (blockedFor.has(e.local)) { matched.push({ local: e.local, itemId: null }); continue }
     const line = users.find(u => u.order > e.baseline && u.order < LIVE_BASE && !taken.has(u.id) && sentMatches(e.text, u.text))
     if (line) { taken.add(line.id); matched.push({ local: e.local, itemId: line.id }); continue }
     if (queued.some(q => sentMatches(e.text, q.text))) { matched.push({ local: e.local, itemId: null }); continue }
     // Claude Code took it (main shows the prompt from its UserPromptSubmit): its line is only late (another
     // plugin's prompt hook holds it 6–12 s), so the bubble stays as it is, never 'unconfirmed' meanwhile
     if (takenByHook(e, items)) { out.push(e.state === 'unconfirmed' ? { ...e, state: 'sent' } : e); continue }
-    if (e.state === 'sent' && now - (e.sentAt ?? e.at) >= UNCONFIRMED_MS) out.push({ ...e, state: 'unconfirmed' })
-    else out.push(e)
+    // never in the record, and the session long idle: it went somewhere the record does not say (it goes quietly)
+    if (now - (e.sentAt ?? e.at) >= STALE_MS && status?.state === 'idle') { matched.push({ local: e.local, itemId: null }); continue }
+    out.push(e.state === 'unconfirmed' ? { ...e, state: 'sent' } : e)
   }
   return { entries: out, matched }
 }

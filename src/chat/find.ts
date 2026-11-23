@@ -149,13 +149,14 @@ export const NOTICE_WORDS: Record<string, string> = {
   'agent-done': '보조 에이전트가 끝났어요',
   'unknown-block': '여기서 보여 줄 수 없는 내용이 있어요',
   model: '',
+  'prompt-blocked': '{by} 플러그인이 이 메시지를 막아서 Claude에게 보내지 못했어요',
 }
 
 /** What a notice row says (a notice this page does not know is said as one it cannot show) */
 export function noticeText(item: NoticeItem): { kind: string; text: string } {
   const kind = Object.prototype.hasOwnProperty.call(NOTICE_WORDS, item.notice) ? item.notice : 'unknown-block'
   const key = NOTICE_WORDS[kind]
-  return { kind, text: key ? t(key, { command: item.text ?? '' }) : item.text ?? '' }
+  return { kind, text: key ? t(key, { command: item.text ?? '', by: item.by ?? t('다른') }) : item.text ?? '' }
 }
 
 const AGENT_TOOLS = new Set(['Agent', 'Task'])

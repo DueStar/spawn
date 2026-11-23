@@ -33,7 +33,7 @@ export const hooksOf = (name: string): { at: number; event: string; body: any }[
 // ---- the event model's field lists (src/chat/types.ts), as a runtime check ----
 
 const STATES = ['running', 'done', 'failed', 'rejected', 'interrupted', 'unknown']
-const NOTICES = ['interrupted', 'command', 'compact', 'summary', 'agent-done', 'unknown-block', 'model']
+const NOTICES = ['interrupted', 'command', 'compact', 'summary', 'agent-done', 'unknown-block', 'model', 'prompt-blocked']
 const INPUT_KEYS: Record<string, string> = {
   file: 'string', command: 'string', description: 'string', pattern: 'string', path: 'string', url: 'string',
   query: 'string', question: 'string', options: 'string[]', plan: 'string', todos: 'todos', agentType: 'string', server: 'string', mcpTool: 'string', background: 'true',
@@ -111,7 +111,7 @@ export function itemProblems(item: any): Problem[] {
         check(item.agentTools === undefined || isNum(item.agentTools), p, 'agentTools')
         break
       case 'notice':
-        only(item, [...base, 'notice', 'text'], p, 'notice')
+        only(item, [...base, 'notice', 'text', 'by'], p, 'notice')
         check(NOTICES.includes(item.notice), p, 'notice.notice')
         check(item.text === undefined || typeof item.text === 'string', p, 'notice.text')
         break

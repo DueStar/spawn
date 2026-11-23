@@ -6145,7 +6145,8 @@ async function composeFail(page) {
   await page.keyboard.press('Enter')
 }
 
-/** chat-compose-pending: one bubble sent and not in the record 9 s later, one whose Enter is still on its way */
+/** chat-compose-pending: one bubble sent and not in the record 9 s later (plain: no "not in the record yet" note since
+    2026-11-23), one whose Enter is still on its way */
 async function composePending(page) {
   const id = await firstTerm(page)
   await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
@@ -6158,7 +6159,8 @@ async function composePending(page) {
   await page.waitForSelector('.chat-user.pending.sent', { timeout: 5000 })
   await page.context().clock.setFixedTime(fixture.NOW + 9_000)
   await pushStatus(page, id, {})
-  await page.waitForSelector('.chat-user.pending.unconfirmed', { timeout: 5000 })
+  await sleep(300)
+  if (await page.locator('.chat-user.pending.unconfirmed').count()) throw new Error('a bubble 9 s unseen by the record says "not in the record yet"')
   await chatScript(page, { submit: 'hang' })
   await page.keyboard.type('and three lakes')
   await page.keyboard.press('Enter')

@@ -7,6 +7,21 @@
  */
 
 import { promptRow, type RowVerdict } from './promptRow'
+import { sentMatches } from './outbox'
+
+/**
+ * The words on the terminal's prompt row are the chat's own: the same as a message it sent lately (Claude Code put
+ * a blocked prompt back, or a send never got its Enter). Those it clears by itself; anything else is the user's.
+ * (the row may show a long message cut or wrapped: a start of 10 characters or more counts)
+ */
+export function ownLeftover(row: string, sent: readonly string[]): boolean {
+  const r = row.replace(/\s+/g, ' ').trim()
+  if ([...r].length < 10 && !sent.some(s => s.replace(/\s+/g, ' ').trim() === r && r)) return false
+  return sent.some(s => {
+    const one = s.replace(/\s+/g, ' ').trim()
+    return sentMatches(one, r) || (one.startsWith(r) && [...r].length >= 10)
+  })
+}
 
 export interface ClearDeps {
   read(): { screen: string | null; dim: string | null }

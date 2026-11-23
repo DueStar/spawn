@@ -137,13 +137,13 @@ export const QaComposer: React.FC = () => {
     <Composer term={term(n)} who={who} onTerminal={noop} control={control} state={state} deps={{ chat: null }} {...over} />
   )
   const pendingUser = (id: string, text: string, pending: 'sending' | 'unconfirmed', n: number): ChatItem => ({ id, order: PENDING_BASE + n, at: at(200 + n), kind: 'user', text, images: 0, pending, local: id })
-  const working = fixed({ state: 'working', since: at(130) }, [...ITEMS.slice(0, 7), pendingUser('p1', '빌드 끝나면 주석 한 줄만 더 달아 주세요', 'sending', 0), pendingUser('p2', '테스트 이름도 정리해 주세요', 'unconfirmed', 1)])
+  const working = fixed({ state: 'working', since: at(130) }, [...ITEMS.slice(0, 7), pendingUser('p1', '빌드 끝나면 주석 한 줄만 더 달아 주세요', 'sending', 0), pendingUser('p2', '테스트 이름도 정리해 주세요', 'sending', 1)])
   return <>
     {box('empty', '빈 입력란', '모델 · 권한 모드 · HP(컨텍스트) · 사용량, 보내기는 흐리게', composer('empty'))}
     {box('draft', '두 줄 + 이미지 두 장', '보내기만 노랑 · 칩은 선 · 대기 중 2가 위에 붙음', composer('draft', { preview: { text: '빌드 끝나면 src/lib/safe-redirect.ts 에\n주석 한 줄만 더 달아 주세요', chips: pics } }, fixed(QUEUED)))}
     {box('slash', '/로 시작', '명령으로 보낸다는 안내 · 명령 메뉴는 ?system 채팅에', composer('slash', { preview: { text: '/compact' } }))}
     {NOTES.map(n => box(`note-${n.title}`, `안내 · ${n.title}`, '조용한 글, 필요하면 터미널로 보기', composer(`note-${n.title}`, { preview: { note: n.note } })))}
-    {box('working', '일하는 중 · 보내는 중 · 기록에 아직 없음', '일하는 줄의 멈추기(잉크) · 보내는 중… · 기록에서 아직 보이지 않아요',
+    {box('working', '일하는 중 · 보내는 중', '일하는 줄의 멈추기(잉크) · 보내는 중…',
       <ChatView term={term('working')} who={who} project="shop-web" branch="fix/login-redirect" onTerminal={noop} onStop={noop} state={working}
         footer={composer('working', {}, working)} />, true)}
   </>

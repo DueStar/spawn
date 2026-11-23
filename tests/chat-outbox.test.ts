@@ -55,11 +55,9 @@ describe('reconcile', () => {
     expect(r.matched).toEqual([{ local: 'l1', itemId: null }])
   })
 
-  it('8 s sent and not in the record: unconfirmed, and it stays', () => {
-    let r = reconcile([entry()], [], STATUS, 1000 + 7999)
+  it('sent and not in the record: it stays plain (no "not in the record yet", 2026-11-23) until the line comes', () => {
+    let r = reconcile([entry()], [], STATUS, 1000 + 8000)
     expect(r.entries[0].state).toBe('sent')
-    r = reconcile(r.entries, [], STATUS, 1000 + 8000)
-    expect(r.entries[0].state).toBe('unconfirmed')
     r = reconcile(r.entries, [], STATUS, 60_000)
     expect(r.entries).toHaveLength(1)
     // a late line still replaces it
@@ -129,19 +127,19 @@ describe('the outbox of a terminal', () => {
     expect(o.thumbs('u31')).toEqual(['blob:31'])
   })
 
-  it('subscribers hear every change; dismiss drops an unconfirmed bubble', () => {
+  it('subscribers hear every change; dismiss drops a bubble', () => {
     const o = createOutbox({ revoke: () => {} })
     let n = 0
     const off = o.subscribe(() => n++)
     o.add(entry({ local: 'a', state: 'sending' }))
     o.mark('a', 'sent', 1000)
     o.sync([], STATUS, 9500)
-    expect(o.entries()[0].state).toBe('unconfirmed')
+    expect(o.entries()[0].state).toBe('sent')
     o.dismiss('a')
     expect(o.entries()).toEqual([])
-    expect(n).toBe(4)
+    expect(n).toBe(3)
     off()
     o.add(entry({ local: 'b' }))
-    expect(n).toBe(4)
+    expect(n).toBe(3)
   })
 })

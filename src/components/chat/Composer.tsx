@@ -24,7 +24,7 @@ import { termDim, termText } from '../../termMetrics'
 import { footerMode, promptRow, suggestionOf, type FooterMode } from '../../chat/promptRow'
 import { parseDialog } from '../../chat/dialog'
 import { switchMode } from '../../chat/modeSwitch'
-import { clearPromptRow } from '../../chat/clearRow'
+import { clearPromptRow, ownLeftover } from '../../chat/clearRow'
 import { createImeTracker, keyAction, mentionAt } from '../../chat/composerKeys'
 import { onChatForget, takeChatFocus, type ChatWho } from '../../chat/lensMode'
 import { baselineOf, outboxFor } from '../../chat/outbox'
@@ -97,6 +97,9 @@ const MAX_MB = 10
 const IMAGE_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp'])
 
 const drafts = new Map<string, string>()
+/** what this page sent lately, per session (the words it may clear from the terminal's prompt row by itself) */
+const sentLately = new Map<string, string[]>()
+const noteSent = (id: string, text: string) => { if (text.trim()) sentLately.set(id, [...(sentLately.get(id) ?? []), text].slice(-8)) }
 const chipsOf = new Map<string, Chip[]>()
 /** the permission modes each session's Shift+Tab cycle was seen to lack (the mode menu greys them) */
 const lacksOf = new Map<string, Set<FooterMode>>()
@@ -108,6 +111,7 @@ const commandsOf = new Map<string, readonly SlashCommand[]>()
 const revoke = (url: string) => { try { URL.revokeObjectURL(url) } catch { /* not a page */ } }
 onChatForget(id => {
   drafts.delete(id)
+  sentLately.delete(id)
   for (const c of chipsOf.get(id) ?? []) revoke(c.url)
   chipsOf.delete(id)
   refsOf.delete(id)
@@ -368,6 +372,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         setDraft(rest(value))
         setShell(false)
       } else if (r.ok) {
+        noteSent(id, value)
         setDraft(rest(value))
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
         setRefList((refsOf.get(id) ?? []).filter(f => !sentRefs.includes(f)))
@@ -376,6 +381,7 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
           void afterCommand(value.trim().split(/\s/)[0])
         }
       } else if (r.leftOnPrompt) {
+        noteSent(id, value)
         // the text is on the terminal's prompt row: sending it again would double it
         setDraft(rest(value))
         setChipList((chipsOf.get(id) ?? []).filter(c => !sentChips.includes(c)))
@@ -385,6 +391,9 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
         if (r.reason === 'screen' && parseDialog((deps?.termText ?? termText)(id))) say({ key: '{name}{iga} 고르기를 기다려요. 위 카드에서 먼저 골라 주세요', vars: nameVars(who.name) })
         // words typed on the terminal's prompt row: cleared, and this message sent instead (no question)
         else if (r.reason === 'prompt-busy' && !retried && chat.dialogKey) clearFirst = true
+        // the words on the row are what this page sent (a prompt another plugin's hook blocked and Claude Code put
+        // back, a send that never got its Enter): cleared, and this message sent, whatever the ledger says
+        else if (r.reason === 'prompt-unknown' && !retried && chat.dialogKey && r.row && ownLeftover(r.row, sentLately.get(id) ?? [])) clearFirst = true
         else say(refusalNote(r.reason, who, cardNote(shownCard(status?.asks)), r.row))
       }
     } finally {
@@ -478,6 +487,40 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
       setCtrlBusy(false)
     }
   }
+
+  // The record says a prompt was blocked (another plugin's prompt hook): Claude Code may put its words back on the
+  // terminal's prompt row, where they would stop the next send. They are this page's own: cleared at once (only
+  // words it sent; the user's own typing stays). Blocks already in the record when the view opened are history
+  const blockSeen = useRef<string | null | undefined>(undefined)
+  useEffect(() => {
+    if (fixed) return
+    const blocks = items.filter(i => i.kind === 'notice' && i.notice === 'prompt-blocked')
+    const latest = blocks[blocks.length - 1] as (typeof blocks)[number] & { text?: string } | undefined
+    if (blockSeen.current === undefined) { blockSeen.current = latest?.id ?? null; return }
+    if (!latest || blockSeen.current === latest.id) return
+    blockSeen.current = latest.id
+    if (!chat?.dialogKey) return
+    const key = chat.dialogKey
+    const readScreen = deps?.termText ?? termText
+    const readDim = deps ? deps.termDim : termDim
+    const sleep = deps?.sleep ?? ((ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms)))
+    const mine = [...(sentLately.get(id) ?? []), ...(latest.text ? [latest.text] : [])]
+    void (async () => {
+      // (the row is put back a moment after the record's line: looked at for a second)
+      for (let k = 0; k < 5; k++) {
+        const row = promptRow(readScreen(id), readDim?.(id) ?? null)
+        if (row.kind === 'text' && ownLeftover(row.text, mine)) {
+          await clearPromptRow({
+            read: () => ({ screen: readScreen(id), dim: readDim?.(id) ?? null }),
+            key: async (k2, n) => { try { return (await key({ id, key: k2, ...(n ? { n } : {}) })).ok } catch { return false } },
+            sleep,
+          })
+          return
+        }
+        await sleep(250)
+      }
+    })()
+  }, [items, fixed, id, chat, deps])
 
   /**
    * Words left on the terminal's prompt row (prompt-busy): cleared from here (src/chat/clearRow.ts), then either

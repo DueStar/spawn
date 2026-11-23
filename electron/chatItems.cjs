@@ -32,7 +32,7 @@
  * @typedef {ItemBase & { kind: 'tool', tool: string | null, input: ToolInput, state: ToolState,
  *   waiting?: 'permission' | 'question' | 'plan', output?: ToolOutput, diff?: DiffBlock, durationMs?: number,
  *   agentId?: string, agentTools?: number }} ToolItem
- * @typedef {ItemBase & { kind: 'notice', notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model', text?: string }} NoticeItem
+ * @typedef {ItemBase & { kind: 'notice', notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model' | 'prompt-blocked', text?: string, by?: string }} NoticeItem
  * @typedef {ItemBase & { kind: 'turn-end', durationMs: number }} TurnEndItem
  * @typedef {ItemBase & { kind: 'live', text: string }} LiveItem
  * @typedef {ItemBase & { kind: 'shell', command: string, state: 'running' | 'done', stdout?: string, stderr?: string, truncated?: boolean }} ShellItem
@@ -288,6 +288,13 @@ function unescapeHtml(s) {
  * are built, each item carrying it (tools and prose only); without it
  * sidechain lines are skipped.
  */
+/** A record line saying a UserPromptSubmit hook blocked the prompt (Claude Code 2.1.330: promptSubmitEnding) */
+function isBlockedPrompt(obj) {
+  if (!obj || obj.type !== 'system') return false
+  const kind = obj.promptSubmitEnding && obj.promptSubmitEnding.ending && obj.promptSubmitEnding.ending.kind
+  return kind === 'blocked_by_hook' || (typeof obj.content === 'string' && obj.content.startsWith('UserPromptSubmit operation blocked by hook'))
+}
+
 function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
   /** @type {Map<string, ToolItem>} */
   const tools = new Map()
@@ -470,6 +477,18 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
         return [{ id, order, at, kind: 'turn-end', durationMs: Number.isFinite(ms) && ms >= 0 ? ms : 0 }]
       }
       if (sub.includes('compact')) return [{ id, order, at, kind: 'notice', notice: 'compact' }]
+      // a prompt another plugin's UserPromptSubmit hook blocked: it never reached Claude (said once, plainly). The
+      // prompt as the line repeats it, when it reads cleanly (a hook's code page mangles it: then left out), and
+      // the plugin's name
+      if (isBlockedPrompt(obj)) {
+        const content = typeof obj.content === 'string' ? obj.content : ''
+        const said = /\nOriginal prompt: ([\s\S]*)$/.exec(content)?.[1]?.trim() ?? ''
+        const by = /This hook comes from the ([\w.-]{1,60})(?:@[\w.-]{1,60})? plugin/.exec(content)?.[1]
+        const it = { id, order, at, kind: 'notice', notice: 'prompt-blocked' }
+        if (said && !said.includes('\ufffd')) it.text = said.slice(0, 4000)
+        if (by) it.by = by
+        return [it]
+      }
       if (sub === 'local_command') {
         const command = typeof obj.content === 'string' ? commandOf(obj.content) : null
         return command ? [{ id, order, at, kind: 'notice', notice: 'command', text: command }] : []
