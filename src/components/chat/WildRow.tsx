@@ -1,6 +1,6 @@
 /**
- * A wild Pokémon met in the flow: the 34px
- * picture, 야생의 {name}{iga} 나타났다, →, then the ball and 잡았다 · Lv.n (with a hairline 새로 등록 for a first of its
+ * A wild Pokémon met in the flow: its small
+ * box icon, 야생의 {name}{iga} 나타났다, →, then the ball and 잡았다 · Lv.n (with a hairline 새로 등록 for a first of its
  * species) or 놓쳤다. A shiny one says 색이 다른; a rare-or-above one names its tier in the tier's colour. A screen
  * reader hears it as one sentence (role="note"); the drawn line is hidden from it.
  *
@@ -11,7 +11,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { josa, nameOf, t } from '../../i18n'
-import { pokemonById, spriteUrl } from '../../theme'
+import { iconUrl, pokemonById } from '../../theme'
 import { TIER_LABEL, ballUrl } from '../../pokedexStore'
 import type { WildEntry } from '../../chat/wild'
 import { useChatContext } from './context'
@@ -37,7 +37,8 @@ export const WildRow: React.FC<{ rowKey: string; entry: WildEntry }> = ({ rowKey
     <div className={`chat-wild${appear ? ' appear' : ''}`} role="note">
       <span className="chat-sr">{sentence}</span>
       <span className="chat-wild-line" aria-hidden="true">
-        <img className="chat-wild-mon" src={spriteUrl(entry.dex, entry.shiny)} alt="" draggable={false} />
+        {/* the Scarlet/Violet box icon, small (the games have no shiny icon: a shiny one says so in its tag) */}
+        <img className="chat-wild-mon" src={iconUrl(entry.dex)} alt="" draggable={false} />
         <span>{before}<b>{name}</b>{after}</span>
         {shiny && <span className="chat-wild-tag">{shiny}</span>}
         {tier && <span className={`chat-wild-tier tier-${entry.tier}`}><i className="tdot" aria-hidden="true" />{tier}</span>}

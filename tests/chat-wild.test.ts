@@ -195,7 +195,8 @@ describe('WildRow', async () => {
   it('a catch: the sprite (34px box), 야생의 꼬렛이 나타났다, →, the ball and 잡았다 · Lv.6, the hairline 새로 등록', () => {
     const h = html(caught)
     expect(h).toMatch(/^<div class="chat-wild" role="note">/)
-    expect(h).toContain('<img class="chat-wild-mon" src="/sprites/pokemon/art/19.png" alt=""')
+    // (2026-11-23) the Scarlet/Violet box icon, small (a shiny is said by its tag: the games have no shiny icon)
+    expect(h).toContain('<img class="chat-wild-mon" src="/sprites/pokemon/icon/19.png" alt=""')
     expect(h).toMatch(/<img class="chat-wild-ball" src="\/sprites\/balls\/great-ball\.png[^"]*" alt=""/)
     expect(h).toContain('야생의 <b>꼬렛</b>이 나타났다')
     expect(h).toContain('<span class="chat-wild-arrow">→</span>')
@@ -221,7 +222,8 @@ describe('WildRow', async () => {
 
   it('a shiny one: 색이 다른 and the shiny picture; the particle follows the name (잉어킹이, 꼬렛이 / 피카츄가)', () => {
     const h = html(shiny)
-    expect(h).toContain('src="/sprites/pokemon/art-shiny/129.png"')
+    // (the games have no shiny box icon: the plain one, and 색이 다른 says it)
+    expect(h).toContain('src="/sprites/pokemon/icon/129.png"')
     expect(h).toContain('<span class="chat-wild-tag">색이 다른</span>')
     expect(sr(h)).toBe('야생의 잉어킹이 나타났다, 색이 다른, 잡았다 · Lv.5')
     expect(html({ ...caught, dex: 25, newSpecies: false })).toContain('야생의 <b>피카츄</b>가 나타났다')
@@ -275,9 +277,9 @@ describe('the view: wild rows only outside 업무 모드, from the page\'s own g
 
   it('its look in chat-game.css; chat.css has none of it', () => {
     const game = read('src', 'styles', 'chat-game.css').replace(/\/\*[\s\S]*?\*\//g, '')
-    expect(game).toMatch(/\.chat-wild \{[^}]*display: flex;[^}]*align-items: center;[^}]*width: 100%;[^}]*min-height: 52px;[^}]*font-size: var\(--t-ui\);[^}]*color: var\(--ink-3\);/)
-    // (1.10.11) the box spans the conversation and holds its Pokémon whole
-    expect(game).toMatch(/\.chat-wild-mon \{[^}]*width: 40px; height: 40px;/)
+    expect(game).toMatch(/\.chat-wild \{[^}]*display: flex;[^}]*align-items: center;[^}]*width: 100%;[^}]*min-height: 34px;[^}]*font-size: var\(--t-ui\);[^}]*color: var\(--ink-3\);/)
+    // (1.10.11) the box spans the conversation and holds its Pokémon whole; (2026-11-23) a small icon, a short box
+    expect(game).toMatch(/\.chat-wild-mon \{[^}]*width: 24px; height: 24px;/)
     expect(game).not.toMatch(/\.chat-wild-mon \{[^}]*margin: -/)
     expect(game).toMatch(/\.chat-wild b \{[^}]*color: var\(--ink-2\);[^}]*font-weight: var\(--w-name\);/)
     // the tag: a hairline, no fill (not the "now" style's filled yellow pill)

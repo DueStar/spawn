@@ -361,7 +361,7 @@ describe('the chat view in 업무 모드', () => {
     const guard = wild.indexOf('if (workMode) return null')
     expect(guard).toBeGreaterThan(0)
     expect(wild.indexOf("t('")).toBeGreaterThan(guard)
-    expect(wild.indexOf('spriteUrl(')).toBeGreaterThan(guard)
+    expect(wild.indexOf('iconUrl(')).toBeGreaterThan(guard)
     expect(keys).toEqual(expect.arrayContaining(['야생의 {name}{iga} 나타났다', '잡았다', '놓쳤다', '새로 등록', '색이 다른']))
     const foot = strip(readFileSync(join(SRC, 'components', 'chat', 'TurnFoot.tsx'), 'utf8'))
     const guarded = /\{!workMode && steps !== null && \(([\s\S]*?)\n\s*\)\}/.exec(foot)

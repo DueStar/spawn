@@ -14,9 +14,9 @@
    everything a step dimmer than the talk around it */
 /* (1.10.11) the whole width of the conversation, and the Pokémon wholly inside it with room around it (it sat at
    the box's own height before, half in and half out) */
-.chat-wild { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 100%; box-sizing: border-box; min-height: 52px; padding: 6px 14px 6px 8px; margin: 4px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.015); opacity: 0.72; }
+.chat-wild { display: flex; align-items: center; gap: 8px; width: 100%; max-width: 100%; box-sizing: border-box; min-height: 34px; padding: 4px 12px 4px 6px; margin: 2px 0; font-size: var(--t-ui); color: var(--ink-3); min-width: 0; border: 1px solid var(--line); border-radius: var(--r-m); background: rgba(255, 255, 255, 0.015); opacity: 0.72; }
 .chat-wild-line { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; min-width: 0; }
-.chat-wild-mon { width: 40px; height: 40px; flex: none; object-fit: contain; }
+.chat-wild-mon { width: 24px; height: 24px; flex: none; object-fit: contain; image-rendering: pixelated; }
 .chat-wild b { color: var(--ink-2); font-weight: var(--w-name); }
 .chat-wild-arrow { color: var(--ink-3); }
 .chat-wild-got { color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
