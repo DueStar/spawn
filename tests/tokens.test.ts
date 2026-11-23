@@ -362,7 +362,8 @@ describe('the guards: what the calm look allows', () => {
   })
 
   // (each matched exactly: .picked, not .picked-x)
-  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-send', '.chat-send', '.w-update', '.set-switch.on', ':focus-visible']
+  const YELLOW = ['.w-row.chosen', '.w-rail-session.on', '.picked', '.drop', '.ins-before', '.ins-after', '.w-pane-drop', '.w-send', '.chat-send', '.w-update', '.set-switch.on', ':focus-visible']
+  // (.w-pane-drop: where a dragged session or pane would go, a drop mark like the box's)
   // (.w-update: the update button wears the primary colour)
   it('(d) yellow only on the chosen session, the picked cell (and its drop / insert marks), send, the update button and focus rings', () => {
     let uses = 0

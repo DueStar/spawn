@@ -38,6 +38,7 @@ import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, 
 import { modeFromUrl, readCarry, writeCarry } from './carry'
 import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
+import { dropSpot, placeTab } from './paneDrop'
 import { numbered } from './sameNames'
 import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
@@ -885,7 +886,48 @@ const Widget: React.FC = () => {
   const dragFrame = useRef(0)
   // (the slide as started, for a drop that comes before the lifted row is drawn)
   const startedSlide = useRef<typeof rowSlide>(null)
-  const endRowDrag = () => { cancelAnimationFrame(dragFrame.current); dragFrame.current = 0; startedSlide.current = null; setDropHint(null); setRowSlide(null); setLifted(null); rowDragged.current = null }
+  const endRowDrag = () => { cancelAnimationFrame(dragFrame.current); dragFrame.current = 0; startedSlide.current = null; setDropHint(null); setPaneDrop(null); setDragCard(null); setRowSlide(null); setLifted(null); rowDragged.current = null }
+  // Over the right side, the half of the pane under the pointer says where the session would go (src/paneDrop.ts):
+  // its left half to that pane's left, its right half to its right. One session shown is one pane
+  const [paneDrop, setPaneDrop] = useState<{ left: number; width: number; hint: string; full: boolean } | null>(null)
+  // off the list (or from the folded rail), a small card of the session follows the pointer
+  const [dragCard, setDragCard] = useState<{ sid: string; x: number; y: number } | null>(null)
+  const visiblePanes = () => (split ? paneSids : shown?.sessionId ? [shown.sessionId] : [])
+  const spotAt = (p: Point) => {
+    const b = termBodyRef.current?.getBoundingClientRect()
+    if (!b || b.width <= 0) return null
+    return dropSpot((p.x - b.left) / b.width, split ? fracs : [1])
+  }
+  // the place among the tabs a spot stands for (the tabs in order; one session shown and no tabs: that one)
+  const tabsAt = (spot: { pane: number; side: 'left' | 'right' }) => {
+    const base = tabs.length ? tabs : shown?.sessionId ? [shown.sessionId] : []
+    const by = visiblePanes()[spot.pane]
+    const k = by ? base.indexOf(by) : -1
+    return { base, at: k < 0 ? base.length : spot.side === 'left' ? k : k + 1 }
+  }
+  const showSpot = (p: Point, hint: string, full: boolean) => {
+    const spot = overPanes(p) ? spotAt(p) : null
+    setPaneDrop(cur => {
+      if (!spot) return cur ? null : cur
+      return cur && cur.left === spot.left && cur.width === spot.width && cur.hint === hint ? cur : { left: spot.left, width: spot.width, hint, full }
+    })
+  }
+  // a session put among the panes at the half it was let go over (opened beside, or moved there)
+  const openAt = (sid: string, p: Point) => {
+    const spot = spotAt(p)
+    if (!spot) { openInTab(sid); return }
+    const { base, at } = tabsAt(spot)
+    const r = placeTab(base, sid, at)
+    if (!r.ok) { setTabNote(t('{n}개까지 나란히 볼 수 있어요. 칸 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
+    if (r.tabs.length > base.length && r.tabs.length >= 2 && r.tabs.length * MIN_PANE_W > roomRef.current) {
+      setTabNote(t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요'))
+      return
+    }
+    setTabs(r.tabs)
+    shownTab.current = sid
+    setTarget(sid)
+    setView('terminal')
+  }
   const rowDrag = useRef({ move: (_p: Point) => {}, drop: (_p: Point) => {}, end: () => {} })
   rowDrag.current = {
     move: p => {
@@ -893,8 +935,12 @@ const Widget: React.FC = () => {
       dragFrame.current = requestAnimationFrame(() => {
         dragFrame.current = 0
         const list = rowsRef.current?.getBoundingClientRect()
+        const inside = !!list && within(rowsRef.current, p, 4)
+        const sid = rowDragged.current
+        setDragCard(cur => (inside || !sid ? null : cur?.x === p.x && cur.y === p.y ? cur : { sid, x: p.x, y: p.y }))
+        if (!inside) showSpot(p, paneHint(), paneFull || paneNarrow)
+        else setPaneDrop(null)
         if (!list) return
-        const inside = within(rowsRef.current, p, 4)
         setRowSlide(cur => {
           if (!cur) return cur
           if (!inside) return { ...cur, slot: listIdsRef.current.indexOf(cur.sid), out: { x: p.x, y: p.y } }
@@ -902,17 +948,15 @@ const Widget: React.FC = () => {
           const slot = dropSlot(cur.boxes.map(b => b.top + b.height / 2), y)
           return cur.y === y && cur.slot === slot && !cur.out ? cur : { ...cur, y, slot, out: null }
         })
-        const hint = !inside && overPanes(p) ? paneHint() : null
-        setDropHint(h => (h === hint ? h : hint))
       })
     },
     drop: p => {
       const slide = rowSlide ?? startedSlide.current
+      const sid = slide?.sid ?? rowDragged.current
       endRowDrag()
-      if (!slide) return
-      const sid = slide.sid
+      if (!sid) return
       const list = rowsRef.current
-      if (list && within(list, p, 4)) {
+      if (slide && list && within(list, p, 4)) {
         // a list that changed under the drag drops nothing (its slots were measured on the old one)
         if (slide.order !== listIds.join(' ')) return
         const slot = dropSlot(slide.boxes.map(b => b.top + b.height / 2), p.y - list.getBoundingClientRect().top)
@@ -923,10 +967,55 @@ const Widget: React.FC = () => {
         setRowSettling(true)
         reorderRow(sid, slot)
         requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
-      } else if (overPanes(p)) openInTab(sid)
+      } else if (overPanes(p)) openAt(sid, p)
       // (anywhere else a drop does nothing: the row goes back)
     },
     end: endRowDrag,
+  }
+  // A pane dragged by its head: the half of the pane under the pointer says where it goes, and it moves there
+  const paneDrag = useRef({ move: (_sid: string, _p: Point) => {}, drop: (_sid: string, _p: Point) => {} })
+  paneDrag.current = {
+    move: (_sid, p) => {
+      cancelAnimationFrame(dragFrame.current)
+      dragFrame.current = requestAnimationFrame(() => { dragFrame.current = 0; showSpot(p, t('놓으면 이 자리로 옮겨요'), false) })
+    },
+    drop: (sid, p) => {
+      cancelAnimationFrame(dragFrame.current)
+      dragFrame.current = 0
+      setPaneDrop(null)
+      const spot = overPanes(p) ? spotAt(p) : null
+      if (!spot) return
+      const { base, at } = tabsAt(spot)
+      const r = placeTab(base, sid, at)
+      if (r.ok && r.tabs.join(' ') !== tabs.join(' ')) setTabs(r.tabs)
+    },
+  }
+  // A row (or, the left panel folded, a session of the rail) picked up by the pointer (src/pointerDrag.ts)
+  const startRowDrag = (e: React.PointerEvent<HTMLElement>, sid: string) => {
+    const rowEl = e.currentTarget
+    const pointerId = e.pointerId
+    const i = listIds.indexOf(sid)
+    trackPointerDrag(e, {
+      onStart: (from, now) => {
+        rowDragged.current = sid
+        setLifted(sid)
+        const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
+        const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
+        const startY = from.y - top0
+        // (the list folded away: no row slides, the card follows)
+        if (i >= 0 && !boxes.some(b => !b || b.height === 0)) {
+          const slide = { sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' '), startY, y: startY, out: null }
+          startedSlide.current = slide
+          setRowSlide(slide)
+        }
+        // (the pointer stays this drag's even off the window)
+        try { rowEl.setPointerCapture(pointerId) } catch { /* gone already */ }
+        rowDrag.current.move(now)
+      },
+      onMove: p => rowDrag.current.move(p),
+      onDrop: p => rowDrag.current.drop(p),
+      onCancel: () => rowDrag.current.end(),
+    })
   }
   const chWidth = clampChangesWidth(chBase, chRoom)
   const chMax = clampChangesWidth(CH_MAX, chRoom)
@@ -1249,6 +1338,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button key={r.sessionId}
                 className={`w-rail-btn w-rail-session mood-${r.mood}${shown?.sessionId === r.sessionId && view === 'terminal' ? ' on' : ''}`}
                 onClick={() => { setTarget(r.sessionId); setView('terminal') }}
+                // dragged onto the right side: opens beside, as from the list
+                onPointerDown={e => startRowDrag(e, r.sessionId)}
                 title={`${r.title ?? t('새 세션')} · ${t(MOOD_LABEL[r.mood])}`} aria-label={r.title ?? t('새 세션')}>
                 {r.shell ? <span className="w-rail-shell" aria-hidden="true">&gt;_</span>
                   : workMode || noPokemon(r) ? <span className="w-rail-glyph" aria-hidden="true"><TerminalIcon size={18} /></span>
@@ -1395,11 +1486,11 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
             <div ref={rowsRef} className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}>
             {/* off the list (over the panes on the right), a small card of the session follows the pointer */}
-            {rowSlide?.out && (() => {
-              const d = rowById.get(rowSlide.sid)
+            {dragCard && (() => {
+              const d = rowById.get(dragCard.sid)
               if (!d) return null
               return (
-                <div className="w-drag-card" style={{ left: rowSlide.out.x + 14, top: rowSlide.out.y + 10 }} aria-hidden="true">
+                <div className="w-drag-card" style={{ left: dragCard.x + 14, top: dragCard.y + 10 }} aria-hidden="true">
                   {workMode || noPokemon(d) || d.shell ? <TerminalIcon size={14} /> : <img src={d.sprite} alt="" />}
                   <span>{d.title || d.name || d.project}</span>
                 </div>
@@ -1483,31 +1574,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 // dragged onto the right side, or Ctrl+clicked: the session opens in a pane of its own;
                 // dragged within the list: it goes where it is put (the order is manual from then on)
                 // (by the pointer, src/pointerDrag.ts: a press that moves less than a few px is a click)
-                onPointerDown={e => {
-                  if (!r.terminal || renaming?.id === r.sessionId || (e.target as Element).closest('input, textarea')) return
-                  const rowEl = e.currentTarget
-                  const pointerId = e.pointerId
-                  trackPointerDrag(e, {
-                    onStart: (from, now) => {
-                      rowDragged.current = sid
-                      setLifted(sid)
-                      const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
-                      const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
-                      const startY = from.y - top0
-                      if (!boxes.some(b => !b)) {
-                        const slide = { sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' '), startY, y: startY, out: null }
-                        startedSlide.current = slide
-                        setRowSlide(slide)
-                      }
-                      // (the pointer stays this drag's even off the window)
-                      try { rowEl.setPointerCapture(pointerId) } catch { /* gone already */ }
-                      rowDrag.current.move(now)
-                    },
-                    onMove: p => rowDrag.current.move(p),
-                    onDrop: p => rowDrag.current.drop(p),
-                    onCancel: () => rowDrag.current.end(),
-                  })
-                }}
+                onPointerDown={e => { if (r.terminal && renaming?.id !== r.sessionId && !(e.target as Element).closest('input, textarea')) startRowDrag(e, sid) }}
                 onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
                 // The keyboard and screen readers: a row is a button (Tab reaches it, Enter / Space
                 // open it, F2 renames it), the one in view is the current one, and its name says
@@ -1715,7 +1782,13 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 const r = rowById.get(sid)!
                 const on = sid === shown?.sessionId
                 return (
-                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%` }} onPointerDown={() => focusPane(sid)}>
+                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%` }}
+                    // (held and dragged: the pane moves to the half it is let go over)
+                    onPointerDown={e => {
+                      focusPane(sid)
+                      if ((e.target as Element).closest('input, textarea, button')) return
+                      trackPointerDrag(e, { onStart: (_f, now) => paneDrag.current.move(sid, now), onMove: p => paneDrag.current.move(sid, p), onDrop: p => paneDrag.current.drop(sid, p), onCancel: () => { cancelAnimationFrame(dragFrame.current); setPaneDrop(null) } })
+                    }}>
                     <SessionHeader
                       parts={sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode)}
                       renameValue={ownName(r)}
@@ -1788,7 +1861,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               if (sid) focusPane(sid)
             } : undefined}
 >
-            {dropHint && <div className={`w-tab-drop${paneFull || paneNarrow ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
+            {paneDrop && <div className={`w-pane-drop${paneDrop.full ? ' full' : ''}`} style={{ left: `${(paneDrop.left * 100).toFixed(3)}%`, width: `${(paneDrop.width * 100).toFixed(3)}%` }} aria-hidden="true"><span>{paneDrop.hint}</span></div>}
             {tabNote && <div className="w-tab-note" role="status">{tabNote}</div>}
             {withTerminal.length === 0 && (
               <div className="w-term-empty">

@@ -2898,6 +2898,86 @@ const FLOWS = {
     }
     return problems
   },
+  // where a dragged session opens among the panes: the half under the pointer, lit first; a pane moved by its head;
+  // the left panel folded, a Pokémon of the rail dragged over opens beside too
+  'pane-place': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat' })
+      const { page } = app
+      const rows = page.locator('.w-party .w-row')
+      const heads = page.locator('.w-sess-bar.split .w-pane-head')
+      const names = () => page.$$eval('.w-sess-bar.split .w-pane-head .w-sess-head-name', els => els.map(e => e.textContent.trim()))
+      const rowName = async i => (await rows.nth(i).locator('.w-row-name').innerText()).trim()
+      const shownName = (await page.locator('.w-sess-head-name').first().innerText()).trim()
+      const body = await page.locator('.w-term-body').boundingBox()
+      const drag = async (from, to, steps = 10) => {
+        await page.mouse.move(from.x, from.y)
+        await page.mouse.down()
+        for (let k = 1; k <= steps; k++) await page.mouse.move(from.x + ((to.x - from.x) * k) / steps, from.y + ((to.y - from.y) * k) / steps)
+        await sleep(120)
+      }
+      const mid = async loc => { const b = await loc.boundingBox(); return { x: b.x + b.width / 2, y: b.y + b.height / 2 } }
+      // 1) over the LEFT half of the one session shown: that half lit, then the new one opens on the left
+      const second = await rowName(1)
+      await drag(await mid(rows.nth(1)), { x: body.x + body.width * 0.2, y: body.y + body.height / 2 })
+      const lit = await page.$eval('.w-pane-drop', el => { const b = el.getBoundingClientRect(); return { x: b.x, w: b.width, text: el.textContent } }).catch(() => null)
+      if (!lit) bad('no half lit over the right side')
+      else {
+        if (Math.abs(lit.x - body.x) > 12 || Math.abs(lit.w - body.width / 2) > 16) bad(`the lit half is not the left half: ${JSON.stringify(lit)} of ${JSON.stringify(body)}`)
+        if (!/놓으면/.test(lit.text)) bad(`the lit half says ${lit.text}`)
+      }
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-pane-place-left.png'), animations: 'disabled', caret: 'hide' })
+      await page.mouse.up()
+      await sleep(600)
+      const two = await names()
+      if (two.join('|') !== [second, shownName].join('|')) bad(`dropped on the left half: panes ${two.join(', ')}; want ${second}, ${shownName}`)
+      if (await page.locator('.w-pane-drop').count()) bad('the lit half stayed after the drop')
+      // 2) a third over the RIGHT half of the first pane: it goes between
+      const third = await rowName(2)
+      const b2 = await page.locator('.w-term-body').boundingBox()
+      await drag(await mid(rows.nth(2)), { x: b2.x + b2.width * 0.4, y: b2.y + b2.height / 2 })
+      await page.mouse.up()
+      await sleep(600)
+      const three = await names()
+      if (three.join('|') !== [second, third, shownName].join('|')) bad(`dropped on the first pane's right half: ${three.join(', ')}; want ${second}, ${third}, ${shownName}`)
+      // 3) the first pane dragged by its head onto the right half of the last: it moves to the end
+      const h0 = await heads.nth(0).locator('.w-sess-head-proj').boundingBox().catch(() => null) ?? await heads.nth(0).boundingBox()
+      const b3 = await page.locator('.w-term-body').boundingBox()
+      await drag({ x: h0.x + 4, y: h0.y + h0.height / 2 }, { x: b3.x + b3.width * 0.95, y: b3.y + b3.height / 2 })
+      if (!(await page.locator('.w-pane-drop').count())) bad('dragging a pane by its head lights no half')
+      await page.mouse.up()
+      await sleep(600)
+      const moved = await names()
+      if (moved.join('|') !== [third, shownName, second].join('|')) bad(`a pane dragged to the end: ${moved.join(', ')}; want ${third}, ${shownName}, ${second}`)
+      // 4) the left panel folded: close a pane, then drag a rail Pokémon over the right side
+      await heads.nth(2).locator('.w-sess-head-close').click()
+      await sleep(400)
+      await page.locator('.w-side-toggle').first().click()
+      await sleep(500)
+      const rail = page.locator('.w-rail .w-rail-session')
+      if (!(await rail.count())) throw new Error('no folded rail')
+      const b4 = await page.locator('.w-term-body').boundingBox()
+      const before = (await names()).length
+      await drag(await mid(rail.nth(3)), { x: b4.x + b4.width * 0.9, y: b4.y + b4.height / 2 })
+      if (!(await page.locator('.w-drag-card').count())) bad('no card follows a rail Pokémon')
+      if (!(await page.locator('.w-pane-drop').count())) bad('a rail Pokémon over the right side lights no half')
+      await page.mouse.up()
+      await sleep(600)
+      if ((await names()).length !== before + 1) bad(`from the folded rail: ${before} → ${(await names()).length} panes`)
+      // a plain click on a rail Pokémon still just shows it
+      await rail.nth(0).click()
+      await sleep(300)
+      if ((await names()).length !== before + 1) bad('a click on the rail opened or closed a pane')
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-tabs': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
