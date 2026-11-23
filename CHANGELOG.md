@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.10.14
+- 세션을 이미 두 칸 띄운 상태에서 오른쪽으로 끌면, 화면이 셋으로 나뉘어 왼쪽 끝·가운데·오른쪽 끝 중 놓을 자리가 밝아져요.
+- 왼쪽 목록에서 아직 안 열린 세션을 누르면, 칸마다 최소 너비가 남는 한 지금 보던 세션을 바꾸지 않고 옆에 새 칸으로 열려요.
+- `/remote-control`(`/rc`)을 보내면 채팅에도 원격 제어가 켜졌다는 줄과 링크가 보여요. `/login` 같은 명령의 결과 문구도 채팅에 나와요.
+- 왼쪽 목록 위의 세션 개수를 없애고 간략·상세를 앞으로 옮겼어요.
+
 ### 1.10.13
 - 앱을 껐다 켜거나 업데이트로 다시 시작해도, 나란히 띄워 둔 칸과 보던 세션이 그대로 돌아와요.
 - 일하는 중에 보낸 메시지가 채팅에 연하게 남고 "대기 중"이라고 표시돼요. 실제로 보내지면 보통 말풍선으로 바뀌어요.
@@ -550,6 +556,12 @@
 
 ## spawn (English)
 
+### 1.10.14
+- With two sessions side by side, dragging another to the right splits the area in thirds: the left end, the middle or the right end lights up where it will go.
+- Clicking a session in the left list that is not open yet opens it in a new pane beside the others, as long as every pane keeps its least width, instead of replacing the one in view.
+- `/remote-control` (`/rc`) now shows in the chat that Remote Control is on, with its link. The words of commands such as `/login` show in the chat too.
+- The session count above the left list is gone; Compact / Detailed comes first.
+
 ### 1.10.13
 - After the app closes and opens again, or restarts for an update, the panes you had side by side and the session you were viewing come back as they were.
 - A message sent while Claude works stays in the chat, faded and marked as queued, and turns into a normal message once it is sent.
@@ -957,6 +969,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.14
+- セッションを2つ並べた状態で右へドラッグすると、画面が3つに分かれ、左端・真ん中・右端のうち置く場所が明るくなります。
+- 左のリストでまだ開いていないセッションを押すと、各ペインの最小幅が保てる限り、表示中のセッションを置き換えず隣に新しいペインで開きます。
+- `/remote-control`(`/rc`)を送ると、チャットにもリモートコントロールがオンになった行とリンクが表示されます。`/login` などのコマンドの結果もチャットに出ます。
+- 左のリスト上のセッション数をなくし、コンパクト・詳細を前に移しました。
 
 ### 1.10.13
 - アプリを閉じて開き直しても、アップデートで再起動しても、並べて開いていたペインと表示中のセッションがそのまま戻ります。
