@@ -283,7 +283,7 @@ describe('the words', () => {
   // The words the calm restyle added (Tasks 5–8, 14) that show in 업무 모드: the list header, the
   // session header and rows, the panel's edge, the text size control and its menu
   const NEW_SESSION_UI = [
-    '간략', '상세', '목록 보기', '한 줄씩 (많이 보기)', '이름·상태·컨텍스트·모델까지', '세션 {n}', '셸 열기', '세션 ({key})',
+    '간략', '상세', '목록 보기', '한 줄씩 (많이 보기)', '이름·상태·컨텍스트·모델까지', '셸 열기', '세션 ({key})',
     '세션 닫기', '한 번 더 누르면 세션을 닫아요', '세션 이름 바꾸기', '더블클릭해서 세션 이름 바꾸기',
     '끌어서 폭 조절 · 두 번 누르면 기본', '왼쪽 패널 폭',
     '글자 크기', '작게', '보통', '크게', '아주 크게', '글자 작게', '글자 크게',

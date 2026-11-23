@@ -149,16 +149,34 @@ describe('the session tab row is gone', () => {
   })
 
   it('the new words are in English and Japanese; the tab words are gone', () => {
-    const words = ['간략', '상세', '목록 보기', '한 줄씩 (많이 보기)', '이름·상태·컨텍스트·모델까지', '세션 {n}', '셸 열기', '셸 열기 (포켓몬 없이 {shell})', '셸은 {n}개까지 열 수 있어요.']
+    const words = ['간략', '상세', '목록 보기', '한 줄씩 (많이 보기)', '이름·상태·컨텍스트·모델까지', '셸 열기', '셸 열기 (포켓몬 없이 {shell})', '셸은 {n}개까지 열 수 있어요.']
     for (const ko of words) {
       expect(DICTS.en[ko], ko).toBeTruthy()
       expect(DICTS.ja[ko], ko).toBeTruthy()
     }
-    expect(DICTS.en['세션 {n}']).toBe('Sessions {n}')
     expect(DICTS.ja['간략']).toBe('コンパクト')
     for (const gone of ['셸 탭 열기', '셸 탭 열기 (포켓몬 없이 {shell})', '셸 탭은 {n}개까지 열 수 있어요.']) {
       expect(DICTS.en[gone], gone).toBeUndefined()
       expect(DICTS.ja[gone], gone).toBeUndefined()
     }
+  })
+})
+
+// 2026-11-23: the list's head shows no count ("7" read as a mystery number); 간략 / 상세 leads, the buttons sit right
+describe('the list head: no count, the mode first', () => {
+  const src = (...p: string[]) => join(__dirname, '..', 'src', ...p)
+  const widget = readFileSync(src('Widget.tsx'), 'utf8')
+  const head = widget.slice(widget.indexOf('<div className="w-list-head">'), widget.indexOf('</div>', widget.indexOf('<div className="w-list-head">')))
+  it('has no session count, and 간략 / 상세 is its first item', () => {
+    expect(head).not.toContain('w-list-count')
+    expect(head.indexOf('w-list-mode')).toBeGreaterThan(0)
+    expect(head.indexOf('w-list-mode')).toBeLessThan(head.indexOf('w-list-shell'))
+  })
+  it('the shell button pushes the two buttons to the right; the count\'s CSS and word are gone', () => {
+    const css = readFileSync(src('styles', 'widget.css'), 'utf8')
+    expect(css).not.toContain('w-list-count')
+    expect(css).toMatch(/\.w-list-shell\s*\{[^}]*margin-left:\s*auto/)
+    expect(DICTS.en['세션 {n}']).toBeUndefined()
+    expect(DICTS.ja['세션 {n}']).toBeUndefined()
   })
 })

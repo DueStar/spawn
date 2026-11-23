@@ -97,15 +97,10 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
   display: flex;
   flex-direction: column;
 }
-/* The list's header: 세션 n, then 자동 / 직접, 간략 / 상세, a new shell, a new session */
-.w-list-head { display: flex; align-items: center; gap: 4px; margin: 2px 0 6px; font-size: var(--t-meta); color: var(--ink-3); min-width: 0; container-type: inline-size; }
-.w-list-count { margin-right: auto; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
-/* a narrow panel: the count alone (세션 would be cut to 세…), its full words in the tooltip */
-.w-list-count-short { display: none; }
-@container (max-width: 250px) {
-  .w-list-count-full { display: none; }
-  .w-list-count-short { display: inline; }
-}
+/* The list's header: 간략 / 상세 first, then a new shell and a new session at the right (no count: it read as a mystery number) */
+.w-list-head { display: flex; align-items: center; gap: 4px; margin: 2px 0 6px; font-size: var(--t-meta); color: var(--ink-3); min-width: 0; }
+/* the first button after 간략 / 상세 takes the free space, so both buttons sit at the right */
+.w-list-shell { margin-left: auto; }
 .w-list-mode, .w-list-sort { flex: none; display: inline-flex; border: 1px solid var(--line); border-radius: var(--r-s); padding: 1px; margin-right: 2px; }
 .w-list-mode button, .w-list-sort button {
   position: relative; font: inherit; font-size: var(--t-micro); line-height: 1.4; color: var(--ink-3);

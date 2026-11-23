@@ -6502,7 +6502,7 @@ async function fitProblems(page) {
       return count
     }
     // (a question's option is a label with its description under it: two lines by design)
-    for (const el of document.querySelectorAll('.w-head .w-signin, .w-head .w-update, .w-launch-main, .today-time, .w-list-count, .w-sess-head-proj, .w-lens button, .chat-btn:not(.chat-card-opt), .chat-jump, .chat-tool-meta, .chat-tool-label, .chat-copy')) {
+    for (const el of document.querySelectorAll('.w-head .w-signin, .w-head .w-update, .w-launch-main, .today-time, .w-sess-head-proj, .w-lens button, .chat-btn:not(.chat-card-opt), .chat-jump, .chat-tool-meta, .chat-tool-label, .chat-copy')) {
       if (el.getBoundingClientRect().width && lines(el) > 1) bad.push(`${name(el)} wraps onto ${lines(el)} lines (${el.textContent.trim().slice(0, 20)})`)
     }
     // A fixed column whose text must fit it (기록's time): not wider than the column

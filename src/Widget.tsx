@@ -1481,9 +1481,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           </button>}
 
           <section className="w-card w-party">
-            {/* The list's header: how many, 간략 / 상세, a new shell, a new session (the order is the user's: drag a row) */}
+            {/* The list's header: 간략 / 상세, then at the right a new shell, a new session (the order is the user's: drag a row) */}
             <div className="w-list-head">
-              <span className="w-list-count" title={t('세션 {n}', { n: rows.length })}><span className="w-list-count-full">{t('세션 {n}', { n: rows.length })}</span><span className="w-list-count-short">{rows.length}</span></span>
               <span className="w-list-mode" role="group" aria-label={t('목록 보기')}>
                 <button className={compact ? 'on' : ''} aria-pressed={compact} onClick={() => setListMode('compact')} title={t('한 줄씩 (많이 보기)')}>{t('간략')}</button>
                 <button className={compact ? '' : 'on'} aria-pressed={!compact} onClick={() => setListMode('detail')} title={t('이름·상태·컨텍스트·모델까지')}>{t('상세')}</button>
