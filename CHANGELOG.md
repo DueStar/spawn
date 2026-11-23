@@ -2,6 +2,12 @@
 
 ## spawn
 
+### 1.10.13
+- 앱을 껐다 켜거나 업데이트로 다시 시작해도, 나란히 띄워 둔 칸과 보던 세션이 그대로 돌아와요.
+- 일하는 중에 보낸 메시지가 채팅에 연하게 남고 "대기 중"이라고 표시돼요. 실제로 보내지면 보통 말풍선으로 바뀌어요.
+- 채팅에 나온 영상·소리·사진·PDF 경로를 누르면 기본 앱으로 열려요. 백틱으로 감싼 경로도 눌러요.
+- 포켓몬을 잡거나 놓친 줄이 작은 박스 아이콘으로 바뀌고, 줄 높이가 낮아졌어요.
+
 ### 1.10.12
 - 왼쪽 목록과 박스에서 끌 때 Windows의 점선 박스 커서가 더 이상 보이지 않아요. 끄는 동안은 잡은 손 모양이고, 살짝 움직인 클릭은 그대로 클릭이며, Esc로 취소할 수 있어요.
 - 세션을 오른쪽으로 끌면 칸의 왼쪽 반이나 오른쪽 반이 밝아지고, 놓으면 그쪽에 열려요. 칸 머리를 잡고 끌어 자리를 옮길 수 있고, 왼쪽 패널을 접은 상태에서도 포켓몬을 끌어 와 옆에 열 수 있어요.
@@ -544,6 +550,12 @@
 
 ## spawn (English)
 
+### 1.10.13
+- After the app closes and opens again, or restarts for an update, the panes you had side by side and the session you were viewing come back as they were.
+- A message sent while Claude works stays in the chat, faded and marked as queued, and turns into a normal message once it is sent.
+- Click a video, sound, picture or PDF path in the chat to open it in its default app, including paths in backticks.
+- A caught or fled Pokémon shows its small box icon, in a shorter row.
+
 ### 1.10.12
 - Dragging in the session list and the box no longer shows Windows' dotted-box cursor. A grabbing hand shows while you drag, a click that barely moves is still a click, and Esc cancels.
 - Drag a session to the right and the left or right half of a pane lights up; drop it to open it on that side. Panes move by dragging their header, and with the left panel folded you can drag a Pokémon over to open it beside.
@@ -945,6 +957,12 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.13
+- アプリを閉じて開き直しても、アップデートで再起動しても、並べて開いていたペインと表示中のセッションがそのまま戻ります。
+- 作業中に送ったメッセージがチャットに薄く残り「待機中」と表示されます。実際に送信されると通常のメッセージに変わります。
+- チャットに出た動画・音声・画像・PDF のパスをクリックすると既定のアプリで開きます。バッククォートで囲まれたパスも開けます。
+- ポケモンを捕まえた・逃げられた行が小さなボックスアイコンになり、行が低くなりました。
 
 ### 1.10.12
 - セッション一覧とボックスでドラッグしても、Windows の点線ボックスのカーソルが出なくなりました。ドラッグ中は手のカーソルになり、わずかに動いたクリックはクリックのまま、Esc で取り消せます。
