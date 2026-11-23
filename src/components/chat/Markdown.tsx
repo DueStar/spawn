@@ -34,6 +34,9 @@ const FileGlyph = () => (
   <svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="M4 1.5h5l3.5 3.5v9.5h-8.5z" /><path d="M9 1.5v3.5h3.5" /></svg>
 )
 
+/** A page, a PDF, a picture, a video or a sound: opened in its default app (electron/links.cjs VIEW_ONLY) */
+const VIEWABLE = /\.(html?|pdf|png|jpe?g|gif|webp|mp4|mov|webm|mkv|avi|m4v|mp3|wav|m4a|ogg|flac)$/i
+
 function inlineNodes(xs: Inline[], h: Handlers): React.ReactNode[] {
   return xs.map((x, i) => {
     switch (x.type) {
@@ -56,7 +59,7 @@ function inlineNodes(xs: Inline[], h: Handlers): React.ReactNode[] {
       case 'path': {
         const { file, line, col } = x
         return (
-          <button key={i} type="button" className="fchip" title={t('코드 편집기에서 열기 (없으면 폴더에서 보기)')} onClick={e => { e.preventDefault(); h.onPath(file, line, col) }}>
+          <button key={i} type="button" className="fchip" title={!line && VIEWABLE.test(file) ? t('눌러서 열기') : t('코드 편집기에서 열기 (없으면 폴더에서 보기)')} onClick={e => { e.preventDefault(); h.onPath(file, line, col) }}>
             <span className="fchip-in"><FileGlyph />{x.text}</span>
           </button>
         )

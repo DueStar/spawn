@@ -32,10 +32,12 @@ function vscodeUrl(abs, { scheme = 'vscode', platform = process.platform } = {})
  * answers vscode:// or cursor:// (at its line), else shown in its folder. Never the default app:
  * from the chat a click must not run a script (.cmd, .bat, .ps1, .js, .sh …), and the prose that
  * names a file can be steered by what Claude read. (A terminal's Ctrl+click keeps its own way.)
- * The one exception: a page, a PDF or a picture named without a line is opened to be looked at, in
- * its default app (the browser, a viewer), as a Ctrl+click on one does — nothing on this list runs.
+ * The one exception: a page, a PDF, a picture, a video or a sound named without a line is opened to be looked at
+ * (or played), in its default app (the browser, a viewer, a player), as a Ctrl+click on one does — nothing on this
+ * list runs.
  */
-const VIEW_ONLY = new Set(['.html', '.htm', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp'])
+const VIEW_ONLY = new Set(['.html', '.htm', '.pdf', '.png', '.jpg', '.jpeg', '.gif', '.webp',
+  '.mp4', '.mov', '.webm', '.mkv', '.avi', '.m4v', '.mp3', '.wav', '.m4a', '.ogg', '.flac'])
 function chatOpenPlan(abs, { line, col, hasScheme, platform = process.platform } = {}) {
   const ext = (platform === 'win32' ? path.win32 : path.posix).extname(String(abs)).toLowerCase()
   if (!(Number(line) > 0) && VIEW_ONLY.has(ext)) return { view: abs }

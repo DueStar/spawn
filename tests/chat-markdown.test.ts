@@ -150,11 +150,13 @@ describe('blocks Claude Code prints', () => {
     expect(plain(xs)).toBe('(see https://example.com/a).')
   })
 
-  it('a file path with a line is a path chip; inside backticks it is code', () => {
+  it('a file path with a line is a path chip; inside backticks too, drawn as code (2026-11-23: clickable)', () => {
     const xs = para('It is in src/app/cart/LoginButton.tsx:18 and `src/app/cart/LoginButton.tsx:18`.')
     const paths = xs.filter(x => x.type === 'path') as Extract<Inline, { type: 'path' }>[]
-    expect(paths).toEqual([{ type: 'path', file: 'src/app/cart/LoginButton.tsx', line: 18, text: 'src/app/cart/LoginButton.tsx:18' }])
-    expect(xs.some(x => x.type === 'code' && x.text === 'src/app/cart/LoginButton.tsx:18')).toBe(true)
+    expect(paths).toEqual([
+      { type: 'path', file: 'src/app/cart/LoginButton.tsx', line: 18, text: 'src/app/cart/LoginButton.tsx:18' },
+      { type: 'path', file: 'src/app/cart/LoginButton.tsx', line: 18, text: 'src/app/cart/LoginButton.tsx:18', code: true },
+    ])
     const win = para('see C:\\x\\y.ts:3:7, ok').find(x => x.type === 'path')
     expect(win).toEqual({ type: 'path', file: 'C:\\x\\y.ts', line: 3, col: 7, text: 'C:\\x\\y.ts:3:7' })
     // a Korean particle right after the path is not part of it

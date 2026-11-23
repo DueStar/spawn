@@ -30,7 +30,7 @@ export type Inline =
   | { type: 'del'; children: Inline[] }
   | { type: 'link'; href: string; children: Inline[] }
   | { type: 'autolink'; href: string }
-  | { type: 'path'; file: string; line?: number; col?: number; text: string }
+  | { type: 'path'; file: string; line?: number; col?: number; text: string; code?: true }
   | { type: 'br' }
 
 export type Align = 'left' | 'center' | 'right' | null
@@ -107,7 +107,7 @@ function autolinkAt(s: string, i: number, runEnd: number): number {
   return safeHref(s.slice(i, j)) ? j : -1
 }
 
-const EXT = 'tsx|ts|jsx|js|mjs|cjs|json|jsonl|md|mdx|py|rs|go|java|kt|kts|swift|c|h|cc|cpp|hpp|cs|rb|php|css|scss|sass|less|html|htm|vue|svelte|yml|yaml|toml|ini|sh|bash|zsh|ps1|psm1|bat|cmd|sql|txt|xml|gradle|lua|dart|ex|exs|erl|hs|ml|scala|clj|r|pl|env|lock|cfg|conf|gitignore|dockerfile'
+const EXT = 'png|jpe?g|gif|webp|pdf|mp4|mov|webm|mkv|avi|m4v|mp3|wav|m4a|ogg|flac|tsx|ts|jsx|js|mjs|cjs|json|jsonl|md|mdx|py|rs|go|java|kt|kts|swift|c|h|cc|cpp|hpp|cs|rb|php|css|scss|sass|less|html|htm|vue|svelte|yml|yaml|toml|ini|sh|bash|zsh|ps1|psm1|bat|cmd|sql|txt|xml|gradle|lua|dart|ex|exs|erl|hs|ml|scala|clj|r|pl|env|lock|cfg|conf|gitignore|dockerfile'
 /**
  * One token (≤ 300 characters, no space): a file path with a folder or a line. A UNC or
  * device path (\\host\share\…, \\?\…, \\.\…) is read whole — so its backslashes stay — but it
@@ -290,7 +290,14 @@ function inlines(s: string, from: number, to: number, T: Tables, links: boolean)
         flush()
         let code = s.slice(i + len, nx).replace(/\n/g, ' ')
         if (code.length > 2 && code[0] === ' ' && code[code.length - 1] === ' ' && code.trim()) code = code.slice(1, -1)
-        out.push({ type: 'code', text: code })
+        // backticks holding a path alone (with a folder or a line): a path chip drawn as code
+        const pm = code.length <= 300 && !/\s/.test(code) ? PATH_RE.exec(code) : null
+        if (pm && pm[0] === code && (/[\\/]/.test(pm[1]) || pm[2]) && !isRemotePath(pm[1])) {
+          const node: Inline = { type: 'path', file: pm[1], text: code, code: true }
+          if (pm[2]) node.line = Number(pm[2])
+          if (pm[3]) node.col = Number(pm[3])
+          out.push(node)
+        } else out.push({ type: 'code', text: code })
         i = nx + len
         continue
       }
