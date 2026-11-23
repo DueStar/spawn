@@ -145,8 +145,10 @@ const CLOSE_AFTER_MS = 60_000
 const TAIL_WANT = 150
 const CANARY_MS = 3000
 // Claude Code writes a prompt only once every UserPromptSubmit hook is done, and another plugin's hook can take
-// many seconds (claude-mem: 12 s) while spawn's own arrives at once: the wait allows for them
-const MISSING_MS = 15_000
+// many seconds while spawn's own arrives at once: the wait outlasts them (claude-mem took 12 s on 2026-11-17, and
+// ran to its own 60 s timeout on 2026-11-23 when its worker could not be reached: the banner came after almost
+// every prompt, and the prompt then landed). Until then the session just shows as working
+const MISSING_MS = 65_000
 const STALL_MS = 30_000
 const AGENT_ITEMS = 200
 /** the items a view keeps (the page's own cap, src/chat/store.ts ITEM_CAP): the oldest go, hasOlder says so */
@@ -1289,7 +1291,7 @@ function createLens({
 
   const watching = (t) => t.open && t.loaded
 
-  /** A prompt: where the transcript stands now (to tell it grew); missing after 5 s without growth */
+  /** A prompt: where the transcript stands now (to tell it grew); missing after MISSING_MS without growth */
   function onPrompt(t) {
     t.prompt = { path: t.path, end: t.tail ? t.tail.state().endOffset : 0 }
     // a late check of the last turn ends here: this turn's own check decides

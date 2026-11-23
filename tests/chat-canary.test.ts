@@ -173,22 +173,34 @@ describe('the canary', () => {
 })
 
 describe('missing and stalled', () => {
-  it('a prompt, and no transcript for 15 s: missing', async () => {
+  it('a prompt, and no transcript for 65 s: missing', async () => {
     const s = setup()
     s.lens.setTerminals([term(SID(901))])
     s.lens.open(SID(901))
     await s.run(20)
     s.lens.hook('UserPromptSubmit', stream[0].body, Date.now())
-    await s.run(14_900)
+    await s.run(64_900)
     expect(s.status().banner).toBeNull()
     await s.run(200)
     expect(s.status().banner).toEqual({ reason: 'missing' })
   })
 
-  it('a prompt, and the transcript does not grow for 15 s: missing', async () => {
+  it('a prompt, and the transcript does not grow for 65 s: missing', async () => {
     const s = await promptSubmitted()
-    await s.run(15_100)
+    await s.run(65_100)
     expect(s.status().banner).toEqual({ reason: 'missing' })
+  })
+
+  // claude-mem's hook can run to its own 60 s timeout (2026-11-23: its worker could not be reached, the
+  // banner showed after almost every prompt): the record is written only then, and nothing is wrong
+  it('the prompt lands 59 s after its hook (a hook that ran near its timeout): no banner', async () => {
+    const s = await promptSubmitted()
+    await s.run(59_000)
+    expect(s.status().banner).toBeNull()
+    appendFileSync(s.transcript(SID(901)), '{"type":"queue-operation","operation":"enqueue"}\n')
+    await s.run(1100)
+    await s.run(10_000)
+    expect(s.status().banner).toBeNull()
   })
 
   // Claude Code writes the prompt only after every UserPromptSubmit hook is done; another plugin's
@@ -204,7 +216,7 @@ describe('missing and stalled', () => {
 
   it('the prompt lands after the missing banner: the banner goes by itself', async () => {
     const s = await promptSubmitted()
-    await s.run(15_100)
+    await s.run(65_100)
     expect(s.status().banner).toEqual({ reason: 'missing' })
     appendFileSync(s.transcript(SID(901)), '{"type":"queue-operation","operation":"enqueue"}\n')
     await s.run(1100)
