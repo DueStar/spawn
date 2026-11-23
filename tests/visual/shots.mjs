@@ -449,7 +449,7 @@ const SURFACES = {
     await sleep(300)
   } },
 }
-const ASK_SURFACES = ['chat-ask-bash', 'chat-ask-edit', 'chat-ask-agent', 'chat-ask-question', 'chat-ask-plan', 'chat-ask-timeout', 'chat-ask-longpath', 'chat-ask-longline', 'chat-ask-sandbox', 'chat-ask-overwrite', 'chat-ask-long']
+const ASK_SURFACES = ['chat-ask-bash', 'chat-ask-edit', 'chat-ask-agent', 'chat-ask-question', 'chat-ask-preview', 'chat-ask-answered', 'chat-ask-plan', 'chat-ask-timeout', 'chat-ask-longpath', 'chat-ask-longline', 'chat-ask-sandbox', 'chat-ask-overwrite', 'chat-ask-long']
 const WORK = ['session', 'session-compact', 'session-nomon', 'rail', 'widget', 'widget-plain', 'settings', 'chat', 'chat-banner', 'chat-empty', 'chat-compose', 'chat-compose-fail', 'chat-compose-pending', ...ASK_SURFACES, 'chat-changes', 'chat-thinking', 'chat-all', 'chat-foot', 'chat-wild', 'chat-link', 'chat-new-version', 'chat-help-settings']
 const MAC = ['session', 'rail', 'chat', 'chat-compose', ...ASK_SURFACES, 'chat-changes', 'chat-thinking', 'chat-foot', 'chat-wild', 'chat-find', 'chat-link', 'chat-new-version']
 const SIZES = [[1440, 900], [1100, 720]]
@@ -3501,7 +3501,9 @@ const FLOWS = {
       await page.locator('.w-lens button', { hasText: '터미널' }).click()
       await sleep(300)
       const vis = await callsOf(page, 'chat.visible')
-      if (vis[vis.length - 1]?.args[0] !== null) bad(`the flip to 터미널 did not say no chat is shown: ${JSON.stringify(vis.map(v => v.args[0]))}`)
+      // (each chat says its own going: (id, false), so a split view's other pane stays shown)
+      const last = vis[vis.length - 1]?.args
+      if (!last || last[1] !== false) bad(`the flip to 터미널 did not say this chat is off screen: ${JSON.stringify(vis.map(v => v.args))}`)
       // back to 채팅: main released it meanwhile (hidden), so its card is the terminal's now (the fake bridge
       // answers chat.open with the conversation as first opened: the lens's word comes after it)
       await page.locator('.w-lens button', { hasText: '채팅' }).click()

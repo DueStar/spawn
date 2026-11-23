@@ -111,8 +111,9 @@ function createChatHost({
   // the held requests (only while armed for a verified Claude Code), what the page shows
   let holds = null
   let holdsOpen = false       // new holds may open (the verified version); off, the open ones stay answerable
-  let visibleId = null       // the terminal whose chat is the shown view (chat:visible), or none
-  let visibleFrom = null      // the page (its webContents id) that said so: only it, or its going, clears it
+  // the terminals whose chat is on screen (chat:visible; the split view shows two or three at once), each with
+  // the page (its webContents id) that said so: only that page, or its going, takes it off
+  const shownChats = new Map()
   let windowVisible = true    // the app window is shown and not minimised (main.cjs)
 
   const sleep = (ms, value) => new Promise((resolve) => timers.setTimeout(() => resolve(value), ms))
@@ -270,7 +271,9 @@ function createChatHost({
   /** The holds of a terminal (bound to it, or named by its URL) */
   const holdOf = (id) => (h) => (h.id ?? h.urlId) === id
   /** A question whose chat is not the visible view of a visible window */
-  const hiddenQuestion = (h) => h.kind === 'question' && (!windowVisible || (h.id ?? h.urlId) !== visibleId)
+  const hiddenQuestion = (h) => h.kind === 'question' && (!windowVisible || !shownChats.has(h.id ?? h.urlId))
+  /** The chat of `id` is on screen, shown by page `from` (a call with no page: any) */
+  const shownBy = (id, from) => shownChats.has(id) && (from === undefined || shownChats.get(id) === undefined || shownChats.get(id) === from)
 
   function onBind(m) {
     if (!holds || typeof m.holdId !== 'string') return
@@ -286,18 +289,21 @@ function createChatHost({
    */
   function visible(p, from) {
     const id = typeof p?.id === 'string' && p.id ? p.id : null
-    if (id === null && from !== undefined && visibleFrom !== null && from !== visibleFrom) return
-    visibleId = id
-    visibleFrom = id === null ? null : (from ?? null)
+    if (id === null) {
+      // (the old word "none": every chat that page showed goes)
+      for (const [k, f] of [...shownChats]) if (from === undefined || f === undefined || f === from) shownChats.delete(k)
+    } else if (p?.on === false) {
+      // (one pane's chat going: only what that page said)
+      if (shownBy(id, from)) shownChats.delete(id)
+    } else shownChats.set(id, from)
     holds?.releaseWhere(hiddenQuestion, 'hidden')
   }
 
   /** A page went or reloads (main.cjs): the chat it showed is no longer shown — only its own */
   function pageGone(from) {
-    if (visibleFrom === null || from !== visibleFrom) return
-    visibleId = null
-    visibleFrom = null
-    holds?.releaseWhere(hiddenQuestion, 'hidden')
+    let gone = false
+    for (const [k, f] of [...shownChats]) if (f === from) { shownChats.delete(k); gone = true }
+    if (gone) holds?.releaseWhere(hiddenQuestion, 'hidden')
   }
 
   /** The app window shown or hidden / minimised (main.cjs): questions go back while it is not seen */
@@ -319,7 +325,7 @@ function createChatHost({
     // (each question's own words, its "Other" row — a string or null per question; the registry checks them)
     const other = Array.isArray(p?.other) && p.other.length <= 4 && p.other.every(x => x === null || typeof x === 'string') ? [...p.other] : undefined
     // (only the page that shows that chat answers for it)
-    const shown = from === undefined || visibleFrom === null || from === visibleFrom ? visibleId : null
+    const shown = shownBy(id, from) ? id : null
     const r = holds.answer(typeof p?.holdId === 'string' ? p.holdId : '', { id, choice: typeof p?.choice === 'string' ? p.choice : '', option, picks, other, visibleId: shown, windowVisible })
     // the side panel's 확인 필요 goes, as when the terminal is answered with Enter
     if (r.ok) { try { terminals.clearAsking?.(id) } catch {} }
@@ -350,8 +356,7 @@ function createChatHost({
     const term = termOf(id)
     if (!term || term.status === 'exited') return { ok: false, reason: 'no-session' }
     if (term.tool !== 'claude' || term.chat !== 'armed') return { ok: false, reason: 'unarmed' }
-    const samePage = from === undefined || visibleFrom === null || from === visibleFrom
-    if (!windowVisible || visibleId !== id || !samePage) return { ok: false, reason: 'not-shown' }
+    if (!windowVisible || !shownBy(id, from)) return { ok: false, reason: 'not-shown' }
     const c = inputs.get(id)
     if (c && (c.inFlight || now() < c.sideUntil)) return { ok: false, reason: 'sending' }
     if (holds && holds.openFor(id).length > 0) return { ok: false, reason: 'waiting' }

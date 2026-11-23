@@ -107,6 +107,11 @@ button.chat-tool-toggle { cursor: pointer; }
 .chat-ask-q { margin: 0 0 4px; color: var(--ink); font-size: var(--t-prose); line-height: 1.6; }
 .chat-ask-opts { margin: 0; padding-left: 20px; font-size: var(--t-ui); line-height: 1.65; }
 .chat-ask-opts li::marker { color: var(--ink-3); }
+/* answered: the option chosen stands out (ink, not yellow), the others stay quiet */
+.chat-ask-opts li { color: var(--ink-3); }
+.chat-ask-opts li.chat-ask-chosen { color: var(--ink); font-weight: 500; }
+.chat-ask-tag { font-weight: 400; color: var(--ink-2); font-size: var(--t-meta); }
+.chat-ask-own { margin: 4px 0 0; font-size: var(--t-ui); color: var(--ink); }
 .chat-plan { color: var(--ink-2); max-height: 420px; overflow: auto; }
 /* a sub-agent's rows, nested */
 .chat-agent-body { display: flex; flex-direction: column; gap: 2px; }
@@ -402,6 +407,8 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 .chat-card-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-height: 30px; padding: 5px 12px; white-space: normal; text-align: left; font-size: var(--t-ui); }
 .chat-card-optlabel { color: var(--ink); font-weight: var(--w-name); overflow-wrap: anywhere; }
 .chat-card-optdesc { font-size: var(--t-meta); font-weight: 400; color: var(--ink-3); overflow-wrap: anywhere; }
+/* an option's preview (a small drawing or code): as drawn, monospace, line breaks and spaces kept; a wide one scrolls */
+.chat-card-optpre, .chat-ask-preview { display: block; width: fit-content; max-width: 100%; box-sizing: border-box; margin: 6px 0 0; padding: 8px 10px; max-height: 260px; overflow: auto; border-radius: var(--r-m); background: var(--term-bg); border: 1px solid var(--line); font-family: 'Monaspace Neon Var', Consolas, 'SF Mono', Menlo, monospace; font-size: var(--t-code); font-weight: var(--w-mono); line-height: 1.15; color: var(--ink-2); white-space: pre; text-align: left; }
 .chat-card-optlist { margin: 0; padding-left: 20px; font-size: var(--t-ui); line-height: 1.65; color: var(--ink-2); }
 .chat-card-optlist li::marker { color: var(--ink-3); }
 /* a plan: its first lines, the rest in place in a box of its own scroll */

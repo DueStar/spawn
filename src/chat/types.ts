@@ -32,6 +32,7 @@ export interface ToolItem extends ItemBase {
 export interface ToolInput {   // a whitelisted, capped excerpt — never the whole input
   file?: string; command?: string; description?: string; pattern?: string; path?: string; url?: string
   query?: string; question?: string; options?: string[]; plan?: string; todos?: { done: number; total: number }
+  previews?: string[]; answer?: string                  // AskUserQuestion: each option's preview ('' for none); what was answered
   agentType?: string; background?: true                 // Agent / Task: run_in_background
   server?: string; mcpTool?: string
   files?: string[]                                       // SendUserFile: the files it sent (paths)
@@ -150,9 +151,9 @@ export interface AskCard {
   timeoutMs?: number                            // Bash / PowerShell: its own time limit
   fetchPrompt?: string                          // WebFetch: what is asked of the page
   always: { rule: string } | null               // 항상 허용 offered: the rule it adds for this session
-  question?: { text: string; header?: string; options: { label: string; description?: string }[] }
+  question?: { text: string; header?: string; options: { label: string; description?: string; preview?: string }[] }
   /** several questions, or a multi-select one: every question, the first as `question` too */
-  questions?: { text: string; header?: string; multiSelect?: true; options: { label: string; description?: string }[] }[]
+  questions?: { text: string; header?: string; multiSelect?: true; options: { label: string; description?: string; preview?: string }[] }[]
   state: 'open' | 'sent' | 'timeout' | 'terminal'
   sent?: 'allow' | 'always' | 'deny' | 'option' | 'options'
   cut?: boolean

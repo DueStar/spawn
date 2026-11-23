@@ -97,6 +97,7 @@ export const QuestionCard: React.FC<CardProps> = ({ card, local, shownAt, onAnsw
             <AnswerButton key={i} className="chat-btn chat-card-opt" shownAt={shownAt} disabled={busy} onAnswer={() => onAnswer('option', i)}>
               <span className="chat-card-optlabel"><Exact text={o.label} /></span>
               {o.description && <span className="chat-card-optdesc"><Exact text={o.description} /></span>}
+              {o.preview && <pre className="chat-card-optpre">{o.preview}</pre>}
             </AnswerButton>
           ))}
           <WordsRow value={words[0]} disabled={busy} on={own(0) !== null} onChange={v => setWord(0, v)} onEnter={sendAll}>
@@ -119,6 +120,7 @@ export const QuestionCard: React.FC<CardProps> = ({ card, local, shownAt, onAnsw
                   aria-pressed={on} disabled={busy} onClick={() => toggle(qi, oi)}>
                   <span className="chat-card-optlabel"><span className="chat-card-mark" aria-hidden="true" /><Exact text={o.label} /></span>
                   {o.description && <span className="chat-card-optdesc"><Exact text={o.description} /></span>}
+                  {o.preview && <pre className="chat-card-optpre">{o.preview}</pre>}
                 </button>
               )
             })}

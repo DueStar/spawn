@@ -118,8 +118,11 @@ function toolInput(name, input, cwd, caps = CAPS) {
     case 'AskUserQuestion': {
       const q = Array.isArray(input.questions) ? input.questions[0] : null
       if (!isObj(q)) return {}
-      const options = Array.isArray(q.options) ? q.options.slice(0, 6).map(o => f(isObj(o) ? o.label : undefined)).filter(Boolean) : undefined
-      return clean({ question: f(q.question), options: options?.length ? options : undefined })
+      const opts = Array.isArray(q.options) ? q.options.slice(0, 6).filter(o => isObj(o) && typeof o.label === 'string' && o.label) : []
+      const options = opts.map(o => f(o.label))
+      // (each option's drawing or code, as it is drawn: '' for none; only when one has it)
+      const previews = opts.map(o => (typeof o.preview === 'string' ? cut(o.preview, PREVIEW_CAP) : ''))
+      return clean({ question: f(q.question), options: options.length ? options : undefined, previews: previews.some(Boolean) ? previews : undefined })
     }
     case 'ExitPlanMode':
       return clean({ plan: str(input.plan, caps.plan) })
@@ -289,6 +292,9 @@ function unescapeHtml(s) {
  * sidechain lines are skipped.
  */
 /** A record line saying a UserPromptSubmit hook blocked the prompt (Claude Code 2.1.330: promptSubmitEnding) */
+/** The most of an option's preview a question row keeps */
+const PREVIEW_CAP = 2000
+
 function isBlockedPrompt(obj) {
   if (!obj || obj.type !== 'system') return false
   const kind = obj.promptSubmitEnding && obj.promptSubmitEnding.ending && obj.promptSubmitEnding.ending.kind
@@ -350,6 +356,11 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
     item.state = state
     item.output = toolOutput(block.content, r, block.is_error === true || rejected, item.tool, caps)
     if (isObj(r) && typeof r.agentId === 'string' && r.agentId) item.agentId = cut(r.agentId, caps.field)
+    // a question answered: what was chosen (the first question's; several: joined), for the row to say
+    if (item.tool === 'AskUserQuestion' && state === 'done' && isObj(r) && isObj(r.answers)) {
+      const said = Object.values(r.answers).filter(v => typeof v === 'string' && v).map(v => cut(v, caps.field))
+      if (said.length) item.input = { ...item.input, answer: said.join(' · ') }
+    }
     // an edit that went through: its diff (a row whose call is not seen yet is judged by the result's shape)
     if (state === 'done' && (item.tool === null || DIFF_TOOLS.has(item.tool))) {
       const diff = buildDiff(r, { cwd, maxLines: caps.diffLines, maxLine: caps.diffLine, maxText: caps.diffText })

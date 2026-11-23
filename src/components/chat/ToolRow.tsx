@@ -89,7 +89,20 @@ export const ToolRow: React.FC<{ item: ToolItem }> = ({ item }) => {
         <div className="chat-tool-body chat-ask">
           {item.input.question && <p className="chat-ask-q">{item.input.question}</p>}
           {!!item.input.options?.length && (
-            <ol className="chat-ask-opts">{item.input.options.map((o, i) => <li key={i}>{o}</li>)}</ol>
+            // answered: the chosen option marked, with its preview as drawn
+            <ol className="chat-ask-opts">{item.input.options.map((o, i) => {
+              const chosen = !!item.input.answer && item.input.answer.split(' · ').includes(o)
+              const pre = chosen ? item.input.previews?.[i] : ''
+              return (
+                <li key={i} className={chosen ? 'chat-ask-chosen' : undefined} aria-current={chosen ? 'true' : undefined}>
+                  {o}{chosen && <span className="chat-ask-tag"> · {t('고름')}</span>}
+                  {pre && <pre className="chat-ask-preview">{pre}</pre>}
+                </li>
+              )
+            })}</ol>
+          )}
+          {item.input.answer && !item.input.answer.split(' · ').some(a => item.input.options?.includes(a)) && (
+            <p className="chat-ask-own">{t('답')}: {item.input.answer}</p>
           )}
         </div>
       )}

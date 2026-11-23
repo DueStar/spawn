@@ -138,7 +138,7 @@ interface spawnBridge {
     /** Whether a send of this session ended without Enter because its page went away (asked once, as the composer opens) */
     stranded(id: string): Promise<{ stranded: boolean }>
     /** The session whose chat is the shown view, or null (a question is answered from the chat only while shown) */
-    visible(id: string | null): void
+    visible(id: string | null, on?: boolean): void
     /** An answer card's choice: main checks it and builds what is sent (never the page) */
     answer(p: { id: string; holdId: string; choice: AnswerChoice; option?: number; picks?: number[][]; other?: (string | null)[] }): Promise<{ ok: true } | { ok: false; reason: AnswerRefusal }>
     /** One resize nudge (a row less, then back) for the shown chat's terminal that replayed before it fitted; never a write */

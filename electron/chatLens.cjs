@@ -163,7 +163,7 @@ const PERMISSION_MODES = new Set(['default', 'acceptEdits', 'plan', 'auto', 'byp
 // ---- the chat's buttons: what a card shows, whole or not at all ----
 
 /** The most a card shows of each part; past it the card is answered in the terminal (never cut and answered) */
-const CARD = Object.freeze({ command: 20_000, file: 2_000, url: 2_000, args: 4_000, question: 1_000, label: 200, description: 1_000, header: 100, json: 65_536 })
+const CARD = Object.freeze({ command: 20_000, file: 2_000, url: 2_000, args: 4_000, question: 1_000, label: 200, description: 1_000, preview: 2_000, header: 100, json: 65_536 })
 
 /**
  * The input keys each tool's card shows. A key outside its tool's list makes the card
@@ -282,7 +282,7 @@ function questionCard(input) {
       text: cutTo(q.question, CARD.question) ?? '',
       ...(cutTo(q.header, CARD.header) ? { header: cutTo(q.header, CARD.header) } : {}),
       ...(q.multiSelect === true ? { multiSelect: true } : {}),
-      options: opts.slice(0, 6).map(o => ({ label: cutTo(o.label, CARD.label) ?? '', ...(cutTo(o.description, CARD.description) ? { description: cutTo(o.description, CARD.description) } : {}) })),
+      options: opts.slice(0, 6).map(o => ({ label: cutTo(o.label, CARD.label) ?? '', ...(cutTo(o.description, CARD.description) ? { description: cutTo(o.description, CARD.description) } : {}), ...(cutTo(o.preview, CARD.preview) ? { preview: cutTo(o.preview, CARD.preview) } : {}) })),
     }
   })
   let size = Infinity

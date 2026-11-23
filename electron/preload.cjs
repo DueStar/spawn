@@ -88,7 +88,8 @@ contextBridge.exposeInMainWorld('spawn', {
     stranded: (id) => ipcRenderer.invoke('chat:stranded', String(id)),
     // the buttons: which session's chat is shown (or none), and an answer — its choice only
     // (main builds what is sent; the page never does)
-    visible: (id) => ipcRenderer.send('chat:visible', { id: typeof id === 'string' && id ? id : null }),
+    // (on false: this chat is off screen now; the split view shows several, each says its own)
+    visible: (id, on) => ipcRenderer.send('chat:visible', { id: typeof id === 'string' && id ? id : null, ...(on === false ? { on: false } : {}) }),
     answer: (p) => ipcRenderer.invoke('chat:answer', {
       id: String(p?.id ?? ''), holdId: String(p?.holdId ?? ''), choice: String(p?.choice ?? ''),
       ...(Number.isInteger(p?.option) ? { option: p.option } : {}),

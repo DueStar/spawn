@@ -621,10 +621,11 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
   // none once this view goes or the page is hidden (a flip, a session switch, another view, the widget mode)
   useEffect(() => {
     if (fixed || !bridge?.chat.visible) return
-    const say = () => bridge?.chat.visible(document.visibilityState === 'visible' ? id : null)
+    // (each pane of the split view says its own chat: one going never hides another)
+    const say = () => bridge?.chat.visible(id, document.visibilityState === 'visible')
     say()
     document.addEventListener('visibilitychange', say)
-    return () => { document.removeEventListener('visibilitychange', say); bridge?.chat.visible(null) }
+    return () => { document.removeEventListener('visibilitychange', say); bridge?.chat.visible(id, false) }
   }, [fixed, id])
   return (
     <ChatContext.Provider value={ctx}>

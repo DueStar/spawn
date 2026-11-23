@@ -226,6 +226,8 @@ export const ASKS = {
   edit: () => ({ ...ASK, key: 'hold0edit', holdId: 'hold0edit', kind: 'permission', tool: 'Edit', input: { file: file('src/middleware.ts') }, diff: { file: 'src/middleware.ts', kind: 'edit', added: 2, removed: 1, hidden: 0, hunks: [{ oldStart: 1, newStart: 1, lines: askEditLines.map(l => ({ ...l })) }] }, since: minutes(1) }),
   agent: () => ({ ...ASK, key: 'hold0agent', holdId: 'hold0agent', kind: 'permission', agent: true, tool: 'PowerShell', input: { command: '(Get-Content notes.txt | Measure-Object -Line).Lines' }, always: { rule: 'PowerShell((Get-Content notes.txt | Measure-Object -Line).Lines)' }, since: minutes(1) }),
   question: () => ({ ...ASK, key: 'hold0question', holdId: 'hold0question', kind: 'question', toolId: 'toolu_fixture92', tool: 'AskUserQuestion', input: {}, question: { text: 'README의 로그인 절도 같이 고칠까요?', header: 'README', options: [{ label: '네', description: '바뀐 리다이렉트 규칙을 README에도 적어요' }, { label: '아니요', description: '코드만 고쳐요' }] }, since: minutes(1) }),
+  // options with previews (a small drawing each): drawn as they are, monospace
+  preview: () => ({ ...ASK, key: 'hold0preview', holdId: 'hold0preview', kind: 'question', toolId: 'toolu_fixture93', tool: 'AskUserQuestion', input: {}, question: { text: '세션을 끌어 놓을 때 어디에 들어갈지 어떻게 보여 줄까요?', header: '놓을 자리', options: [{ label: '칸 사이 틈', description: '가장 가까운 칸 사이에 세로 표시', preview: '┌──────┬ ┊ ┬──────┐\n│ 칸 A │ ┊ │ 칸 B │\n│      │ ┊ │      │\n└──────┴ ┊ ┴──────┘\n         ↑ 여기에 열려요' }, { label: '칸의 왼쪽/오른쪽 반', description: '포인터가 있는 칸의 반쪽이 밝아져요', preview: '┌──────────┬──────────┐\n│ 칸 A     │░░░░░░░░░░│\n│          │░ 여기에 ░│\n│          │░ 열려요 ░│\n└──────────┴──────────┘' }] }, since: minutes(1) }),
   plan: () => ({ ...ASK, key: 'ask:hold0plan', holdId: null, kind: 'plan', tool: 'ExitPlanMode', input: { plan: askPlan }, state: 'terminal', since: minutes(1) }),
   timeout: () => ({ ...ASK, key: 'hold0timeout', holdId: 'hold0timeout', kind: 'permission', tool: 'WebFetch', input: { url: 'https://developer.mozilla.org/docs/Web/API/URL/URL' }, state: 'timeout', since: minutes(6) }),
   // edge cases: a path of 300 characters, a diff line hiding its tail far to the right, a command with
@@ -456,6 +458,9 @@ const CONVERSATIONS = {
   'chat-ask-edit': asking(ASKS.edit, null),
   'chat-ask-agent': asking(ASKS.agent, null),
   'chat-ask-question': asking(ASKS.question, questionRow, 'working'),
+  'chat-ask-preview': asking(ASKS.preview, { ...questionRow, id: 'toolu_fixture93', input: { question: '세션을 끌어 놓을 때 어디에 들어갈지 어떻게 보여 줄까요?', options: ['칸 사이 틈', '칸의 왼쪽/오른쪽 반'] } }, 'working'),
+  // the same question answered: the row says what was chosen, with its preview
+  'chat-ask-answered': () => ({ items: [...askTurn(), { ...questionRow, id: 'toolu_fixture93', state: 'done', waiting: undefined, input: { question: '세션을 끌어 놓을 때 어디에 들어갈지 어떻게 보여 줄까요?', options: ['칸 사이 틈', '칸의 왼쪽/오른쪽 반'], previews: ['┌──────┬ ┊ ┬──────┐\n│ 칸 A │ ┊ │ 칸 B │\n└──────┴ ┊ ┴──────┘', '┌──────────┬──────────┐\n│ 칸 A     │░░░░░░░░░░│\n│          │░ 여기에 ░│\n│          │░ 열려요 ░│\n└──────────┴──────────┘'], answer: '칸의 왼쪽/오른쪽 반' } }], status: status({ state: 'idle', since: minutes(1) }) }),
   'chat-ask-plan': asking(ASKS.plan, null),
   'chat-ask-timeout': asking(ASKS.timeout, null),
   'chat-ask-longpath': asking(ASKS.longpath, null),

@@ -299,6 +299,33 @@ describe('review I3: the shown chat belongs to the page that said so', () => {
     expect(q.got).toEqual([null])
   })
 
+  // (split view: two panes, each a chat on screen. Each says so; one saying so never hides the other)
+  it('two chats on screen side by side: a question of either stays for the chat, and goes back only when its own goes', async () => {
+    const s = await setup()
+    const page = fromPage(s)
+    page(8, 'chat:visible', { id: A })
+    page(8, 'chat:visible', { id: B })
+    const q = s.request('question', A)
+    s.bind(q.holdId!, A, 'question')
+    expect(q.got).toEqual([])
+    // B's pane closes: A's question stays
+    page(8, 'chat:visible', { id: B, on: false })
+    expect(q.got).toEqual([])
+    // A's own pane goes: its question goes back to the terminal
+    page(8, 'chat:visible', { id: A, on: false })
+    expect(q.got).toEqual([null])
+  })
+
+  it('two chats on screen: either is answered from its own pane', async () => {
+    const s = await setup()
+    const page = fromPage(s)
+    const p = s.request('permission', A)
+    s.bind(p.holdId!, A, 'permission')
+    page(8, 'chat:visible', { id: A })
+    page(8, 'chat:visible', { id: B })
+    expect(page(8, 'chat:answer', { id: A, holdId: p.holdId, choice: 'allow' })).toEqual({ ok: true })
+  })
+
   it('another page cannot answer for the chat a page shows', async () => {
     const s = await setup()
     const page = fromPage(s)

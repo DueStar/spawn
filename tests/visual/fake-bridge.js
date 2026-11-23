@@ -165,7 +165,7 @@
       files: (p) => { record('chat.files', [p]); return script('files', p, { ok: true, files: ['src/lib/safe-redirect.ts', 'src/middleware.ts', 'README.md'].filter(f => f.toLowerCase().includes(String(p.query || '').toLowerCase())) }) },
       stranded: (id) => { record('chat.stranded', [id]); return script('stranded', id, { stranded: false }) },
       // the buttons: which chat is shown, and an answer card's choice (answered from the script, else ok)
-      visible: (id) => record('chat.visible', [id]),
+      visible: (id, on) => record('chat.visible', on === false ? [id, false] : [id]),
       answer: (p) => { record('chat.answer', [p]); return script('answer', p, { ok: true }) },
       // the redraw nudge for a shown chat's hidden terminal (recorded; answered from the script, else ok)
       redraw: (id) => { record('chat.redraw', [id]); return script('redraw', id, { ok: true }) },

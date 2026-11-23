@@ -36,7 +36,7 @@ const STATES = ['running', 'done', 'failed', 'rejected', 'interrupted', 'unknown
 const NOTICES = ['interrupted', 'command', 'compact', 'summary', 'agent-done', 'unknown-block', 'model', 'prompt-blocked']
 const INPUT_KEYS: Record<string, string> = {
   file: 'string', command: 'string', description: 'string', pattern: 'string', path: 'string', url: 'string',
-  query: 'string', question: 'string', options: 'string[]', plan: 'string', todos: 'todos', agentType: 'string', server: 'string', mcpTool: 'string', background: 'true',
+  query: 'string', question: 'string', options: 'string[]', previews: 'string[]', answer: 'string', plan: 'string', todos: 'todos', agentType: 'string', server: 'string', mcpTool: 'string', background: 'true',
 }
 
 type Problem = string
