@@ -2,6 +2,13 @@
 
 ## spawn
 
+### 1.10.12
+- 왼쪽 목록과 박스에서 끌 때 Windows의 점선 박스 커서가 더 이상 보이지 않아요. 끄는 동안은 잡은 손 모양이고, 살짝 움직인 클릭은 그대로 클릭이며, Esc로 취소할 수 있어요.
+- 세션을 오른쪽으로 끌면 칸의 왼쪽 반이나 오른쪽 반이 밝아지고, 놓으면 그쪽에 열려요. 칸 머리를 잡고 끌어 자리를 옮길 수 있고, 왼쪽 패널을 접은 상태에서도 포켓몬을 끌어 와 옆에 열 수 있어요.
+- 질문의 선택지에 그림 미리보기가 있으면 그대로 보여요. 답한 뒤에는 무엇을 골랐는지 대화에 표시돼요. 여러 칸을 띄워도 각 칸의 질문을 채팅에서 바로 답할 수 있어요.
+- 채팅으로 보낸 메시지를 다른 플러그인이 막으면 한 줄로 알려 주고, 터미널 입력란에 남은 그 글은 자동으로 지워서 다음 메시지가 막히지 않아요.
+- 메시지를 보낸 뒤 "기록에서 아직 보이지 않아요", "세션 기록 파일을 찾지 못했어요" 알림이 괜히 뜨지 않아요.
+
 ### 1.10.11
 - 채팅에서 일하는 포켓몬 뒤의 후광을 없앴어요. 통통 튀는 움직임은 그대로예요.
 - 업데이트 버튼이 언제나 글자로 상태를 알려 줘요: 업데이트 · 받는 중 n% · 재시작.
@@ -537,6 +544,13 @@
 
 ## spawn (English)
 
+### 1.10.12
+- Dragging in the session list and the box no longer shows Windows' dotted-box cursor. A grabbing hand shows while you drag, a click that barely moves is still a click, and Esc cancels.
+- Drag a session to the right and the left or right half of a pane lights up; drop it to open it on that side. Panes move by dragging their header, and with the left panel folded you can drag a Pokémon over to open it beside.
+- A question's option previews show as drawn, and after you answer, the chat shows what you chose. With several panes open, each pane's question can be answered in the chat.
+- When another plugin blocks a message sent from the chat, it says so in one line and clears that text from the terminal's input, so the next message goes through.
+- "Not in the session record yet" and "Couldn't find the session record" no longer show up for no reason after you send.
+
 ### 1.10.11
 - The working Pokémon in the chat no longer has a halo behind it; it still bounces.
 - The update button always says what it does, in words: Update · Downloading n% · Restart.
@@ -931,6 +945,13 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.12
+- セッション一覧とボックスでドラッグしても、Windows の点線ボックスのカーソルが出なくなりました。ドラッグ中は手のカーソルになり、わずかに動いたクリックはクリックのまま、Esc で取り消せます。
+- セッションを右へドラッグするとペインの左半分か右半分が明るくなり、離すとその側に開きます。ペインはヘッダーをドラッグして移動でき、左パネルを畳んだ状態でもポケモンをドラッグして横に開けます。
+- 質問の選択肢にプレビュー図があればそのまま表示されます。回答後はチャットに何を選んだかが表示されます。複数のペインを開いていても、各ペインの質問にチャットから答えられます。
+- チャットから送ったメッセージを別のプラグインがブロックすると一行で知らせ、ターミナルの入力欄に残ったその文字を自動で消すので、次のメッセージが止まりません。
+- 送信後に「まだセッション記録に見当たりません」「セッション記録が見つかりません」が理由もなく出なくなりました。
 
 ### 1.10.11
 - チャットで作業中のポケモンの後ろの光をなくしました。ぴょんぴょん跳ねる動きはそのままです。
