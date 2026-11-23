@@ -150,6 +150,9 @@ export const NOTICE_WORDS: Record<string, string> = {
   'unknown-block': '여기서 보여 줄 수 없는 내용이 있어요',
   model: '',
   'prompt-blocked': '{by} 플러그인이 이 메시지를 막아서 Claude에게 보내지 못했어요',
+  // /remote-control turned on (its link is the row's button); a local command's own words are said as they are
+  remote: '원격 제어가 켜졌어요 · 휴대폰이나 브라우저에서 이어서 할 수 있어요',
+  'command-output': '',
 }
 
 /** What a notice row says (a notice this page does not know is said as one it cannot show) */

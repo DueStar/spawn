@@ -185,6 +185,10 @@ const NoticeRow: React.FC<{ item: NoticeItem }> = ({ item }) => {
   return (
     <div className="chat-notice">
       <span>{text}</span>
+      {kind === 'remote' && item.text && <>
+        <span aria-hidden="true">·</span>
+        <button type="button" className="chat-link-btn" title={item.text} onClick={() => openUrlFromChat(item.text!)}>{t('링크 열기')}</button>
+      </>}
       {kind === 'unknown-block' && <>
         <span aria-hidden="true">·</span>
         <button type="button" className="chat-link-btn" onClick={onTerminal}>{t('터미널로 보기')}</button>

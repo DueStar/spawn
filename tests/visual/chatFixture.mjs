@@ -416,6 +416,8 @@ const CONVERSATIONS = {
   'chat-link-long': () => ({ items: linkLongItems(), status: status({ hasOlder: true }) }),
   'chat-wild': () => ({ items: wildItems(), status: status() }),
   'chat-foot': () => ({ items: footItems(), status: status() }),
+  // /remote-control's "active" with its link and /login's words, as notices after a turn (2026-11-23)
+  'chat-remote': () => ({ items: build([...timed(lineObjs('basic.jsonl'), minutes(20)), ...timed(lineObjs('remote.jsonl'), minutes(3))]), status: status() }),
   // the 변경 사항 panel: changes.jsonl as the conversation, its index's summary in the status; and one with no edit
   'chat-changes': () => ({ items: build(lineObjs('changes.jsonl')), status: status({ changes: CHANGES.list.summary }) }),
   'chat-changes-empty': () => ({ items: build(timed(lineObjs('basic.jsonl'), minutes(6))), status: status({ changes: NO_CHANGES.list.summary }) }),

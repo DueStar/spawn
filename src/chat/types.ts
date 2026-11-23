@@ -45,7 +45,7 @@ export interface DiffBlock { file: string; kind: 'edit' | 'create' | 'write'; ad
 export interface DiffHunk { oldStart: number; newStart: number; lines: DiffLine[] }
 export interface DiffLine { t: '+' | '-' | ' '; old: number | null; new: number | null; text: string }
 /** `prompt-blocked`: another plugin's prompt hook blocked a prompt (`by`: that plugin; `text`: the prompt, when it read cleanly) */
-export interface NoticeItem extends ItemBase { kind: 'notice'; notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model' | 'prompt-blocked'; text?: string; by?: string }
+export interface NoticeItem extends ItemBase { kind: 'notice'; notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model' | 'prompt-blocked' | 'remote' | 'command-output'; text?: string; by?: string }
 export interface TurnEndItem extends ItemBase { kind: 'turn-end'; durationMs: number }
 export interface LiveItem extends ItemBase { kind: 'live'; text: string }
 /** A thinking block (shown from 생각 포함). Claude Code 2.1.32x writes its text empty (FINDINGS §1): `text` is ''

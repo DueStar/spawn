@@ -32,7 +32,7 @@
  * @typedef {ItemBase & { kind: 'tool', tool: string | null, input: ToolInput, state: ToolState,
  *   waiting?: 'permission' | 'question' | 'plan', output?: ToolOutput, diff?: DiffBlock, durationMs?: number,
  *   agentId?: string, agentTools?: number }} ToolItem
- * @typedef {ItemBase & { kind: 'notice', notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model' | 'prompt-blocked', text?: string, by?: string }} NoticeItem
+ * @typedef {ItemBase & { kind: 'notice', notice: 'interrupted' | 'command' | 'compact' | 'summary' | 'agent-done' | 'unknown-block' | 'model' | 'prompt-blocked' | 'remote' | 'command-output', text?: string, by?: string }} NoticeItem
  * @typedef {ItemBase & { kind: 'turn-end', durationMs: number }} TurnEndItem
  * @typedef {ItemBase & { kind: 'live', text: string }} LiveItem
  * @typedef {ItemBase & { kind: 'shell', command: string, state: 'running' | 'done', stdout?: string, stderr?: string, truncated?: boolean }} ShellItem
@@ -282,6 +282,19 @@ function unwrapPasted(text) {
 const BASH_INPUT = /^<bash-input>([\s\S]*?)<\/bash-input>\s*$/
 const BASH_OUTPUT = /^<bash-stdout>([\s\S]*?)<\/bash-stdout>\s*(?:<bash-stderr>([\s\S]*?)<\/bash-stderr>)?\s*$/
 const NO_OUTPUT = '(Bash completed with no output)'
+/** A local command's words (<local-command-stdout>…</local-command-stdout>), colour codes (a control character, then
+ *  [ … letter) dropped; '' when none */
+const LOCAL_STDOUT = /^\s*<local-command-stdout>([\s\S]*?)<\/local-command-stdout>/
+function localStdout(text) {
+  const m = LOCAL_STDOUT.exec(String(text ?? ''))
+  if (!m) return ''
+  return unescapeHtml(m[1]).replace(/[\x00-\x08\x0e-\x1f]\[[0-9;?]*[A-Za-z]/g, '').trim()
+}
+/** The link /remote-control offers, only when it is claude.ai's own (https) */
+function remoteUrl(u) {
+  return typeof u === 'string' && /^https:\/\/claude\.ai\/[\w./?=&%-]{1,300}$/.test(u) ? u : undefined
+}
+
 function unescapeHtml(s) {
   return String(s ?? '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&')
 }
@@ -333,7 +346,11 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
       shell = clean({ ...shell, state: 'done', stdout: so || undefined, stderr: se || undefined, truncated: so.length < stdout.length || se.length < stderr.length ? true : undefined })
       return shell
     }
-    if (t.startsWith('<local-command-')) return null
+    if (t.startsWith('<local-command-')) {
+      // a local command's words (/login's "Login successful", /model's "Set model to …"): said quietly, as the terminal does
+      const said = localStdout(t)
+      return said ? { id, order, at, kind: 'notice', notice: 'command-output', text: cut(said, caps.field) } : null
+    }
     if (t.startsWith('<task-notification>')) return { id, order, at, kind: 'notice', notice: 'agent-done' }
     if (!text && !images) return null
     const capped = cut(text, caps.text)
@@ -502,7 +519,16 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
       }
       if (sub === 'local_command') {
         const command = typeof obj.content === 'string' ? commandOf(obj.content) : null
-        return command ? [{ id, order, at, kind: 'notice', notice: 'command', text: command }] : []
+        if (command) return [{ id, order, at, kind: 'notice', notice: 'command', text: command }]
+        const said = localStdout(obj.content)
+        return said ? [{ id, order, at, kind: 'notice', notice: 'command-output', text: cut(said, CAPS.field) }] : []
+      }
+      // /remote-control turned on: the terminal shows "active" and its link; the chat says so with the link
+      if (sub === 'bridge_status') {
+        const it = { id, order, at, kind: 'notice', notice: 'remote' }
+        const url = remoteUrl(obj.url)
+        if (url) it.text = url
+        return [it]
       }
     }
     return []
