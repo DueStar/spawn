@@ -612,7 +612,9 @@ const FLOWS = {
       })
     }
     // The left panel folded: the header and the rail do it all
-    await run('접힘', { local: { 'spawn-side-hidden': '1' } }, async ({ page, shot }, bad) => {
+    // (a window too narrow for a second pane: a click on the rail shows its session in the one pane; with room it
+    // would open beside it — pane-place checks that)
+    await run('접힘', { size: [760, 720], local: { 'spawn-side-hidden': '1' } }, async ({ page, shot }, bad) => {
       const head = page.locator('.w-sess-head')
       await closeAsksThenCloses(page, head, head.locator('.w-sess-head-close'), shot.terminals[0].id, bad)
       await head.locator('.w-sess-head-name').dblclick()
@@ -2902,6 +2904,39 @@ const FLOWS = {
   },
   // where a dragged session opens among the panes: the half under the pointer, lit first; a pane moved by its head;
   // the left panel folded, a Pokémon of the rail dragged over opens beside too
+  /**
+   * A click in the left list on a session not open yet opens it beside the ones shown while every pane still
+   * gets its least width (2026-11-23: it used to take the place of the one in view); three shown, it takes the place
+   * of the one in view; Ctrl+Tab still shows the next session in the pane in view.
+   */
+  'pane-click-adds': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat' })
+      const { page } = app
+      const rows = page.locator('.w-party .w-row')
+      const count = async () => Math.max(1, await page.locator('.w-sess-bar.split .w-pane-head').count())
+      if (await count() !== 1) bad(`at start: ${await count()} panes`)
+      await rows.nth(1).click(); await sleep(500)
+      if (await count() !== 2) bad(`a click on a second session: ${await count()} panes, not 2`)
+      await rows.nth(2).click(); await sleep(500)
+      if (await count() !== 3) bad(`a click on a third session: ${await count()} panes, not 3`)
+      await rows.nth(3).click(); await sleep(500)
+      if (await count() !== 3) bad(`three shown, a click on a fourth: ${await count()} panes, not 3`)
+      await rows.nth(1).click(); await sleep(300)
+      if (await count() !== 3) bad(`a click on one already shown: ${await count()} panes`)
+      await page.keyboard.press('Control+Tab'); await sleep(400)
+      if (await count() !== 3) bad(`Ctrl+Tab: ${await count()} panes`)
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
+
   'pane-place': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -2941,6 +2976,9 @@ const FLOWS = {
       const third = await rowName(2)
       const b2 = await page.locator('.w-term-body').boundingBox()
       await drag(await mid(rows.nth(2)), { x: b2.x + b2.width * 0.4, y: b2.y + b2.height / 2 })
+      // (two shown, a session not open yet: the area in thirds — left end, middle, right end; the middle lit)
+      const mid3 = await page.$eval('.w-pane-drop', el => { const b = el.getBoundingClientRect(); return { x: b.x, w: b.width } }).catch(() => null)
+      if (!mid3 || Math.abs(mid3.w - b2.width / 3) > 16 || Math.abs(mid3.x - (b2.x + b2.width / 3)) > 16) bad(`two shown: the lit slot is not the middle third: ${JSON.stringify(mid3)} ${JSON.stringify(b2)}`)
       await page.mouse.up()
       await sleep(600)
       const three = await names()

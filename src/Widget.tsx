@@ -38,7 +38,7 @@ import { autoFold, canOpen, changesWidthFor, clampChangesWidth, CH_MAX, RAIL_W, 
 import { modeFromUrl, readCarry, writeCarry } from './carry'
 import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailability, readLensAll, writeLensAll, type LensMode } from './chat/lensMode'
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
-import { dropSpot, placeTab } from './paneDrop'
+import { addSpot, dropSpot, placeTab } from './paneDrop'
 import { numbered } from './sameNames'
 import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
@@ -799,6 +799,9 @@ const Widget: React.FC = () => {
   const [tabs, setTabsState] = useState<string[]>(() => { const c = readCarry().tabs; return Array.isArray(c) ? c.filter(x => typeof x === 'string').slice(0, MAX_TABS) : [] })
   const setTabs = useCallback((next: string[]) => { setTabsState(next); writeCarry({ tabs: next }) }, [])
   const shownTab = useRef<string | null>(lensSid ?? null)
+  // set by a click in the left list or the rail: the session it opens joins the panes when there is room (Ctrl+Tab and
+  // the rest still show it in the pane in view)
+  const addPane = useRef<string | null>(null)
   // The start's own reopening of the last run's sessions (one by one): until it is done, the panes and the
   // session in view stay as the last run left them (a session not back yet is not gone)
   const [reopening, setReopening] = useState(true)
@@ -806,7 +809,10 @@ const Widget: React.FC = () => {
   useEffect(() => { const timer = setTimeout(() => setReopening(false), 20_000); return () => clearTimeout(timer) }, [])
   useEffect(() => {
     if (reopening || !lensSid) return
-    setTabsState(cur => { const next = showIn(cur, shownTab.current, lensSid); if (next !== cur) writeCarry({ tabs: next }); return next })
+    // a session chosen in the list that is not open joins the panes while every pane still has room; else it
+    // takes the place of the one in view
+    const add = addPane.current === lensSid; addPane.current = null
+    setTabsState(cur => { const next = showIn(cur, shownTab.current, lensSid, add && (cur.length + 1) * MIN_PANE_W <= roomRef.current); if (next !== cur) writeCarry({ tabs: next }); return next })
     shownTab.current = lensSid
   }, [lensSid, reopening])
   const aliveKey = withTerminal.map(r => r.sessionId).join('|')
@@ -910,8 +916,22 @@ const Widget: React.FC = () => {
     const k = by ? base.indexOf(by) : -1
     return { base, at: k < 0 ? base.length : spot.side === 'left' ? k : k + 1 }
   }
-  const showSpot = (p: Point, hint: string, full: boolean) => {
-    const spot = overPanes(p) ? spotAt(p) : null
+  // a session not open yet goes into one of n + 1 even slots (two shown: left end, middle, right end); one open
+  // already moves by the half of a pane (dropSpot). Its place among the tabs: before the pane at that slot, or after the last
+  const isUnopened = (sid: string | null | undefined) => !!sid && !(tabs.length ? tabs : shown?.sessionId ? [shown.sessionId] : []).includes(sid) && tabs.length < MAX_TABS
+  const newSpotAt = (p: Point) => {
+    const b = termBodyRef.current?.getBoundingClientRect()
+    if (!b || b.width <= 0) return null
+    const panes = visiblePanes()
+    const s = addSpot((p.x - b.left) / b.width, panes.length)
+    const base = tabs.length ? tabs : shown?.sessionId ? [shown.sessionId] : []
+    const by = panes[s.at]
+    const last = panes.length ? base.indexOf(panes[panes.length - 1]) : -1
+    const at = by ? Math.max(0, base.indexOf(by)) : last >= 0 ? last + 1 : base.length
+    return { ...s, at, base }
+  }
+  const showSpot = (p: Point, hint: string, full: boolean, sid?: string | null) => {
+    const spot = overPanes(p) ? (isUnopened(sid) ? newSpotAt(p) : spotAt(p)) : null
     setPaneDrop(cur => {
       if (!spot) return cur ? null : cur
       return cur && cur.left === spot.left && cur.width === spot.width && cur.hint === hint ? cur : { left: spot.left, width: spot.width, hint, full }
@@ -919,9 +939,10 @@ const Widget: React.FC = () => {
   }
   // a session put among the panes at the half it was let go over (opened beside, or moved there)
   const openAt = (sid: string, p: Point) => {
-    const spot = spotAt(p)
-    if (!spot) { openInTab(sid); return }
-    const { base, at } = tabsAt(spot)
+    const fresh = isUnopened(sid) ? newSpotAt(p) : null
+    const spot = fresh ? null : spotAt(p)
+    if (!fresh && !spot) { openInTab(sid); return }
+    const { base, at } = fresh ?? tabsAt(spot!)
     const r = placeTab(base, sid, at)
     if (!r.ok) { setTabNote(t('{n}개까지 나란히 볼 수 있어요. 칸 하나를 닫고 다시 놓아 주세요', { n: MAX_TABS })); return }
     if (r.tabs.length > base.length && r.tabs.length >= 2 && r.tabs.length * MIN_PANE_W > roomRef.current) {
@@ -943,7 +964,7 @@ const Widget: React.FC = () => {
         const inside = !!list && within(rowsRef.current, p, 4)
         const sid = rowDragged.current
         setDragCard(cur => (inside || !sid ? null : cur?.x === p.x && cur.y === p.y ? cur : { sid, x: p.x, y: p.y }))
-        if (!inside) showSpot(p, paneHint(), paneFull || paneNarrow)
+        if (!inside) showSpot(p, paneHint(), paneFull || paneNarrow, sid)
         else setPaneDrop(null)
         if (!list) return
         setRowSlide(cur => {
@@ -1346,7 +1367,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
             {withTerminal.map(r => (
               <button key={r.sessionId}
                 className={`w-rail-btn w-rail-session mood-${r.mood}${shown?.sessionId === r.sessionId && view === 'terminal' ? ' on' : ''}`}
-                onClick={() => { setTarget(r.sessionId); setView('terminal') }}
+                onClick={() => { addPane.current = r.sessionId; setTarget(r.sessionId); setView('terminal') }}
                 // dragged onto the right side: opens beside, as from the list
                 onPointerDown={e => startRowDrag(e, r.sessionId)}
                 title={`${r.title ?? t('새 세션')} · ${t(MOOD_LABEL[r.mood])}`} aria-label={r.title ?? t('새 세션')}>
@@ -1567,6 +1588,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               // A row's click (and Enter / Space on it, focused from the keyboard): open its session
               const open = () => {
                 if (!r.terminal) return
+                addPane.current = expanded ? r.sessionId : null
                 setTarget(r.sessionId)
                 if (expanded) setView('terminal')
                 // 간략 in the widget: a session waiting on you opens its terminal, as 상세's 확인 필요 button does

@@ -5,6 +5,8 @@
  *
  *   dropSpot   the pane and half under the pointer, the place among the panes it stands for (`at`), and the
  *              half's box (left, width) to draw
+ *   addSpot    a session not open yet: one of n + 1 even slots of the area (two open: left end, middle, right
+ *              end, a third each), its place among the panes (`at`) and its box
  *   placeTab   the tabs with `sid` at that place (a new one in, one open already moved; never a fourth)
  */
 
@@ -26,6 +28,12 @@ export function dropSpot(x: number, fracs: readonly number[]): DropSpot {
     left += w
   }
   return { pane: 0, side: 'left', at: 0, left: 0, width: (fracs[0] ?? 1) / 2 }
+}
+
+export function addSpot(x: number, n: number): { at: number; left: number; width: number } {
+  const k = Math.max(1, n + 1)
+  const at = Math.max(0, Math.min(k - 1, Math.floor(x * k)))
+  return { at, left: at / k, width: 1 / k }
 }
 
 export function placeTab(tabs: readonly string[], sid: string, at: number): { tabs: string[]; ok: boolean; full?: true } {

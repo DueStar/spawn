@@ -11,9 +11,11 @@
 export const MAX_TABS = 3
 
 /** The tabs once `sid` is shown, `active` being the tab in view before */
-export function showIn(tabs: string[], active: string | null | undefined, sid: string): string[] {
+export function showIn(tabs: string[], active: string | null | undefined, sid: string, room = false): string[] {
   if (tabs.includes(sid)) return tabs
   if (!tabs.length) return [sid]
+  // room for one more pane (fewer than three, and each still at least its least width): added at the right end
+  if (room && tabs.length < MAX_TABS) return [...tabs, sid]
   const at = active ? tabs.indexOf(active) : -1
   const i = at >= 0 ? at : tabs.length - 1
   return tabs.map((t, k) => (k === i ? sid : t))

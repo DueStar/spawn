@@ -50,3 +50,28 @@ describe('the drop in the app', () => {
     expect(w).toMatch(/w-rail-session[\s\S]{0,600}onPointerDown=\{e => startRowDrag\(/)
   })
 })
+
+// 2026-11-23: a session not open yet, dragged from the left panel, goes into one of n + 1 even slots of the area
+// (two open: left end, middle, right end, each a third), not into half of a pane
+describe('addSpot: the slot a new session goes into', () => {
+  it('one open: halves; two open: thirds (left end, middle, right end)', async () => {
+    const { addSpot } = await import('../src/paneDrop')
+    expect(addSpot(0.2, 1)).toEqual({ at: 0, left: 0, width: 0.5 })
+    expect(addSpot(0.7, 1)).toEqual({ at: 1, left: 0.5, width: 0.5 })
+    expect(addSpot(0.1, 2)).toMatchObject({ at: 0, left: 0 })
+    expect(addSpot(0.5, 2)).toMatchObject({ at: 1 })
+    expect(addSpot(0.9, 2)).toMatchObject({ at: 2 })
+    expect(addSpot(0.5, 2).left).toBeCloseTo(1 / 3)
+    expect(addSpot(0.5, 2).width).toBeCloseTo(1 / 3)
+  })
+  it('the pointer past either edge stays in the end slots; none open is one slot', async () => {
+    const { addSpot } = await import('../src/paneDrop')
+    expect(addSpot(-0.3, 2).at).toBe(0)
+    expect(addSpot(1.4, 2).at).toBe(2)
+    expect(addSpot(0.5, 0)).toEqual({ at: 0, left: 0, width: 1 })
+  })
+  it('the widget uses it for a session not open yet, and dropSpot (halves) for one moved', () => {
+    const w = readFileSync(join(__dirname, '..', 'src', 'Widget.tsx'), 'utf8')
+    expect(w).toMatch(/addSpot\(/)
+  })
+})
