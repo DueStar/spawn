@@ -799,16 +799,21 @@ const Widget: React.FC = () => {
   const [tabs, setTabsState] = useState<string[]>(() => { const c = readCarry().tabs; return Array.isArray(c) ? c.filter(x => typeof x === 'string').slice(0, MAX_TABS) : [] })
   const setTabs = useCallback((next: string[]) => { setTabsState(next); writeCarry({ tabs: next }) }, [])
   const shownTab = useRef<string | null>(lensSid ?? null)
+  // The start's own reopening of the last run's sessions (one by one): until it is done, the panes and the
+  // session in view stay as the last run left them (a session not back yet is not gone)
+  const [reopening, setReopening] = useState(true)
+  // (never for good: a start whose game server is slow to answer ends it after 20 s all the same)
+  useEffect(() => { const timer = setTimeout(() => setReopening(false), 20_000); return () => clearTimeout(timer) }, [])
   useEffect(() => {
-    if (!lensSid) return
+    if (reopening || !lensSid) return
     setTabsState(cur => { const next = showIn(cur, shownTab.current, lensSid); if (next !== cur) writeCarry({ tabs: next }); return next })
     shownTab.current = lensSid
-  }, [lensSid])
+  }, [lensSid, reopening])
   const aliveKey = withTerminal.map(r => r.sessionId).join('|')
   useEffect(() => {
-    if (!withTerminal.length) return
+    if (reopening || !withTerminal.length) return
     setTabsState(cur => { const next = pruneTabs(cur, new Set(withTerminal.map(r => r.sessionId))); if (next !== cur) writeCarry({ tabs: next }); return next })
-  }, [aliveKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [aliveKey, reopening]) // eslint-disable-line react-hooks/exhaustive-deps
   const [tabNote, setTabNote] = useState<string | null>(null)
   useEffect(() => { if (!tabNote) return; const timer = setTimeout(() => setTabNote(null), 3000); return () => clearTimeout(timer) }, [tabNote])
   // (the chat area's width, for openInTab, which is made before it is measured below)
@@ -1081,10 +1086,10 @@ const Widget: React.FC = () => {
   // In widget mode, the first session waiting on a question (its own output, or the hooks' needs-you)
   const askRow = expanded ? undefined : withTerminal.find(r => r.terminal?.status === 'running' && (r.terminal.asking || r.mood === 'needs-you'))
 
-  // A new terminal becomes the one in front
+  // A new terminal becomes the one in front (not one the start reopens: the last run's session in view stays)
   const lastCount = useRef(terminals.length)
   useEffect(() => {
-    if (terminals.length > lastCount.current) setTarget(terminals[terminals.length - 1].sessionId)
+    if (terminals.length > lastCount.current && !reopening) setTarget(terminals[terminals.length - 1].sessionId)
     lastCount.current = terminals.length
   }, [terminals])
 
@@ -1192,7 +1197,8 @@ const Widget: React.FC = () => {
         // A quiet open is a restore at startup: the server gives it the next Pokémon, no note)
         if (!thrown.ok && !quiet && !workModeRef.current) setNote(thrown.reason === 'busy' ? t('세션은 열렸어요. 고른 파트너가 다른 세션에서 일하고 있어서 다른 파트너가 함께해요.') : thrown.reason === 'no-token' ? t('세션은 열렸어요. 서버와 연결되는 중이라 파트너는 잠시 뒤에 배정돼요.') : t('세션은 열렸지만 파트너를 배정하지 못했어요 ({reason})', { reason: thrown.reason ?? t('알 수 없는 이유') }))
       }
-      setTarget(r.sessionId)
+      // (a quiet open is the start's reopening: the session in view stays the one the last run left)
+      if (!quiet) setTarget(r.sessionId)
       if (where.resume && !quiet) { setView('terminal'); setExpanded(true) }
     } finally {
       pendingThrows.current.delete(sessionId)
@@ -1231,10 +1237,12 @@ const Widget: React.FC = () => {
   // A Pokémon goes with one session only (src/resting.ts restorePicks)
   const restored = useRef(false)
   useEffect(() => {
-    if (restored.current || !bridge || !dex) return
+    if (!bridge) { setReopening(false); return }
+    if (restored.current || !dex) return
     restored.current = true
     void (async () => {
       const open = await bridge.terminals.restorable().catch(() => [])
+      try {
       // A session coming back may hold its own Pokémon still (the last run's record): that one is not taken
       const back = new Set(open.map(s => s.sessionId))
       const held = Object.fromEntries(Object.entries(dex.assign ?? {}).filter(([sid]) => !back.has(sid)))
@@ -1250,6 +1258,7 @@ const Widget: React.FC = () => {
         // resume their conversation, another tool opens anew in the same folder
         await openSession({ resume: { id: s.sessionId, cwd: s.cwd } as PastSession, ...(s.tool && s.tool !== 'claude' ? { tool: s.tool } : {}) }, uid, true)
       }
+      } finally { setReopening(false) }
     })()
   }, [dex]) // eslint-disable-line react-hooks/exhaustive-deps
 

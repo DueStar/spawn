@@ -30,7 +30,11 @@
   for (const k of Object.keys(shot.settings || {})) if (settings[k]) settings[k] = Object.assign({}, settings[k], shot.settings[k])
   const settingsListeners = new Set()
 
-  const terminals = (shot.terminals || []).map(t => Object.assign({}, t))
+  // shot.restore: a start that reopens the last run's sessions (their terminals come back one by one, each a
+  // moment after the page asks: restorable() names them, create({ resume }) brings each back, onList says so)
+  const held = shot.restore ? (shot.terminals || []).map(t => Object.assign({}, t)) : []
+  const terminals = shot.restore ? [] : (shot.terminals || []).map(t => Object.assign({}, t))
+  const listListeners = new Set()
   let mode = shot.mode || 'window'
   const modeListeners = new Set()
   // shot.update: an update on offer (e.g. { status: 'available', latest: '9.9.9' }) for the header's button
@@ -201,9 +205,20 @@
     },
     terminals: {
       list: () => Promise.resolve(terminals.map(t => Object.assign({}, t))),
-      create: (opts) => { record('create', [opts]); return Promise.resolve({ error: 'harness: no pty' }) },
+      create: (opts) => {
+        record('create', [opts])
+        // (a shell tab comes back as a fresh shell in its folder: the held one of that folder not back yet)
+        const back = !shot.restore || !opts ? null : opts.resume ? held.find(t => t.sessionId === opts.resume) : opts.tool === 'shell' ? held.find(t => t.tool === 'shell' && t.cwd === opts.cwd && !terminals.some(x => x.id === t.id)) : null
+        if (!back) return Promise.resolve({ error: 'harness: no pty' })
+        return new Promise(res => setTimeout(() => {
+          terminals.push(Object.assign({}, back))
+          const list = terminals.map(t => Object.assign({}, t))
+          listListeners.forEach(fn => fn(list))
+          res({ id: back.id, sessionId: back.sessionId })
+        }, 150))
+      },
       pickFolder: () => Promise.resolve(null),
-      restorable: () => Promise.resolve([]),
+      restorable: () => Promise.resolve(shot.restore ? held.map(t => ({ sessionId: t.sessionId, cwd: t.cwd, tool: t.tool || 'claude' })) : []),
       branches: (dirs) => Promise.resolve(Object.fromEntries((dirs || []).map(d => [d, (shot.branches || {})[d] ?? null]))),
       history: () => Promise.resolve((shot.history || []).map(h => Object.assign({}, h))),
       buffer: (id) => {
@@ -220,7 +235,7 @@
       openUrl: () => Promise.resolve(),
       openPath: (...args) => { record('terminals.openPath', args); return Promise.resolve(false) },
       onData: (fn) => { dataListeners.add(fn); return () => dataListeners.delete(fn) },
-      onList: off,
+      onList: (fn) => { listListeners.add(fn); return () => listListeners.delete(fn) },
     },
     cloud: {
       signIn: () => Promise.resolve({ ok: false, reason: 'harness' }),

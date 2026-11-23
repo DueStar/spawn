@@ -2978,6 +2978,33 @@ const FLOWS = {
     }
     return problems
   },
+  // the app started again (closed, or restarted by an update): the sessions come back one by one, and the panes
+  // side by side and the session in view are as they were left
+  'restart-keeps-tabs': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      const ids = fixture.terminals.map(t => t.sessionId)
+      // the last run: the 2nd, 3rd and 4th side by side, the 3rd in view
+      const want = [ids[1], ids[2], ids[3]]
+      app = await openApp(browser, { restore: true, local: { 'spawn-carry': JSON.stringify({ view: 'terminal', target: ids[2], tabs: want }) } })
+      const { page } = app
+      await page.locator('.w-party .w-row').nth(ids.length - 1).waitFor({ timeout: 15_000 })
+      await sleep(800)
+      const carry = await page.evaluate(() => JSON.parse(localStorage.getItem('spawn-carry') || '{}'))
+      if ((carry.tabs || []).join() !== want.join()) bad(`the panes after a restart: ${JSON.stringify(carry.tabs)}; want ${JSON.stringify(want)}`)
+      if (carry.target !== ids[2]) bad(`the session in view after a restart: ${carry.target}; want ${ids[2]}`)
+      const heads = await page.locator('.w-sess-bar.split .w-pane-head').count()
+      if (heads !== 3) bad(`${heads} panes side by side after a restart, want 3`)
+      if ((await page.locator('.w-row.chosen').getAttribute('data-sid')) !== ids[2]) bad('the chosen row is not the session that was in view')
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-tabs': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)
@@ -5983,7 +6010,7 @@ const flowPageErrors = []
  * update state (an update on offer); ended: the index of a terminal that has exited (its session ended);
  * noMon: the last n sessions have no Pokémon yet (fixture.snapshotNoMon)
  */
-async function openApp(browser, { local = {}, twelve = false, noMon = 0, size = [1440, 900], work = false, mac = false, smoke = false, mode = 'window', commits = false, lang = null, update = null, ended = null, chat = undefined, armed = {}, chatMode = true, chatOpts = null, init = null, settings = null } = {}) {
+async function openApp(browser, { local = {}, twelve = false, noMon = 0, size = [1440, 900], work = false, mac = false, smoke = false, mode = 'window', commits = false, lang = null, update = null, ended = null, chat = undefined, armed = {}, chatMode = true, chatOpts = null, init = null, settings = null, restore = false } = {}) {
   const base0 = twelve ? fixture.terminals12 : fixture.terminals
   // chat: a conversation's name (chatFixture.mjs), or null for armed terminals with nothing to show;
   // left out: no terminal has the chat key (the app as 1.4.0). chatMode: 채팅 chosen in the carry
@@ -5998,6 +6025,8 @@ async function openApp(browser, { local = {}, twelve = false, noMon = 0, size = 
     ...(chatOpts ? { chatOpts } : {}),
     // (설정's values laid over the defaults, e.g. 링크 미리보기 on: fake-bridge.js)
     ...(settings ? { settings } : {}),
+    // (a start that reopens the last run's sessions one by one: fake-bridge.js shot.restore)
+    ...(restore ? { restore: true } : {}),
   }
   // (a conversation's wild Pokémon: its game events in the snapshot; pushDex sends more, kept for a reload)
   let snapshot = withDex(twelve ? fixture.snapshot12 : noMon ? fixture.snapshotNoMon(noMon) : fixture.snapshot, chat ? chatFixture.wild(chat, shot.terminals[0].sessionId) : null)
@@ -6050,7 +6079,7 @@ async function openApp(browser, { local = {}, twelve = false, noMon = 0, size = 
     }
     // &smoke: the page offers window.spawnTermMetrics() (src/termMetrics.ts): each terminal's font size and columns
     await page.goto(`${BASE}/?widget&mode=${mode}${smoke ? '&smoke' : ''}`)
-    await page.waitForFunction(n => document.querySelectorAll('.w-party .w-row').length === n, shot.terminals.length, { timeout: 15_000 })
+    await page.waitForFunction(n => document.querySelectorAll('.w-party .w-row').length === n, shot.terminals.length, { timeout: 15_000 }).catch(async e => { throw new Error(`rows ${await page.locator('.w-party .w-row').count()} of ${shot.terminals.length}; creates ${await page.evaluate(() => (window.__CALLS__ || []).filter(c => c.fn === 'create').length)}`) })
     // (HIT_BEFORE_RUN: the hit-areas flow measuring the pre-plan build, which has no session header)
     if (mode !== 'widget' && !process.env.HIT_BEFORE_RUN) await page.waitForSelector('.w-sess-head', { timeout: 15_000 })
     return { ctx, page, shot, pushDex }
