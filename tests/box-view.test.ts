@@ -34,8 +34,9 @@ describe('BoxView: one box', () => {
     expect(html).not.toContain('파티')
     expect(html).toContain('box-toolbar')
     expect((html.match(/class="box-cell /g) ?? []).length).toBe(3)
-    // every cell can be dragged within the box
-    expect((html.match(/draggable="true"/g) ?? []).length).toBe(3)
+    // every cell can be dragged within the box (by the pointer, tests/pointer-drag.test.ts: no native drag)
+    expect((html.match(/data-uid="/g) ?? []).length).toBe(3)
+    expect(html).not.toContain('draggable="true"')
     expect(html).toContain('끌어서 박스 안에서 옮기기')
   })
 

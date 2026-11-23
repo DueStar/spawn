@@ -261,7 +261,7 @@
       throw: () => Promise.resolve({ ok: false, reason: 'harness' }),
       release: () => Promise.resolve({ ok: false, reason: 'harness' }),
       exchange: () => Promise.resolve({ ok: false, reason: 'harness' }),
-      arrange: () => ok(),
+      arrange: ids => { window.__ARRANGED__ = ids; return ok() },
       swap: () => Promise.resolve({ ok: false, reason: 'harness' }),
     },
     update: {

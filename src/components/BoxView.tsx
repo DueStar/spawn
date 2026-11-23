@@ -7,7 +7,8 @@
  * (30 to a box, 6 × 5 like the games, was tried in 1.3.13–1.3.14 and rolled back.)
  */
 
-import React, { useMemo, useState } from 'react'
+import React, { useMemo, useRef, useState } from 'react'
+import { trackPointerDrag } from '../pointerDrag'
 import { pokemonById, spriteUrl, iconUrl } from '../theme'
 import { bridge } from '../desktop'
 import { t, locale, nameOf, statName, useLang } from '../i18n'
@@ -100,7 +101,6 @@ const BoxView: React.FC = () => {
   // (the others shift along, nobody trades places). Only the whole box can be
   // arranged (not a search or the shiny filter); the order seen becomes the trainer's own
   const filtered = shinyOnly || query.trim() !== ''
-  const canDropOn = (uid: string) => !!dragging && dragging !== uid && !filtered
   const arrange = (from: string, onto: string, after: boolean) => {
     if (!bridge) return
     const ids = box.map(m => m.uid).filter(u => u !== from)
@@ -111,6 +111,34 @@ const BoxView: React.FC = () => {
     setSort('mine')
     void bridge.game.arrange(ids).then(r => { if (!r.ok) setNote(t('옮기지 못했어요 ({reason})', { reason: r.reason ?? t('알 수 없음') })) })
   }
+  // The drag, by the pointer (src/pointerDrag.ts: no system drag cursor, a press that barely moves is a click):
+  // the gap is taken from the cell under the pointer; between cells the last gap stays; off the grid there is none
+  const gridRef = useRef<HTMLDivElement>(null)
+  const dragNow = useRef({ insert, filtered, arrange })
+  dragNow.current = { insert, filtered, arrange }
+  const boxDrag = (e: React.PointerEvent, uid: string) => {
+    const end = () => { setDragging(null); setInsert(null) }
+    const inGrid = (x: number, y: number) => { const b = gridRef.current?.getBoundingClientRect(); return !!b && x >= b.left && x < b.right && y >= b.top && y < b.bottom }
+    trackPointerDrag(e, {
+      onStart: () => setDragging(uid),
+      onMove: ({ x, y }) => {
+        if (dragNow.current.filtered) return
+        if (!inGrid(x, y)) { setInsert(null); return }
+        const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('.box-cell[data-uid]')
+        const on = el?.dataset.uid
+        if (!el || !on || on === uid) return
+        const r = el.getBoundingClientRect()
+        const after = x > r.left + r.width / 2
+        setInsert(cur => (cur?.uid === on && cur.after === after ? cur : { uid: on, after }))
+      },
+      onDrop: ({ x, y }) => {
+        const { insert: gap, filtered: f, arrange: put } = dragNow.current
+        end()
+        if (gap && !f && inGrid(x, y)) put(uid, gap.uid, gap.after)
+      },
+      onCancel: end,
+    })
+  }
   // A plain function, not a component: a new component type every render would remount the cell mid-drag
   const cell = (m: Mon) => (
     <button
@@ -118,25 +146,8 @@ const BoxView: React.FC = () => {
       className={`box-cell tier-${tierOf(m.dex)}${pick === m.uid ? ' picked' : ''}${working.has(m.uid) ? ' working' : ''}${dragging === m.uid ? ' dragging' : ''}${insert?.uid === m.uid ? (insert.after ? ' ins-after' : ' ins-before') : ''}`}
       onClick={() => select(m.uid)}
       title={`${nameById(m.dex)}${genderMark(m.gender)} · ${t('끌어서 박스 안에서 옮기기')}`}
-      draggable
-      onDragStart={e => { e.dataTransfer.setData('text/plain', m.uid); e.dataTransfer.effectAllowed = 'move'; setDragging(m.uid) }}
-      onDragEnd={() => { setDragging(null); setInsert(null) }}
-      onDragOver={e => {
-        if (!canDropOn(m.uid)) return
-        e.preventDefault()
-        e.dataTransfer.dropEffect = 'move'
-        const r = e.currentTarget.getBoundingClientRect()
-        const after = e.clientX > r.left + r.width / 2
-        if (insert?.uid !== m.uid || insert.after !== after) setInsert({ uid: m.uid, after })
-      }}
-      onDrop={e => {
-        e.preventDefault()
-        const from = e.dataTransfer.getData('text/plain') || dragging
-        const gap = insert
-        setDragging(null); setInsert(null)
-        if (!from || !canDropOn(m.uid)) return
-        arrange(from, m.uid, gap?.uid === m.uid ? gap.after : false)
-      }}
+      data-uid={m.uid}
+      onPointerDown={e => boxDrag(e, m.uid)}
     >
       <img src={look === 'icon' ? iconUrl(m.dex) : spriteUrl(m.dex, m.shiny)} alt="" loading="lazy" draggable={false} />
       {m.shiny && <span className="box-shiny">✦</span>}
@@ -175,15 +186,7 @@ const BoxView: React.FC = () => {
           {/* A drop in the gap between cells goes where the bar shows */}
           <div
             className="box-grid"
-            onDragOver={e => { if (insert && dragging) e.preventDefault() }}
-            onDrop={e => {
-              if (e.defaultPrevented || !insert || !dragging) return
-              e.preventDefault()
-              const gap = insert
-              const from = dragging
-              setDragging(null); setInsert(null)
-              if (!filtered) arrange(from, gap.uid, gap.after)
-            }}
+        ref={gridRef}
           >
             {box.length ? box.map(cell) : <div className="dex-empty">{state?.box.length ? t('조건에 맞는 포켓몬이 없어요') : t('박스가 비어 있어요. 일하다 보면 야생 포켓몬을 만나요')}</div>}
           </div>

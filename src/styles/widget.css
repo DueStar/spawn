@@ -129,6 +129,10 @@ html.widget-mode, html.widget-mode body, html.widget-mode #root {
 .w-rows.sliding .w-row.lifted { transition: none; }
 .w-rows.sliding .w-row.lifted.home { transition: transform 180ms cubic-bezier(0.2, 0, 0, 1); }
 /* off the list: a small card of the session at the pointer */
+/* a drag the app follows itself (src/pointerDrag.ts): the grabbing hand everywhere it goes, nothing selected on the way,
+   and a row's pictures never start a drag of their own (the system's drag cursor is a dotted box on Windows) */
+body.pointer-dragging, body.pointer-dragging * { cursor: grabbing !important; user-select: none; }
+.w-row img { -webkit-user-drag: none; }
 .w-drag-card { position: fixed; z-index: 70; display: flex; align-items: center; gap: 6px; max-width: 220px; padding: 5px 10px 5px 6px; border-radius: var(--r-m); background: var(--card-2); border: 1px solid var(--line-hover); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45); color: var(--ink); font-size: var(--t-ui); pointer-events: none; }
 .w-drag-card img { width: 22px; height: 22px; object-fit: contain; }
 .w-drag-card span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

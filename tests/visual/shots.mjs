@@ -2716,24 +2716,25 @@ const FLOWS = {
       app = await openApp(browser, { twelve: true, size: [1100, 560] })
       const { page } = app
       await page.locator('.w-party .w-row').nth(5).waitFor({ timeout: 10_000 })
-      const dragAt = (type, row, y) => page.evaluate(([type, row, y]) => {
-        window.__DT__ = type === 'dragstart' ? new DataTransfer() : window.__DT__
-        const el = type === 'dragstart' || type === 'dragend' ? document.querySelectorAll('.w-party .w-row')[row] : document.querySelector('.w-party .w-rows')
-        el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: 80, clientY: y, dataTransfer: window.__DT__ }))
-      }, [type, row, y])
-      await dragAt('dragstart', 1, 0)
+      // (the drag is the pointer's: src/pointerDrag.ts)
+      const b1 = await page.locator('.w-party .w-row').nth(1).boundingBox()
+      await page.mouse.move(80, b1.y + b1.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(80, b1.y + b1.height / 2 + 8)
+      await sleep(60)
       // the list scrolls 3 rows down (as Chromium scrolls a list a drag nears the edge of)
       const step = await page.evaluate(() => { const r = document.querySelectorAll('.w-party .w-row'); return r[1].getBoundingClientRect().top - r[0].getBoundingClientRect().top })
       await page.evaluate(s => { document.querySelector('.w-party').scrollTop += s }, step * 3)
       await sleep(100)
       // the pointer just above row 6's middle, as it now stands: the dragged row (1) would land before row 6
       const y = await page.evaluate(() => { const b = document.querySelectorAll('.w-party .w-row')[6].getBoundingClientRect(); return b.top + 4 })
-      await dragAt('dragover', 1, y)
+      await page.mouse.move(80, y)
       await sleep(300)
       const moved = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => getComputedStyle(el).transform !== 'none'))
       const want = moved.map((_, i) => i >= 1 && i <= 5)
       if (moved.join() !== want.join()) bad(`after scrolling, rows moved: ${moved.map((m, i) => (m ? i : '')).filter(String).join(',')}; want 1–5`)
-      await dragAt('dragend', 1, 0)
+      await page.keyboard.press('Escape')
+      await page.mouse.up()
     } catch (err) {
       bad(String(err.message).split(String.fromCharCode(10))[0])
     } finally {
@@ -2753,30 +2754,29 @@ const FLOWS = {
       if (await page.locator('.w-list-sort').count()) bad('the list header still has the 자동 / 직접 switch')
       const before = await names(page)
       if (before.length < 4) throw new Error(`only ${before.length} rows`)
-      // drag the fourth row above the first: a line on the way, then it is first and the list is 직접
-      // (the line, from the page's own drag events: Playwright's mouse sends one dragover per drag, the drop's)
-      const dragAt = (type, row, y) => page.evaluate(([type, row, y]) => {
-        window.__DT__ = type === 'dragstart' ? new DataTransfer() : window.__DT__
-        const el = type === 'dragstart' || type === 'dragend' ? document.querySelectorAll('.w-party .w-row')[row] : document.querySelector('.w-party .w-rows')
-        el.dispatchEvent(new DragEvent(type, { bubbles: true, cancelable: true, clientX: 80, clientY: y, dataTransfer: window.__DT__ }))
-      }, [type, row, y])
+      // drag the fourth row above the first: the rows slide aside on the way, then it is first and the list is 직접
+      // (the drag is the pointer's, src/pointerDrag.ts: no browser drag, so no system drag cursor)
       const to = await rows.nth(0).boundingBox()
-      const r2 = await rows.nth(2).boundingBox()
-      // (a synthetic drag's DataTransfer drops what the page sets: what it asked for is read from the setter)
-      await page.evaluate(() => { const d = Object.getOwnPropertyDescriptor(DataTransfer.prototype, 'effectAllowed'); Object.defineProperty(DataTransfer.prototype, 'effectAllowed', { configurable: true, get() { return d.get.call(this) }, set(v) { window.__ALLOWED__ = v; d.set.call(this, v) } }) })
       const r3 = await rows.nth(3).boundingBox()
-      // picked up at its middle (the pointer's travel is what the row follows)
-      await dragAt('dragstart', 3, r3.y + r3.height / 2)
-      // a move, everywhere: no "+" copy badge and no "not allowed" sign under the pointer
-      if ((await page.evaluate(() => window.__ALLOWED__)) !== 'move') bad(`the drag allows ${await page.evaluate(() => window.__ALLOWED__)}, want move only`)
-      const anywhere = await page.evaluate(() => { const ev = new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: 700, clientY: 20, dataTransfer: window.__DT__ }); document.querySelector('.w-view-tabs')?.dispatchEvent(ev); return ev.defaultPrevented })
-      if (!anywhere) bad('over the top bar the drag shows "not allowed"')
-      await dragAt('dragover', 3, r3.y + r3.height / 2 - 6) // a little up, still over its own place
+      const drawn = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].some(el => el.getAttribute('draggable') === 'true'))
+      if (drawn) bad('a row is still a browser drag (draggable): Windows draws its dotted-box drag cursor')
+      // picked up at its middle (the pointer's travel is what the row follows); a 2px wobble is still a click
+      await page.mouse.move(80, r3.y + r3.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(80, r3.y + r3.height / 2 - 2)
+      await sleep(60)
+      if (await page.locator('.w-row.lifted').count()) bad('a 2px wobble started a drag')
+      // the hand, everywhere the drag goes (the top bar too)
+      await page.mouse.move(700, 20)
+      await sleep(60)
+      const hand = await page.evaluate(() => getComputedStyle(document.elementFromPoint(700, 20)).cursor)
+      if (hand !== 'grabbing') bad(`over the top bar the cursor is ${hand}, want grabbing`)
+      await page.mouse.move(80, r3.y + r3.height / 2 - 6) // a little up, still over its own place
       await sleep(120)
       const own = await page.evaluate(() => [...document.querySelectorAll('.w-party .w-row')].map(el => new DOMMatrix(getComputedStyle(el).transform).m42))
       if (own.slice(0, 3).some(v => v !== 0)) bad(`rows moved while the row is over its own place: ${own.join(', ')}`)
       if (Math.abs(own[3] + 6) > 1) bad(`the row in hand is not under the pointer (moved ${own[3]}px, the pointer -6px)`)
-      await dragAt('dragover', 3, to.y + 4)
+      await page.mouse.move(80, to.y + 4)
       await sleep(250)
       if (await page.locator('.w-row-drop').count()) bad('an insertion line is drawn (the rows slide instead)')
       // over the first row: rows 0–2 step down, the row in hand is under the pointer, whole (no faded copy)
@@ -2787,18 +2787,21 @@ const FLOWS = {
       if ((await page.locator('.w-row.lifted').count()) !== 1) bad('the dragged row is not marked')
       if ((await page.$eval('.w-row.lifted', el => getComputedStyle(el).opacity)) !== '1') bad('the row in hand is faded (it is the row itself, not a copy)')
       // off the list, over the panes: the row goes home and a small card follows the pointer
-      await page.evaluate(() => document.body.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, clientX: 700, clientY: 300, dataTransfer: window.__DT__ })))
+      await page.mouse.move(700, 300)
       await sleep(250)
       const card = await page.$eval('.w-drag-card', el => { const b = el.getBoundingClientRect(); return { x: b.x, y: b.y, text: el.textContent } }).catch(() => null)
       if (!card || Math.abs(card.x - 714) > 2 || Math.abs(card.y - 310) > 2) bad(`no card at the pointer off the list: ${JSON.stringify(card)}`)
       const home = await page.$eval('.w-row.lifted', el => new DOMMatrix(getComputedStyle(el).transform).m42)
       if (Math.abs(home) > 1) bad(`off the list the row did not go home (${home}px)`)
-      await dragAt('dragover', 3, to.y + 4)
+      await page.mouse.move(80, to.y + 4)
       await sleep(200)
       if (await page.locator('.w-drag-card').count()) bad('the card stayed when the pointer came back to the list')
       if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-order-drag.png'), animations: 'disabled', caret: 'hide' })
-      await dragAt('dragend', 3, 0)
+      // Esc puts it back (the release after it is not a drop)
+      await page.keyboard.press('Escape')
+      await page.mouse.up()
       await sleep(100)
+      if (await page.evaluate(() => document.body.classList.contains('pointer-dragging'))) bad('the grabbing hand stayed after Esc')
       if (await page.locator('.w-row.lifted, .w-row[style*="translateY"]').count()) bad('a slid or dimmed row stayed after the drag ended')
       if ((await names(page)).join('|') !== before.join('|')) bad('a drag that ended without a drop moved a row')
       // the real drag (the pointer): onto the top of the first row
@@ -2836,6 +2839,49 @@ const FLOWS = {
   },
 
   // the split view (src/splitPanes.ts): open tabs side by side, each with its own header, chat and composer
+  // the box: a Pokémon dragged by the pointer (no browser drag, so no system drag cursor) goes into the gap shown
+  'box-drag': async ({ browser }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, {})
+      const { page } = app
+      await page.locator('.w-view-tabs button').nth(2).click()
+      const cells = page.locator('.box-grid .box-cell')
+      await cells.nth(2).waitFor({ timeout: 10_000 })
+      if (await page.locator('.box-cell[draggable="true"]').count()) bad('a cell is still a browser drag (draggable)')
+      const uids = await page.$$eval('.box-grid .box-cell', els => els.map(el => el.getAttribute('data-uid')))
+      const a = await cells.nth(0).boundingBox()
+      const c = await cells.nth(2).boundingBox()
+      await page.mouse.move(a.x + a.width / 2, a.y + a.height / 2)
+      await page.mouse.down()
+      await page.mouse.move(a.x + a.width / 2 + 2, a.y + a.height / 2)
+      if (await page.locator('.box-cell.dragging').count()) bad('a 2px wobble started a drag')
+      for (let k = 1; k <= 6; k++) await page.mouse.move(a.x + a.width / 2 + ((c.x + c.width * 0.8 - a.x - a.width / 2) * k) / 6, c.y + c.height / 2)
+      await sleep(100)
+      if ((await page.locator('.box-cell.dragging').count()) !== 1) bad('the dragged Pokémon is not marked')
+      if ((await page.locator('.box-cell.ins-after').count()) !== 1) bad('no gap shown after the third Pokémon')
+      const hand = await page.evaluate(([x, y]) => getComputedStyle(document.elementFromPoint(x, y)).cursor, [c.x + c.width * 0.8, c.y + c.height / 2])
+      if (hand !== 'grabbing') bad(`the cursor over the box is ${hand}, want grabbing`)
+      await page.mouse.up()
+      await sleep(150)
+      const got = await page.evaluate(() => window.__ARRANGED__ ?? null)
+      const want = [uids[1], uids[2], uids[0], ...uids.slice(3)]
+      if (!got || got.join() !== want.join()) bad(`arranged ${JSON.stringify(got)}, want ${JSON.stringify(want)}`)
+      if (await page.locator('.box-cell.dragging, .box-cell.ins-after, .box-cell.ins-before').count()) bad('a mark stayed after the drop')
+      if (await page.locator('.box-side, .box-detail').count() && (await page.$$eval('.box-cell.picked', els => els.length)) > 0) bad('the drop also picked a Pokémon (the release was taken as a click)')
+      // a plain click still picks
+      await cells.nth(1).click()
+      await sleep(100)
+      if ((await page.locator('.box-cell.picked').count()) !== 1) bad('a click no longer picks a Pokémon')
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'session-tabs': async ({ browser, opts }) => {
     const problems = []
     const bad = m => problems.push(m)

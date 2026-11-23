@@ -75,6 +75,7 @@ function preloadViews() {
 }
 import { resetTextSize, stepTextSize, useTextStep } from './textSize'
 import { bucketOf, dropSlot, slideOffsets, keepOrder, manualOrder, markUsed, moveTo, nextSince, readManual, readUsed, statusOrder, MANUAL_KEY, USED_KEY, type Bucket } from './sessionOrder'
+import { trackPointerDrag, type Point } from './pointerDrag'
 import { TextSizeControl } from './components/TextSizeControl'
 import type { SessionInfo } from './types'
 import { t, josa, nameOf, locale, lang } from './i18n'
@@ -106,9 +107,6 @@ function moodOf(s: SessionInfo | undefined, t: TerminalInfo | undefined): Mood {
 
 /** A pending /rename is tried again at most this often (1.6.2: each try reads the terminal's last lines) */
 const RENAME_RETRY_MS = 1000
-
-/** A transparent picture for a list row's drag: the row itself moves, no picture of it under the pointer */
-const BLANK_DRAG: HTMLImageElement | null = typeof Image === 'undefined' ? null : Object.assign(new Image(), { src: 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7' })
 
 const PREREQ_LABEL = {
   claude: { name: 'Claude Code', why: '포켓몬이 일할 Claude 세션' },
@@ -595,41 +593,6 @@ const Widget: React.FC = () => {
   const rowsRef = useRef<HTMLDivElement>(null)
   // the frame a drop is applied in: no transition, so the rows do not slide back from their offsets
   const [rowSettling, setRowSettling] = useState(false)
-  // a drag that ends where React does not hear it (its row went, the drop landed outside the window):
-  // the rows go back all the same
-  useEffect(() => {
-    if (!rowSlide) return
-    const end = () => { setRowSlide(null); setLifted(null); rowDragged.current = null }
-    // the pointer, wherever it is in the window: on the list the row follows it and the slot is taken
-    // from it; off the list the row goes home and the card follows (one update a frame)
-    let frame = 0
-    let last: DragEvent | null = null
-    const over = (e: DragEvent) => {
-      // the row in hand may pass over anything: no "not allowed" sign on the way (a drop outside the list and
-      // the panes does nothing: dragend puts the row back)
-      if (e.dataTransfer?.types.includes('application/x-spawn-session')) { e.preventDefault(); e.dataTransfer.dropEffect = 'move' }
-      last = e
-      if (frame) return
-      frame = requestAnimationFrame(() => {
-        frame = 0
-        const ev = last
-        const list = rowsRef.current?.getBoundingClientRect()
-        if (!ev || !list) return
-        const inside = ev.clientX >= list.left && ev.clientX < list.right && ev.clientY >= list.top - 4 && ev.clientY < list.bottom + 4
-        setRowSlide(cur => {
-          if (!cur) return cur
-          if (!inside) return { ...cur, slot: listIdsRef.current.indexOf(cur.sid), out: { x: ev.clientX, y: ev.clientY } }
-          const y = ev.clientY - list.top
-          const slot = dropSlot(cur.boxes.map(b => b.top + b.height / 2), y)
-          return cur.y === y && cur.slot === slot && !cur.out ? cur : { ...cur, y, slot, out: null }
-        })
-      })
-    }
-    window.addEventListener('dragover', over)
-    window.addEventListener('dragend', end, true)
-    window.addEventListener('drop', end)
-    return () => { cancelAnimationFrame(frame); window.removeEventListener('dragover', over); window.removeEventListener('dragend', end, true); window.removeEventListener('drop', end) }
-  }, [rowSlide !== null])
   const rowDragged = useRef<string | null>(null)
   const [lifted, setLifted] = useState<string | null>(null)
 
@@ -869,7 +832,6 @@ const Widget: React.FC = () => {
   }, [tabs, lensSid, setTabs])
   // a session dragged from the left list over the right side: where it would go
   const [dropHint, setDropHint] = useState<string | null>(null)
-  const SESSION_MIME = 'application/x-spawn-session'
   const toTerminal = useCallback(() => setLens('terminal'), [setLens])
   const lastShownSid = useRef(lensSid)
   // (a layout effect: it runs before the chat view's own effect, which takes the focus)
@@ -907,6 +869,65 @@ const Widget: React.FC = () => {
   // (the chat's area: the window less the left panel or the rail and the gaps)
   const chRoom = winW - (folded ? RAIL_W : sideWidth) - 12
   roomRef.current = chRoom
+  // A row dragged by the pointer (src/pointerDrag.ts, not the browser's own drag: no system drag cursor,
+  // the app's grabbing hand). On the list the row follows the pointer and the slot is taken from it; off the
+  // list the row goes home and a small card follows; over the right side the hint says what a drop does
+  // there (one update a frame). The handlers are this render's: the drag reads them through rowDrag
+  const termBodyRef = useRef<HTMLDivElement>(null)
+  const paneFull = tabs.length >= MAX_TABS
+  const paneNarrow = tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom
+  const paneHint = () => paneFull ? t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS }) : paneNarrow ? t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요') : t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS })
+  const within = (el: Element | null | undefined, p: Point, pad = 0) => {
+    const b = el?.getBoundingClientRect()
+    return !!b && b.width > 0 && p.x >= b.left && p.x < b.right && p.y >= b.top - pad && p.y < b.bottom + pad
+  }
+  const overPanes = (p: Point) => view === 'terminal' && within(termBodyRef.current, p)
+  const dragFrame = useRef(0)
+  // (the slide as started, for a drop that comes before the lifted row is drawn)
+  const startedSlide = useRef<typeof rowSlide>(null)
+  const endRowDrag = () => { cancelAnimationFrame(dragFrame.current); dragFrame.current = 0; startedSlide.current = null; setDropHint(null); setRowSlide(null); setLifted(null); rowDragged.current = null }
+  const rowDrag = useRef({ move: (_p: Point) => {}, drop: (_p: Point) => {}, end: () => {} })
+  rowDrag.current = {
+    move: p => {
+      cancelAnimationFrame(dragFrame.current)
+      dragFrame.current = requestAnimationFrame(() => {
+        dragFrame.current = 0
+        const list = rowsRef.current?.getBoundingClientRect()
+        if (!list) return
+        const inside = within(rowsRef.current, p, 4)
+        setRowSlide(cur => {
+          if (!cur) return cur
+          if (!inside) return { ...cur, slot: listIdsRef.current.indexOf(cur.sid), out: { x: p.x, y: p.y } }
+          const y = p.y - list.top
+          const slot = dropSlot(cur.boxes.map(b => b.top + b.height / 2), y)
+          return cur.y === y && cur.slot === slot && !cur.out ? cur : { ...cur, y, slot, out: null }
+        })
+        const hint = !inside && overPanes(p) ? paneHint() : null
+        setDropHint(h => (h === hint ? h : hint))
+      })
+    },
+    drop: p => {
+      const slide = rowSlide ?? startedSlide.current
+      endRowDrag()
+      if (!slide) return
+      const sid = slide.sid
+      const list = rowsRef.current
+      if (list && within(list, p, 4)) {
+        // a list that changed under the drag drops nothing (its slots were measured on the old one)
+        if (slide.order !== listIds.join(' ')) return
+        const slot = dropSlot(slide.boxes.map(b => b.top + b.height / 2), p.y - list.getBoundingClientRect().top)
+        // the new order lands where the rows already slid to: no transition for that frame; the dragged
+        // row glides from where it was let go into its place (rowSettle, after the new order is drawn)
+        const el = rowEls.current.get(sid)
+        if (el) rowSettle.current = { sid, top: el.getBoundingClientRect().top }
+        setRowSettling(true)
+        reorderRow(sid, slot)
+        requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
+      } else if (overPanes(p)) openInTab(sid)
+      // (anywhere else a drop does nothing: the row goes back)
+    },
+    end: endRowDrag,
+  }
   const chWidth = clampChangesWidth(chBase, chRoom)
   const chMax = clampChangesWidth(CH_MAX, chRoom)
   // The split view (src/splitPanes.ts): two or three open tabs side by side, each with its own header,
@@ -1372,32 +1393,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               <button className="w-list-btn" onClick={() => launch(false)} title={t('새로운 세션 시작하기')} aria-label={t('새로운 세션 시작하기')}><PlusIcon size={13} /></button>
             </div>
             {rows.length === 0 && <div className="w-empty">{t('새 세션을 열면 여기 나타나요')}</div>}
-            <div ref={rowsRef} className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}
-              // a row dragged within the list: the others slide aside as it passes their middle
-              // (measured against the rows as they stood when it was picked up, so the slide never feeds back)
-              onDragOver={e => {
-                const sid = rowDragged.current
-                if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
-                e.preventDefault()
-                e.dataTransfer.dropEffect = 'move'
-                // (where the row goes is followed from the window's dragover, on and off the list)
-              }}
-              onDrop={e => {
-                const sid = rowDragged.current
-                if (!sid || !rowSlide || !e.dataTransfer.types.includes(SESSION_MIME)) return
-                e.preventDefault()
-                // a list that changed under the drag drops nothing (its slots were measured on the old one)
-                if (rowSlide.order !== listIds.join(' ')) { setRowSlide(null); return }
-                const slot = dropSlot(rowSlide.boxes.map(b => b.top + b.height / 2), e.clientY - e.currentTarget.getBoundingClientRect().top)
-                // the new order lands where the rows already slid to: no transition for that frame; the dragged
-                // row glides from where it was let go into its place (rowSettle, after the new order is drawn)
-                const el = rowEls.current.get(sid)
-                if (el) rowSettle.current = { sid, top: el.getBoundingClientRect().top }
-                setRowSettling(true)
-                setRowSlide(null)
-                reorderRow(sid, slot)
-                requestAnimationFrame(() => requestAnimationFrame(() => setRowSettling(false)))
-              }}>
+            <div ref={rowsRef} className={`w-rows${compact ? ' compact' : ''}${rowSlide ? ' sliding' : ''}${rowSettling ? ' settling' : ''}`} onPointerEnter={() => setOverList(true)} onPointerLeave={() => setOverList(false)}>
             {/* off the list (over the panes on the right), a small card of the session follows the pointer */}
             {rowSlide?.out && (() => {
               const d = rowById.get(rowSlide.sid)
@@ -1486,24 +1482,32 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 className={`w-row${lifted === sid ? ` lifted${rowSlide?.out ? ' home' : ''}` : ''} mood-${r.mood}${r.terminal?.status === 'running' && r.terminal.asking ? ' asking' : ''}${shown?.sessionId === r.sessionId ? ' chosen' : ''}`}
                 // dragged onto the right side, or Ctrl+clicked: the session opens in a pane of its own;
                 // dragged within the list: it goes where it is put (the order is manual from then on)
-                draggable={!!r.terminal && renaming?.id !== r.sessionId}
-                onDragStart={e => {
-                  if (!r.terminal) return
-                  e.dataTransfer.setData(SESSION_MIME, r.sessionId)
-                  // (a move, everywhere: no "+" copy badge under the pointer)
-                  e.dataTransfer.effectAllowed = 'move'
-                  // no picture of the row under the pointer: the row itself moves (and, off the list, a card)
-                  if (BLANK_DRAG) e.dataTransfer.setDragImage(BLANK_DRAG, 0, 0)
-                  rowDragged.current = sid
-                  setLifted(sid)
-                  const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
-                  const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
-                  const own = boxes[i]
-                  // (a synthetic drag may carry no pointer: the row's own middle)
-                  const startY = e.clientY ? e.clientY - top0 : own ? own.top + own.height / 2 - top0 : 0
-                  if (!boxes.some(b => !b)) setRowSlide({ sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' '), startY, y: startY, out: null })
+                // (by the pointer, src/pointerDrag.ts: a press that moves less than a few px is a click)
+                onPointerDown={e => {
+                  if (!r.terminal || renaming?.id === r.sessionId || (e.target as Element).closest('input, textarea')) return
+                  const rowEl = e.currentTarget
+                  const pointerId = e.pointerId
+                  trackPointerDrag(e, {
+                    onStart: (from, now) => {
+                      rowDragged.current = sid
+                      setLifted(sid)
+                      const boxes = listIds.map(id => rowEls.current.get(id)?.getBoundingClientRect())
+                      const top0 = rowsRef.current?.getBoundingClientRect().top ?? 0
+                      const startY = from.y - top0
+                      if (!boxes.some(b => !b)) {
+                        const slide = { sid, boxes: boxes.map(b => ({ top: b!.top - top0, height: b!.height })), slot: i, order: listIds.join(' '), startY, y: startY, out: null }
+                        startedSlide.current = slide
+                        setRowSlide(slide)
+                      }
+                      // (the pointer stays this drag's even off the window)
+                      try { rowEl.setPointerCapture(pointerId) } catch { /* gone already */ }
+                      rowDrag.current.move(now)
+                    },
+                    onMove: p => rowDrag.current.move(p),
+                    onDrop: p => rowDrag.current.drop(p),
+                    onCancel: () => rowDrag.current.end(),
+                  })
                 }}
-                onDragEnd={() => { setDropHint(null); setRowSlide(null); rowDragged.current = null; setLifted(null) }}
                 onClick={e => { if ((e.ctrlKey || e.metaKey) && r.terminal && expanded) { e.preventDefault(); openInTab(r.sessionId); return } open() }}
                 // The keyboard and screen readers: a row is a button (Tab reaches it, Enter / Space
                 // open it, F2 renames it), the one in view is the current one, and its name says
@@ -1775,30 +1779,16 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           {/* (the 변경 사항 panel's width for the chat pane and the panel; folded for it, the terminals keep the box they
               had with the left panel open: --fold-pad, so a terminal fitted under the chat gets the size it will be shown at) */}
           <div className="w-term-body" style={{ display: view === 'terminal' ? undefined : 'none', ...(chPanel ? { '--ch-w': `${chWidth}px` } : {}), ...(foldNow ? { '--fold-pad': `${Math.max(0, sideWidth - RAIL_W)}px` } : {}) } as React.CSSProperties}
-            // a session dragged from the left list: where it would go, said while it is over the right side
-            onDragOver={e => {
-              if (!e.dataTransfer.types.includes(SESSION_MIME)) return
-              e.preventDefault()
-              e.dataTransfer.dropEffect = 'move'
-              const narrow = tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom
-              const hint = tabs.length >= MAX_TABS ? t('나란히 볼 칸이 가득 찼어요 ({max}/{max})', { max: MAX_TABS }) : narrow ? t('창이 좁아서 칸을 더 열 수 없어요. 창을 넓히거나 칸 하나를 닫아 주세요') : t('놓으면 옆에 나란히 열려요 ({n}/{max})', { n: tabs.length + 1, max: MAX_TABS })
-              if (hint !== dropHint) setDropHint(hint)
-            }}
+            // (a session dragged from the left list over here: rowDrag says where it would go, and opens it beside)
+            ref={termBodyRef}
             onPointerDownCapture={split ? e => {
               const box = e.currentTarget.getBoundingClientRect()
               const i = Math.floor(((e.clientX - box.left) / Math.max(1, box.width)) * paneSids.length)
               const sid = paneSids[Math.max(0, Math.min(paneSids.length - 1, i))]
               if (sid) focusPane(sid)
             } : undefined}
-            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDropHint(null) }}
-            onDrop={e => {
-              const sid = e.dataTransfer.getData(SESSION_MIME)
-              if (!sid) return
-              e.preventDefault()
-              setDropHint(null)
-              openInTab(sid)
-            }}>
-            {dropHint && <div className={`w-tab-drop${tabs.length >= MAX_TABS || (tabs.length >= 1 && (tabs.length + 1) * MIN_PANE_W > chRoom) ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
+>
+            {dropHint && <div className={`w-tab-drop${paneFull || paneNarrow ? ' full' : ''}`} aria-hidden="true"><span>{dropHint}</span></div>}
             {tabNote && <div className="w-tab-note" role="status">{tabNote}</div>}
             {withTerminal.length === 0 && (
               <div className="w-term-empty">
