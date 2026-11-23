@@ -3092,6 +3092,36 @@ const FLOWS = {
     return problems
   },
 
+  // a message sent while Claude works, held in Claude Code's queue: it shows as sent, faded, saying it waits
+  'chat-queued-bubble': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat' })
+      const { page } = app
+      const id = await firstTerm(page)
+      await page.waitForSelector('.chat-composer textarea.chat-input:not(.chat-input-twin)', { timeout: 10_000 })
+      await screenTo(page, id, 'idle-empty')
+      await composerField(page).click()
+      await page.keyboard.type('Without tools, name three rivers')
+      await page.keyboard.press('Enter')
+      await sleep(200)
+      await screenTo(page, id, 'echo-plain')
+      await page.waitForSelector('.chat-user.pending', { timeout: 5000 }).catch(async () => { throw new Error(`no bubble after Enter; note: ${await page.locator('.chat-note').allInnerTexts().catch(() => [])}; calls: ${JSON.stringify((await callsOf(page, 'chat.send')).length)}`) })
+      await pushStatus(page, id, { state: 'working', since: fixture.NOW, queued: [{ text: 'Without tools, name three rivers', truncated: false }], queuedCount: 1 })
+      await page.waitForSelector('.chat-user.pending.queued', { timeout: 5000 }).catch(() => bad('the queued message is not in the conversation'))
+      const look = await page.$eval('.chat-user.pending.queued', el => ({ text: el.textContent, op: getComputedStyle(el.querySelector('.chat-bubble')).opacity })).catch(() => null)
+      if (look && !look.text.includes('대기 중')) bad(`the queued bubble does not say it waits: ${look.text}`)
+      if (look && !(Number(look.op) < 0.8)) bad(`the queued bubble is not faded (opacity ${look.op})`)
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-chat-queued.png'), animations: 'disabled', caret: 'hide' })
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
   'chat-queue': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)

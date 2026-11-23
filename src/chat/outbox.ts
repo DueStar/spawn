@@ -18,7 +18,8 @@ export interface OutboxEntry {
   local: string
   text: string
   images: OutboxImage[]
-  state: 'sending' | 'sent' | 'unconfirmed'
+  /** queued: Claude Code holds it in its queue while it works (drawn faded, said as waiting) */
+  state: 'sending' | 'sent' | 'unconfirmed' | 'queued'
   /** when it was written */
   at: number
   /** when Enter was accepted */
@@ -99,13 +100,14 @@ export function reconcile(entries: readonly OutboxEntry[], items: readonly ChatI
     if (blockedFor.has(e.local)) { matched.push({ local: e.local, itemId: null }); continue }
     const line = users.find(u => u.order > e.baseline && u.order < LIVE_BASE && !taken.has(u.id) && sentMatches(e.text, u.text))
     if (line) { taken.add(line.id); matched.push({ local: e.local, itemId: line.id }); continue }
-    if (queued.some(q => sentMatches(e.text, q.text))) { matched.push({ local: e.local, itemId: null }); continue }
+    // held in Claude Code's queue: it stays in the conversation, faded, until its line comes (2026-11-23)
+    if (queued.some(q => sentMatches(e.text, q.text))) { out.push(e.state === 'queued' ? e : { ...e, state: 'queued' }); continue }
     // Claude Code took it (main shows the prompt from its UserPromptSubmit): its line is only late (another
     // plugin's prompt hook holds it 6–12 s), so the bubble stays as it is, never 'unconfirmed' meanwhile
     if (takenByHook(e, items)) { out.push(e.state === 'unconfirmed' ? { ...e, state: 'sent' } : e); continue }
     // never in the record, and the session long idle: it went somewhere the record does not say (it goes quietly)
     if (now - (e.sentAt ?? e.at) >= STALE_MS && status?.state === 'idle') { matched.push({ local: e.local, itemId: null }); continue }
-    out.push(e.state === 'unconfirmed' ? { ...e, state: 'sent' } : e)
+    out.push(e.state === 'unconfirmed' || e.state === 'queued' ? { ...e, state: 'sent' } : e)
   }
   return { entries: out, matched }
 }

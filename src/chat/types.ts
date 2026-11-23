@@ -17,7 +17,7 @@ export interface UserItem extends ItemBase {
    * A message not yet seen in the transcript: this composer's bubble (with `local`), or — 'sent', no `local` — the
    * prompt main shows from its UserPromptSubmit until its line is written (electron/chatLens.cjs showPrompt)
    */
-  pending?: 'sending' | 'sent' | 'unconfirmed'; local?: string   // the outbox entry it stands for
+  pending?: 'sending' | 'sent' | 'unconfirmed' | 'queued'; local?: string   // the outbox entry it stands for
 }
 /** The provisional bubbles' orders: after every transcript line, before the new turn's hook rows */
 export const PENDING_BASE = LIVE_BASE - 2 ** 32

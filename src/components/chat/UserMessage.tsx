@@ -53,6 +53,8 @@ export const UserMessage: React.FC<{ item: UserItem; time: string | null }> = ({
       {body.trim() && <div className="chat-bubble">{splitMentions(body).map((g, i) => g.kind === 'file' ? <FileRef key={i} path={g.path} /> : g.text)}</div>}
       {item.truncated && <span className="chat-time">{t('글이 길어서 앞부분만 보여요')} <FullButton itemId={item.id} title={t('보낸 메시지 전체')} /></span>}
       {item.pending === 'sending' && <span className="chat-pending">{t('보내는 중…')}</span>}
+      {/* sent while Claude works: it waits its turn in Claude Code's queue */}
+      {item.pending === 'queued' && <span className="chat-pending">{t('대기 중 · 지금 일이 끝나면 보내져요')}</span>}
       {time && !item.pending && <span className="chat-time">{time}</span>}
     </div>
   )

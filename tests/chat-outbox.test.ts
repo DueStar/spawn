@@ -5,6 +5,8 @@
  * never disappears without a reason.
  */
 
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { baselineOf, createOutbox, pendingItems, reconcile, sentMatches, type OutboxEntry } from '../src/chat/outbox'
 import { LIVE_BASE, PENDING_BASE, type ChatItem, type LensStatus } from '../src/chat/types'
@@ -49,10 +51,24 @@ describe('reconcile', () => {
     expect(r.matched).toEqual([{ local: 'l1', itemId: 'u3' }])
   })
 
-  it('held in Claude Code\'s queue (the strip shows it): dropped, no item yet', () => {
-    const r = reconcile([entry({ text: 'Then list the js files.' })], [], { ...STATUS, queued: [{ text: 'Then list the js files.', truncated: false }], queuedCount: 1 }, 2000)
-    expect(r.entries).toEqual([])
-    expect(r.matched).toEqual([{ local: 'l1', itemId: null }])
+  // (2026-11-23) it stays in the conversation, faded, marked as waiting: the user sees it went
+  it('held in Claude Code\'s queue: it stays as a queued bubble until its line comes', () => {
+    const q = { ...STATUS, state: 'working' as const, queued: [{ text: 'Then list the js files.', truncated: false }], queuedCount: 1 }
+    const r = reconcile([entry({ text: 'Then list the js files.' })], [], q, 2000)
+    expect(r.entries.map(e => e.state)).toEqual(['queued'])
+    expect(r.matched).toEqual([])
+    // the queue let it go and its line came: the line takes its place
+    const done = reconcile(r.entries, [user('u7', 900, 'Then list the js files.')], { ...STATUS, state: 'working' }, 3000)
+    expect(done.matched).toEqual([{ local: 'l1', itemId: 'u7' }])
+    // out of the queue, no line yet: a plain sent bubble again
+    expect(reconcile(r.entries, [], { ...STATUS, state: 'working' }, 3000).entries[0].state).toBe('sent')
+  })
+
+  it('a queued bubble is drawn faded and says it waits', () => {
+    const src = readFileSync(join(__dirname, '..', 'src/components/chat/UserMessage.tsx'), 'utf8')
+    expect(src).toMatch(/item\.pending === 'queued'/)
+    const css = readFileSync(join(__dirname, '..', 'src/styles/chat.css'), 'utf8')
+    expect(css).toMatch(/\.chat-user\.pending\.queued[^{]*\{[^}]*opacity/)
   })
 
   it('sent and not in the record: it stays plain (no "not in the record yet", 2026-11-23) until the line comes', () => {
@@ -100,10 +116,10 @@ describe('the outbox of a terminal', () => {
     o.sync([user('u1', 900, 'Without tools, name three rivers', 1)], STATUS, 1500)
     expect(o.entries()).toEqual([])
     expect(o.thumbs('u1')).toEqual(['blob:a'])
-    // a queued one: no bubble, its picture waits for its line
+    // a queued one: its bubble stays, faded (with its picture), until its line comes
     o.add(entry({ local: 'b', text: 'Then list the js files.', state: 'sent', images: [{ token: 't2', url: 'blob:b' }] }))
     o.sync([], { ...STATUS, queued: [{ text: 'Then list the js files.', truncated: false }], queuedCount: 1 }, 1600)
-    expect(o.entries()).toEqual([])
+    expect(o.entries().map(e => e.state)).toEqual(['queued'])
     o.sync([user('u2', 950, 'Then list the js files. [Image #1]', 1)], STATUS, 1700)
     expect(o.thumbs('u2')).toEqual(['blob:b'])
     // a send refused: the entry and its picture go
