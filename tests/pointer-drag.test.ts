@@ -64,6 +64,25 @@ describe('trackPointerDrag: a drag the app follows itself (no system drag cursor
     }
   })
 
+  it('after Esc the release is not a click either (the row would open), and the Esc goes no further', () => {
+    const { win } = fakeWin()
+    const h = { onStart: vi.fn(), onMove: vi.fn(), onDrop: vi.fn(), onCancel: vi.fn() }
+    trackPointerDrag(down, h, win as any)
+    win.dispatchEvent(ev('pointermove', { clientX: 100, clientY: 130, pointerId: 1 }))
+    const esc = ev('keydown', { key: 'Escape' })
+    const heard = vi.fn()
+    win.addEventListener('keydown', heard)
+    win.dispatchEvent(esc)
+    expect(heard).not.toHaveBeenCalled()
+    win.dispatchEvent(ev('pointerup', { clientX: 100, clientY: 130, pointerId: 1 }))
+    const click = ev('click')
+    win.dispatchEvent(click)
+    expect(click.defaultPrevented).toBe(true)
+    const next = ev('click')
+    win.dispatchEvent(next)
+    expect(next.defaultPrevented).toBe(false)
+  })
+
   it('another pointer (a second finger, a pen) is not this drag', () => {
     const { win } = fakeWin()
     const h = { onStart: vi.fn(), onMove: vi.fn(), onDrop: vi.fn(), onCancel: vi.fn() }

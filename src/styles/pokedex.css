@@ -349,6 +349,8 @@
 .box-cell.picked { box-shadow: inset 0 0 0 1px var(--accent); }
 /* The Pokémon being dragged fades while it is carried */
 .box-cell.dragging { opacity: 0.4; }
+/* (the drag is the pointer's, src/pointerDrag.ts: a touch drags the cell, not the page) */
+.box-cell { touch-action: none; }
 .box-cell { transition: transform 0.12s ease, background 0.12s ease; }
 /* up to 1200 cells: off-screen ones skip paint */
 .box-grid .box-cell { width: auto; height: auto; aspect-ratio: 1; content-visibility: auto; contain-intrinsic-size: auto 96px; }

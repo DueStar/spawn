@@ -42,19 +42,30 @@ export function trackPointerDrag(down: Down, h: DragHandlers, win: Win = window 
     const was = started
     stop()
     if (!was) return
-    // the release's click (on the row or cell, or wherever it landed) is not a click
+    eatClick()
+    h.onDrop(at(e))
+  }
+  // the release's click (on the row or cell, or wherever it landed) is not a click
+  function eatClick() {
     let live = true
     const eat = (c: Event) => { if (!live) return; live = false; c.preventDefault(); c.stopPropagation() }
     win.addEventListener('click', eat, { capture: true, once: true })
     setTimeout(() => { live = false; win.removeEventListener('click', eat, { capture: true }) }, 0)
-    h.onDrop(at(e))
   }
   const cancel = (e: Event) => {
     if (e.type === 'keydown' && (e as KeyboardEvent).key !== 'Escape') return
     if (e.type === 'pointercancel' && !mine(e)) return
     const was = started
     stop()
-    if (was) { e.preventDefault(); h.onCancel() }
+    if (!was) return
+    // (the Esc is the drag's: no dialog or row hears it too)
+    e.preventDefault()
+    e.stopImmediatePropagation()
+    h.onCancel()
+    // the button let go after a cancel is no click either (the row would open, the cell be picked)
+    if (e.type === 'pointercancel') return
+    const release = (u: Event) => { if (!mine(u)) return; win.removeEventListener('pointerup', release); eatClick() }
+    win.addEventListener('pointerup', release)
   }
   function stop() {
     win.removeEventListener('pointermove', move)

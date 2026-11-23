@@ -116,6 +116,7 @@ const BoxView: React.FC = () => {
   const gridRef = useRef<HTMLDivElement>(null)
   const dragNow = useRef({ insert, filtered, arrange })
   dragNow.current = { insert, filtered, arrange }
+  const gapNow = useRef<{ uid: string; after: boolean } | null>(null)
   const boxDrag = (e: React.PointerEvent, uid: string) => {
     const end = () => { setDragging(null); setInsert(null) }
     const inGrid = (x: number, y: number) => { const b = gridRef.current?.getBoundingClientRect(); return !!b && x >= b.left && x < b.right && y >= b.top && y < b.bottom }
@@ -123,20 +124,25 @@ const BoxView: React.FC = () => {
       onStart: () => setDragging(uid),
       onMove: ({ x, y }) => {
         if (dragNow.current.filtered) return
-        if (!inGrid(x, y)) { setInsert(null); return }
+        // (the gap, kept here too: a quick release may come before it is drawn)
+        const show = (next: { uid: string; after: boolean } | null) => { gapNow.current = next; setInsert(cur => (cur?.uid === next?.uid && cur?.after === next?.after ? cur : next)) }
+        if (!inGrid(x, y)) { show(null); return }
         const el = document.elementFromPoint(x, y)?.closest<HTMLElement>('.box-cell[data-uid]')
         const on = el?.dataset.uid
-        if (!el || !on || on === uid) return
+        // over its own cell: no gap (let go there, it stays); between cells the last gap stays
+        if (on === uid) { show(null); return }
+        if (!el || !on) return
         const r = el.getBoundingClientRect()
-        const after = x > r.left + r.width / 2
-        setInsert(cur => (cur?.uid === on && cur.after === after ? cur : { uid: on, after }))
+        show({ uid: on, after: x > r.left + r.width / 2 })
       },
       onDrop: ({ x, y }) => {
-        const { insert: gap, filtered: f, arrange: put } = dragNow.current
+        const { filtered: f, arrange: put } = dragNow.current
+        const gap = gapNow.current
+        gapNow.current = null
         end()
         if (gap && !f && inGrid(x, y)) put(uid, gap.uid, gap.after)
       },
-      onCancel: end,
+      onCancel: () => { gapNow.current = null; end() },
     })
   }
   // A plain function, not a component: a new component type every render would remount the cell mid-drag
