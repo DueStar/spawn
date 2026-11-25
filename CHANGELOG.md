@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.10.15
+- 앱을 끄자마자 바로 다시 켜도 "The spawn server did not start on port 3334" 오류가 뜨지 않아요. 끌 때 서버가 완전히 멈출 때까지 기다리고, 새로 켤 때 포트가 아직 비지 않았으면 잠깐 기다렸다 다시 시도해요.
+- 앱을 오래 켜 둔 뒤 보던 세션이 끝났다가 이어하기로 다시 붙었을 때 오른쪽이 빈 채로 남던 문제를 고쳤어요. 대화가 오지 않으면 한 번 더 불러오고, 그래도 안 되면 "터미널로 보기 · 다시 읽기" 안내가 떠요.
+- 나란히 띄운 칸의 머리를 끌면 왼쪽 목록에서 세션을 옮길 때처럼 그 칸이 손을 따라오고 다른 칸이 비켜나요. 화면을 반으로 나눠 보여 주는 표시는 왼쪽 목록에서 새 세션을 끌어 올 때만 나와요.
+
 ### 1.10.14
 - 세션을 이미 두 칸 띄운 상태에서 오른쪽으로 끌면, 화면이 셋으로 나뉘어 왼쪽 끝·가운데·오른쪽 끝 중 놓을 자리가 밝아져요.
 - 왼쪽 목록에서 아직 안 열린 세션을 누르면, 칸마다 최소 너비가 남는 한 지금 보던 세션을 바꾸지 않고 옆에 새 칸으로 열려요.
@@ -556,6 +561,11 @@
 
 ## spawn (English)
 
+### 1.10.15
+- Opening spawn right after quitting no longer says "The spawn server did not start on port 3334". Quitting waits for the server to stop, and a new start waits and tries again while the port is still taken.
+- After the app had been open a long time, a shown session that ended and came back through Resume could leave the right side empty. If its conversation does not come, it is asked for again, and then a note offers "View in terminal · Read again".
+- Dragging the head of a side-by-side pane now moves it the way rows move in the left list: it follows the pointer and the other panes slide aside. The half-of-the-screen highlight shows only when you drag a new session in from the left list.
+
 ### 1.10.14
 - With two sessions side by side, dragging another to the right splits the area in thirds: the left end, the middle or the right end lights up where it will go.
 - Clicking a session in the left list that is not open yet opens it in a new pane beside the others, as long as every pane keeps its least width, instead of replacing the one in view.
@@ -969,6 +979,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.15
+- spawnを終了してすぐ開き直しても「The spawn server did not start on port 3334」が出なくなりました。終了時にサーバーが止まるまで待ち、起動時にポートがまだ使われていれば少し待って再試行します。
+- 長時間開いたまま、表示中のセッションが終了して「続きから」で戻ったとき、右側が空のままになる問題を直しました。会話が届かなければもう一度読み込み、それでも届かなければ「ターミナルで見る・再読み込み」を表示します。
+- 並べて開いたペインのヘッダーをドラッグすると、左のリストでセッションを動かすときと同じように、ペインがポインターについてきて他のペインがよけます。画面を半分に分ける表示は、左のリストから新しいセッションを持ってくるときだけ出ます。
 
 ### 1.10.14
 - セッションを2つ並べた状態で右へドラッグすると、画面が3つに分かれ、左端・真ん中・右端のうち置く場所が明るくなります。
