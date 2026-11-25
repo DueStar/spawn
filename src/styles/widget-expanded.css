@@ -700,6 +700,12 @@
 .w-pane-head.on { background: var(--hover); }
 .w-pane-head .w-sess-head { min-width: 0; }
 .w-pane-head { box-sizing: border-box; }
+/* A head dragged among the open panes: it follows the pointer, the others slide aside (as the list's rows,
+   widget.css .w-rows.sliding), and the new order is drawn where they slid to (settling: no transition) */
+.w-sess-bar.split.sliding .w-pane-head { position: relative; transition: transform 180ms cubic-bezier(0.2, 0, 0, 1); }
+.w-sess-bar.split.sliding .w-pane-head.lifted { z-index: 3; transition: none; background: var(--card-2); box-shadow: 0 10px 28px rgba(0, 0, 0, 0.45), 0 0 0 1px var(--line); cursor: grabbing; }
+.w-sess-bar.split.settling .w-pane-head { transition: none; }
+@media (prefers-reduced-motion: reduce) { .w-sess-bar.split.sliding .w-pane-head { transition: none; } }
 /* the edges between panes: a 1px line, a 7px strip to drag (as the left panel's edge), brighter on hover and while dragged */
 .w-pane-edge { position: absolute; top: 0; bottom: 0; width: 7px; margin-left: -3px; z-index: 3; cursor: col-resize; touch-action: none; -webkit-app-region: no-drag; }
 .w-pane-edge::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: var(--line); }

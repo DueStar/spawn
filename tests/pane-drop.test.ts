@@ -45,7 +45,7 @@ describe('the drop in the app', () => {
     expect(w).toContain('placeTab(')
     expect(w).toContain('w-pane-drop')
     // the pane head takes a pointer drag
-    expect(w).toMatch(/className=\{`w-pane-head[\s\S]{0,400}trackPointerDrag\(/)
+    expect(w).toMatch(/className=\{`w-pane-head[\s\S]{0,800}trackPointerDrag\(/)
     // the folded rail's sessions start the same drag as the list's rows
     expect(w).toMatch(/w-rail-session[\s\S]{0,600}onPointerDown=\{e => startRowDrag\(/)
   })

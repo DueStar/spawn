@@ -998,22 +998,62 @@ const Widget: React.FC = () => {
     },
     end: endRowDrag,
   }
-  // A pane dragged by its head: the half of the pane under the pointer says where it goes, and it moves there
-  const paneDrag = useRef({ move: (_sid: string, _p: Point) => {}, drop: (_sid: string, _p: Point) => {} })
+  // A pane dragged by its head moves among the open panes as a row does in the list (src/sessionOrder.ts):
+  // the head follows the pointer, the others slide aside, and it lands where it was let go. (The lit half,
+  // src/paneDrop.ts, is for a session brought in from the list or the rail, not one already open.)
+  const paneHeadEls = useRef(new Map<string, HTMLElement>())
+  const [paneSlide, setPaneSlide] = useState<{ sid: string; boxes: { top: number; height: number }[]; order: string; startX: number; x: number; slot: number } | null>(null)
+  const paneSlideRef = useRef<typeof paneSlide>(null)
+  const [paneSettling, setPaneSettling] = useState(false)
+  const paneSlot = (boxes: readonly { top: number; height: number }[], x: number) => dropSlot(boxes.map(b => b.top + b.height / 2), x)
+  const paneDrag = useRef({ start: (_sid: string, _from: Point) => {}, move: (_sid: string, _p: Point) => {}, drop: (_sid: string, _p: Point) => {}, cancel: () => {} })
   paneDrag.current = {
+    start: (sid, from) => {
+      // (left and width stand in for a row's top and height: the same slot and slide sums, sideways)
+      const boxes = paneSids.map(s => { const b = paneHeadEls.current.get(s)?.getBoundingClientRect(); return { top: b?.left ?? 0, height: b?.width ?? 0 } })
+      const from0 = paneSids.indexOf(sid)
+      if (from0 < 0 || boxes.some(b => b.height <= 0)) return
+      const slide = { sid, boxes, order: paneSids.join(' '), startX: from.x, x: from.x, slot: from0 }
+      paneSlideRef.current = slide
+      setPaneSlide(slide)
+    },
     move: (_sid, p) => {
       cancelAnimationFrame(dragFrame.current)
-      dragFrame.current = requestAnimationFrame(() => { dragFrame.current = 0; showSpot(p, t('놓으면 이 자리로 옮겨요'), false) })
+      dragFrame.current = requestAnimationFrame(() => {
+        dragFrame.current = 0
+        setPaneSlide(cur => {
+          if (!cur) return cur
+          const slot = paneSlot(cur.boxes, p.x)
+          const next = cur.x === p.x && cur.slot === slot ? cur : { ...cur, x: p.x, slot }
+          paneSlideRef.current = next
+          return next
+        })
+      })
     },
     drop: (sid, p) => {
       cancelAnimationFrame(dragFrame.current)
       dragFrame.current = 0
-      setPaneDrop(null)
-      const spot = overPanes(p) ? spotAt(p) : null
-      if (!spot) return
-      const { base, at } = tabsAt(spot)
+      const slide = paneSlideRef.current
+      paneSlideRef.current = null
+      // the new order is drawn where the heads already slid to: no transition frame
+      setPaneSettling(true)
+      setPaneSlide(null)
+      requestAnimationFrame(() => requestAnimationFrame(() => setPaneSettling(false)))
+      // the panes changed under the drag (one closed, one came): nothing moves
+      if (!slide || slide.sid !== sid || slide.order !== paneSids.join(' ')) return
+      const slot = paneSlot(slide.boxes, p.x)
+      const n = paneSids.length
+      const base = tabs.length ? tabs : paneSids
+      const at = slot < n ? base.indexOf(paneSids[slot]) : base.indexOf(paneSids[n - 1]) + 1
+      if (at < 0) return
       const r = placeTab(base, sid, at)
       if (r.ok && r.tabs.join(' ') !== tabs.join(' ')) setTabs(r.tabs)
+    },
+    cancel: () => {
+      cancelAnimationFrame(dragFrame.current)
+      dragFrame.current = 0
+      paneSlideRef.current = null
+      setPaneSlide(null)
     },
   }
   // A row (or, the left panel folded, a session of the rail) picked up by the pointer (src/pointerDrag.ts)
@@ -1807,17 +1847,29 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
           {/* Which session is open (the left list or the rail switches them): its picture, name,
               branch and project; rename and close here too. The bar keeps its height with none */}
           {view === 'terminal' && split && (
-            <div className="w-sess-bar split">
-              {paneSids.map(sid => {
+            <div className={`w-sess-bar split${paneSlide ? ' sliding' : ''}${paneSettling ? ' settling' : ''}`}>
+              {(() => {
+                // the heads' slide while one is dragged (the panes changed under the drag: none, they stand)
+                const ps = paneSlide && paneSlide.order === paneSids.join(' ') ? paneSlide : null
+                const from = ps ? paneSids.indexOf(ps.sid) : -1
+                const own = ps?.boxes[from]
+                const first = ps?.boxes[0]
+                const last = ps?.boxes[ps.boxes.length - 1]
+                // it follows the pointer, kept inside the bar
+                const follow = ps && own && first && last ? Math.max(first.top - own.top, Math.min(last.top + last.height - own.top - own.height, ps.x - ps.startX)) : 0
+                const offsets = ps ? slideOffsets(ps.boxes, from, ps.slot, follow) : null
+                return paneSids.map((sid, pi) => {
                 const r = rowById.get(sid)!
                 const on = sid === shown?.sessionId
                 return (
-                  <div key={sid} className={`w-pane-head${on ? ' on' : ''}`} style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%` }}
+                  <div key={sid} ref={el => { if (el) paneHeadEls.current.set(sid, el); else paneHeadEls.current.delete(sid) }}
+                    className={`w-pane-head${on ? ' on' : ''}${ps?.sid === sid ? ' lifted' : ''}`}
+                    style={{ flex: `0 0 ${(fracs[paneSids.indexOf(sid)] * 100).toFixed(4)}%`, transform: offsets?.[pi] ? `translateX(${offsets[pi]}px)` : undefined }}
                     // (held and dragged: the pane moves to the half it is let go over)
                     onPointerDown={e => {
                       focusPane(sid)
                       if ((e.target as Element).closest('input, textarea, button')) return
-                      trackPointerDrag(e, { onStart: (_f, now) => paneDrag.current.move(sid, now), onMove: p => paneDrag.current.move(sid, p), onDrop: p => paneDrag.current.drop(sid, p), onCancel: () => { cancelAnimationFrame(dragFrame.current); setPaneDrop(null) } })
+                      trackPointerDrag(e, { onStart: (f, now) => { paneDrag.current.start(sid, f); paneDrag.current.move(sid, now) }, onMove: p => paneDrag.current.move(sid, p), onDrop: p => paneDrag.current.drop(sid, p), onCancel: () => paneDrag.current.cancel() })
                     }}>
                     <SessionHeader
                       parts={sessionHeaderParts({ ...r, noPokemon: noPokemon(r) }, workMode)}
@@ -1835,7 +1887,8 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                     />
                   </div>
                 )
-              })}
+              })
+              })()}
             </div>
           )}
           {view === 'terminal' && !split && (
