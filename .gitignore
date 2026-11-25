@@ -40,3 +40,6 @@ spike/
 /docs/STATUS-*.md
 /docs/superpowers/
 /.claude/
+
+# the regression set's runs (tests/visual/regress.mjs)
+tests/visual/.regress/

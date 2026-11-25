@@ -322,7 +322,9 @@ describe('guards: one animation file, yellow only on send, three storage keys, l
       'errWord(err)',
       // 1.5.3 (chatHost diag / refused): a screen's shape with every letter and digit masked twice (page and main;
       // tests/chat-send-diag.test.ts), and a refusal's fixed reason word
-      'shape', 'kind', 'String(r.reason).slice(0, 30)'])
+      'shape', 'kind', 'String(r.reason).slice(0, 30)',
+      // 1.10.15 (chatHost open / resync): a refused open's fixed reason and terminal state words, a resync's state word
+      'word'])
     const CALL = /\blogOnce\(|\blog\(|console\.\w+\(|\bmsg:\s*`|\bwrite\(`/g
     let lines = 0
     for (const f of files) {

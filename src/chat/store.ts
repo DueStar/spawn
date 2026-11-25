@@ -125,6 +125,13 @@ export function pageStatus(cur: LensStatus | null, reason: PageReason): LensStat
   return { ...(cur ?? { state: 'idle', since: null, label: null, note: null, version: null, hasOlder: false, empty: false }), banner: { reason } }
 }
 
+/**
+ * How long an open waits for its first answer (a reset) before asking again once (resync), and as long again
+ * before the view says it could not read. 1.10.14 waited for ever: after the shown session came back by 이어하기
+ * the right side stayed on "불러오는 중" (2026-11-25 16:31 KST).
+ */
+export const OPEN_WAIT_MS = 8000
+
 export function createChatStore(chat: Pick<ChatBridge, 'open' | 'close' | 'resync' | 'onUpdate'> & Partial<Pick<ChatBridge, 'reload'>> | null | undefined, cap = ITEM_CAP) {
   const states = new Map<string, ChatState>()
   const subs = new Map<string, Set<() => void>>()
@@ -134,6 +141,20 @@ export function createChatStore(chat: Pick<ChatBridge, 'open' | 'close' | 'resyn
   const reloading = new Set<string>()
   /** Opened and not yet sent its reset: only statuses count (whatever their rev), and no gap is one */
   const awaiting = new Set<string>()
+  /** An open's wait for its first answer (OPEN_WAIT_MS): asked again once, then the view says so */
+  const openWaits = new Map<string, ReturnType<typeof setTimeout>>()
+  const stopWait = (id: string) => { const w = openWaits.get(id); if (w !== undefined) { clearTimeout(w); openWaits.delete(id) } }
+  const waitFirst = (id: string, round: 1 | 2) => {
+    stopWait(id)
+    openWaits.set(id, setTimeout(() => {
+      openWaits.delete(id)
+      if (!awaiting.has(id) || !subs.has(id) || !chat) return
+      if (round === 1) {
+        chat.resync(id).then(r => { if (r && r.ok === false) unreadable(id) }, () => unreadable(id))
+        waitFirst(id, 2)
+      } else unreadable(id)
+    }, OPEN_WAIT_MS))
+  }
   const closedOrder: string[] = []
   let listening = false
   /** Who hears items that arrived live (onAppended) */
@@ -184,7 +205,7 @@ export function createChatStore(chat: Pick<ChatBridge, 'open' | 'close' | 'resyn
       }
       return
     }
-    if (resets) { reloading.delete(u.id); awaiting.delete(u.id) }
+    if (resets) { reloading.delete(u.id); awaiting.delete(u.id); stopWait(u.id) }
     if (state === cur) return
     states.set(u.id, state)
     subs.get(u.id)?.forEach(fn => fn())
@@ -223,6 +244,7 @@ export function createChatStore(chat: Pick<ChatBridge, 'open' | 'close' | 'resyn
         const i = closedOrder.indexOf(id)
         if (i >= 0) closedOrder.splice(i, 1)
         awaiting.add(id)
+        waitFirst(id, 1)
         chat.open(id).then(r => {
           if (r && r.ok === false) unreadable(id, openRefusal((r as { reason?: string }).reason))
         }, () => unreadable(id))
@@ -235,6 +257,7 @@ export function createChatStore(chat: Pick<ChatBridge, 'open' | 'close' | 'resyn
         subs.delete(id)
         reloading.delete(id)
         awaiting.delete(id)
+        stopWait(id)
         if (chat) chat.close(id)
         // keep the last few closed conversations; the next open sends a reset anyway
         closedOrder.push(id)

@@ -43,6 +43,9 @@
   // (numbered after the replay's seq 1, as main numbers them)
   const dataListeners = new Set()
   const seqOf = {}
+  // A flow's terminals list as main pushes it (window.__TERMS_SET__(fn): fn gets a copy of the list and returns the
+  // new one; it is kept and sent to the page's onList), e.g. a terminal that exited, then one that took its place
+  window.__TERMS_SET__ = (fn) => { const next = fn(terminals.map(t => Object.assign({}, t))); terminals.length = 0; next.forEach(t => terminals.push(t)); const l = terminals.map(t => Object.assign({}, t)); listListeners.forEach(f => f(l)); return l }
   window.__TERM_PUSH__ = (id, data) => { seqOf[id] = (seqOf[id] || 1) + 1; dataListeners.forEach(fn => fn({ id, data, seq: seqOf[id] })) }
 
   // The chat view (shot.chat: terminal id -> the reset chat.open answers with, from chatFixture.mjs;

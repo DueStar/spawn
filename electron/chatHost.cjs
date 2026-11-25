@@ -1058,9 +1058,11 @@ function createChatHost({
   function open(id) {
     if (!st.on) return { ok: false, reason: 'off' }
     const term = safeList().find(t => t && t.id === id)
-    if (!term || term.tool !== 'claude') return { ok: false, reason: 'not-claude' }
-    if (term.chat === 'version') return { ok: false, reason: 'version' }
-    if (term.chat !== 'armed') return { ok: false, reason: 'unarmed' }
+    // (a refused open, in spawn.log: an empty right side after a session came back is traced from here; 1.10.14)
+    const no = (why) => { const status = term ? (term.status === 'exited' ? 'exited' : 'running') : 'none'; log('info', `chat open refused (${why}, ${status})`); return { ok: false, reason: why } }
+    if (!term || term.tool !== 'claude') return no('not-claude')
+    if (term.chat === 'version') return no('version')
+    if (term.chat !== 'armed') return no('unarmed')
     openIds.add(id)
     if (!post({ t: 'open', id })) workerBanner(id) // the worker is gone for good this run
     return { ok: true }
@@ -1068,6 +1070,9 @@ function createChatHost({
 
   /** The worker sends the view again; with the worker gone for good, its banner is sent again instead */
   function resync(id) {
+    // the page asks again when a view's first answer never came (src/chat/store.ts OPEN_WAIT_MS) or after a gap
+    const word = !worker ? 'no-worker' : openIds.has(id) ? 'open' : 'not-open'
+    log('info', `chat resync (${word})`)
     if (!worker) {
       if (st.on && openIds.has(id)) workerBanner(id)
       return Promise.resolve({ ok: st.on })

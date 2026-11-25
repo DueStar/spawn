@@ -1679,6 +1679,85 @@ const FLOWS = {
    * kept as a session switch keeps it (the same rule as session 2 and back), the output in its
    * buffer and the focus in it. The choice is per session and survives a reload (the carry).
    */
+  // 1.10.14 bug (2026-11-25 16:31 KST): after the app had been open for hours, the right side showed nothing while the
+  // list was fine. The shown session's terminal had exited (code 1) and came back 3 s later by 이어하기 with a new
+  // terminal id. This walks that: in 채팅 and in 터미널, the shown terminal exits, then a new one takes its session;
+  // and the window hidden and shown again (the tray). Each time the right side must show its session again.
+  'resume-shown': async ({ browser, opts }) => {
+    const problems = []
+    const bad = m => problems.push(m)
+    let app
+    try {
+      app = await openApp(browser, { chat: 'chat', smoke: true })
+      const { page, shot } = app
+      const t1 = shot.terminals[0].id
+      const sid = shot.terminals[0].sessionId
+      await page.waitForSelector('.chat .chat-row', { timeout: 15_000 })
+      // what the right side shows: the chat's rows, or a terminal drawing, and no empty area
+      const right = () => page.evaluate(() => {
+        const body = document.querySelector('.w-term-body')
+        const vis = el => !!el && el.offsetParent !== null && el.getBoundingClientRect().width > 0
+        const chat = [...document.querySelectorAll('.chat')].find(vis)
+        const term = [...document.querySelectorAll('.w-term-body .xterm')].find(vis)
+        const ended = [...document.querySelectorAll('.w-term-ended, .w-term-empty, .chat-empty, .chat-loading')].find(vis)
+        return { body: !!body && body.getBoundingClientRect().height > 0, chatRows: chat ? chat.querySelectorAll('.chat-row').length : 0, term: !!term, ended: ended ? ended.className : null }
+      })
+      const shows = (r) => r.body && (r.chatRows > 0 || r.term)
+      for (const lensName of ['채팅', '터미널']) {
+        await page.locator('.w-lens button', { hasText: lensName }).click()
+        await sleep(400)
+        const before = await right()
+        if (!shows(before)) { bad(`${lensName}: nothing on the right before the exit ${JSON.stringify(before)}`); continue }
+        const oldId = (await page.evaluate(s => window.__TERMS_SET__(l => l).find(t => t.sessionId === s)?.id, sid))
+        // it exits (code 1, no goodbye: the tab stays)
+        await page.evaluate(id => window.__TERMS_SET__(l => l.map(t => t.id === id ? Object.assign({}, t, { status: 'exited', exitCode: 1 }) : t)), oldId)
+        await sleep(3000)
+        const during = await right()
+        // 이어하기: a new terminal for the same session (its id new), the exited one gone
+        const newId = `${oldId}-r${lensName === '채팅' ? 1 : 2}`
+        // (the same conversation under the new id, as main's chat host reads it from the session's transcript)
+        await page.evaluate(([id, nid]) => { const sh = window.__SHOT__; if (sh?.chat?.[id]) sh.chat[nid] = Object.assign({}, sh.chat[id], { id: nid }); window.__TERMS_SET__(l => l.map(t => t.id === id ? Object.assign({}, t, { id: nid, status: 'running', exitCode: undefined }) : t)) }, [oldId, newId])
+        await sleep(1500)
+        const after = await right()
+        if (process.env.RESUME_DEBUG) console.log(lensName, JSON.stringify((await calls(page)).filter(c => /^chat\.|^create$/.test(c.fn)).slice(-6)))
+        if (!shows(after)) bad(`${lensName}: after the exit and 이어하기 the right side is empty ${JSON.stringify({ during, after })}`)
+        if (opts?.out) await page.screenshot({ path: join(opts.out, `flow-resume-shown-${lensName === '채팅' ? 'chat' : 'term'}.png`), animations: 'disabled', caret: 'hide' })
+      }
+      // a session that comes back whose conversation never answers (main's reader stuck): not 불러오는 중 for ever —
+      // after OPEN_WAIT_MS (8 s) it is asked again once, 8 s on the view says it could not read, with 터미널로 보기
+      await page.locator('.w-lens button', { hasText: '채팅' }).click()
+      await sleep(400)
+      const stuckOld = await page.evaluate(s => window.__TERMS_SET__(l => l).find(t => t.sessionId === s)?.id, sid)
+      await page.evaluate(id => window.__TERMS_SET__(l => l.map(t => t.id === id ? Object.assign({}, t, { status: 'exited', exitCode: 1 }) : t)), stuckOld)
+      await sleep(1000)
+      await page.evaluate(id => window.__TERMS_SET__(l => l.map(t => t.id === id ? Object.assign({}, t, { id: `${id}-stuck`, status: 'running', exitCode: undefined }) : t)), stuckOld)
+      await sleep(17_500)
+      const stuck = await page.evaluate(() => {
+        const vis = el => !!el && el.offsetParent !== null
+        const banner = [...document.querySelectorAll('.chat-banner')].find(vis)
+        return { banner: banner ? banner.textContent.trim().slice(0, 80) : null, loading: [...document.querySelectorAll('.chat-loading')].some(vis) }
+      })
+      const resynced = (await calls(page)).some(c => c.fn === 'chat.resync' && c.args[0] === `${stuckOld}-stuck`)
+      if (!resynced) bad('a view with no first answer was not asked again (chat.resync)')
+      if (!stuck.banner) bad(`a view with no first answer stays empty: ${JSON.stringify(stuck)}`)
+      if (opts?.out) await page.screenshot({ path: join(opts.out, 'flow-resume-shown-stuck.png'), animations: 'disabled', caret: 'hide' })
+      // the window hidden for a while and shown again (the tray): the page sees visibility change
+      await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' }); Object.defineProperty(document, 'hidden', { configurable: true, get: () => true }); document.dispatchEvent(new Event('visibilitychange')) })
+      await sleep(1500)
+      await page.evaluate(() => { Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' }); Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); document.dispatchEvent(new Event('visibilitychange')) })
+      await sleep(800)
+      const shown = await right()
+      const bannerNow = await page.evaluate(() => [...document.querySelectorAll('.chat-banner')].some(el => el.offsetParent !== null))
+      if (!shows(shown) && !bannerNow) bad(`after hide and show the right side is empty ${JSON.stringify(shown)}`)
+      void t1
+    } catch (err) {
+      bad(String(err.message).split(String.fromCharCode(10))[0])
+    } finally {
+      if (app) await app.ctx.close()
+    }
+    return problems
+  },
+
   'chat-flip': async ({ browser }) => {
     const problems = []
     const bad = m => problems.push(m)
