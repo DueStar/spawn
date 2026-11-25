@@ -155,6 +155,37 @@ function childSlot() {
   }
 }
 
+/**
+ * Wait for a child process to be gone (its 'exit'), at most `ms`: 'exited', 'timeout', or 'none' for no child.
+ * The quit waits on the server with it, so the single-instance lock (let go when the app quits) is never
+ * free while the old server still holds the port (1.10.14: quit and open at once → "did not start on port").
+ */
+function waitForExit(child, ms) {
+  if (!child) return Promise.resolve('none')
+  if (child.exitCode !== null || child.signalCode !== null) return Promise.resolve('exited')
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => { child.removeListener('exit', onExit); resolve('timeout') }, ms)
+    const onExit = () => { clearTimeout(timer); resolve('exited') }
+    child.once('exit', onExit)
+  })
+}
+
+/**
+ * Start the server and wait until it is ready; when it did not get ready because it exited (the port was still
+ * held by the run that just quit), pause and start it again, `tries` times in all. A server still running is
+ * never started twice. → whether it became ready.
+ */
+async function startWithRetries({ start, ready, tries = 3, pause = 2000 }) {
+  for (let i = 0; i < tries; i++) {
+    const child = start()
+    if (await ready(child)) return true
+    const gone = !child || child.exitCode !== null || child.signalCode !== null
+    if (!gone || i === tries - 1) return false
+    await new Promise(r => setTimeout(r, pause))
+  }
+  return false
+}
+
 // ---------------------------------------------------------------------------
 // The page link
 //
@@ -384,6 +415,8 @@ module.exports = {
   singleFlight,
   reopenAction,
   childSlot,
+  waitForExit,
+  startWithRetries,
   SERVER_TOKEN_PATTERN,
   runtimeDirFromEnv,
   readServerToken,

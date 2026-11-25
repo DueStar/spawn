@@ -17,6 +17,8 @@ const {
   singleFlight,
   reopenAction,
   childSlot,
+  waitForExit,
+  startWithRetries,
   clampBounds,
   readWindowState,
   writeWindowState,
@@ -326,6 +328,19 @@ function stopServer() {
     console.log('[main] Stopping server process...')
     child.kill('SIGTERM')
   }
+  return child
+}
+
+/**
+ * Stop the server and wait for it to be gone (at most `ms`), so the port is free before the app lets go of
+ * its single-instance lock: a run opened right after a quit took the lock while the old server still held
+ * port 3334 and said "did not start on port" (1.10.14). Past `ms` the quit goes on (the next run retries).
+ */
+async function stopServerAndWait(ms = 3000) {
+  const child = stopServer()
+  const how = await waitForExit(child, ms)
+  if (how !== 'none') console.log(`[main] server stop: ${how}`)
+  return how
 }
 
 // ---------------------------------------------------------------------------
@@ -533,9 +548,17 @@ async function startApp() {
   } else if (plan === 'reuse') {
     console.log(`[main] Server already running on port ${SERVER_PORT} — skipping spawn${found === 'usable' ? '' : ' (it has no built UI; this window loads the Vite dev server)'}`)
   } else {
-    startServer()
-    startupMark('server-spawned')
-    const ready = await waitForServer()
+    // a run opened right after a quit can find the old server still letting go of the port: its own server
+    // then exits at once (port in use), and is started again after a pause, 6 tries (1.10.14 bug: the port was
+    // still taken 6 s after the old server was stopped, 2026-11-25 07:40:17.6 → 23.9; Windows can hold it a while)
+    let starts = 0
+    const ready = await startWithRetries({
+      start: () => { startServer(); if (starts++ === 0) startupMark('server-spawned'); else console.log(`[main] the server exited (port ${SERVER_PORT} still in use?) — starting it again, try ${starts}`); return server.get() },
+      // ready, or not as soon as that server has exited (no 9 s wait on a server that lost the port)
+      ready: (child) => Promise.race([waitForServer(), waitForExit(child, 60_000).then(() => false)]),
+      tries: 6,
+      pause: 2000,
+    })
     if (ready) {
       console.log(`[main] Server is ready on ${SERVER_URL}`)
       startupMark('server-ready')
@@ -1554,7 +1577,10 @@ if (lockWaits < 0) {
         try { if (tray) { tray.dispose(); tray = null } } catch {}
         // the chat view's worker and hook endpoint (the sessions have ended by now)
         try { void chatHost?.close() } catch {}
-        try { stopServer() } catch {}
+      })
+      // the port free before the lock goes (the app quits right after this)
+      .then(() => stopServerAndWait(3000).catch(() => {}))
+      .finally(() => {
         timer.mark('server-stopped')
         quitSequence = 'done'
         // An update restart: everything worth keeping is saved by now (the server flushed
