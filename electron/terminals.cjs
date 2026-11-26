@@ -603,6 +603,9 @@ function createTerminalManager({ repoRoot, userDataDir, send, onExit, defaultCwd
     if (!t || t.status === 'exited' || !t.chatArmed || t.adapter.id !== 'claude' || typeof data !== 'string') return false
     t.pty.write(data)
     t.activity?.input()
+    // (a dialog answered from the chat's card — the /model confirmation's "1. Yes" — clears the question as the
+    // keyboard's Enter or Esc does: left up, every later send was refused until the terminal was clicked. 1.10.16)
+    if (data.includes('\r') || data === '\x1b') clearAsking(id)
     return true
   }
 

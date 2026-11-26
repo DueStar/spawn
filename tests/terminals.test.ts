@@ -1207,4 +1207,28 @@ describe('the terminal manager and the chat composer', () => {
     pty.exit(pid)
     expect(terms.typeForChat(armed.id, 'x')).toBe(false)
   })
+
+  it('typeForChat: a dialog answered from the chat (Enter, or Esc) clears the question; arrows between choices do not', () => {
+    const pty = recordingPty()
+    const userDataDir = tempDir()
+    const terms = createTerminalManager({ repoRoot: REPO, userDataDir, defaultCwd: userDataDir, send: () => {}, pty, killTree: () => {}, chat: { state: () => ({ on: true, hooks: CHAT }) } })
+    const armed = terms.create({})
+    const pid = [...pty.procs.keys()][0]
+    const asking = () => terms.list().find((t: any) => t.id === armed.id).asking
+    // the /model confirmation (2.1.32x), answered by the chat's dialog card
+    pty.data(pid, '   Switch model?\n   > 1. Yes, switch to Sonnet 5.5\n     2. No\n')
+    expect(asking()).toBe(true)
+    terms.typeForChat(armed.id, '\x1b[B')
+    expect(asking()).toBe(true)
+    terms.typeForChat(armed.id, '\r')
+    expect(asking()).toBe(false)
+    // the old dialog's words do not raise it again on the next output
+    pty.data(pid, 'Set model to Sonnet 5.5\n')
+    expect(asking()).toBe(false)
+    // dismissed with Esc
+    pty.data(pid, '   Switch model?\n   > 1. Yes, switch to Opus 5.5\n     2. No\n')
+    expect(asking()).toBe(true)
+    terms.typeForChat(armed.id, '\x1b')
+    expect(asking()).toBe(false)
+  })
 })
