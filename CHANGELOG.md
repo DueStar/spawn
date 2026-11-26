@@ -2,6 +2,10 @@
 
 ## spawn
 
+### 1.10.16
+- 채팅에서 모델을 바꾼 뒤 바로 메시지를 보내면 "터미널에서 먼저 답해 주세요"라며 막히던 문제를 고쳤어요. 채팅에서 확인 창에 답하면 이제 바로 보낼 수 있어요.
+- 가끔 오른쪽 화면이 통째로 검게 비는 문제를 찾기 위해, 그런 상태가 되면 기록을 남기도록 했어요(세션 이름이나 대화 내용은 남기지 않아요).
+
 ### 1.10.15
 - 앱을 끄자마자 바로 다시 켜도 "The spawn server did not start on port 3334" 오류가 뜨지 않아요. 끌 때 서버가 완전히 멈출 때까지 기다리고, 새로 켤 때 포트가 아직 비지 않았으면 잠깐 기다렸다 다시 시도해요.
 - 앱을 오래 켜 둔 뒤 보던 세션이 끝났다가 이어하기로 다시 붙었을 때 오른쪽이 빈 채로 남던 문제를 고쳤어요. 대화가 오지 않으면 한 번 더 불러오고, 그래도 안 되면 "터미널로 보기 · 다시 읽기" 안내가 떠요.
@@ -561,6 +565,10 @@
 
 ## spawn (English)
 
+### 1.10.16
+- After switching the model from the chat, the next message is no longer refused with "Answer it in the terminal first". A confirmation answered in the chat now lets you send right away.
+- To track down the rare case where the whole right side goes black, spawn now writes a note to its log when that happens (no session names or conversation text).
+
 ### 1.10.15
 - Opening spawn right after quitting no longer says "The spawn server did not start on port 3334". Quitting waits for the server to stop, and a new start waits and tries again while the port is still taken.
 - After the app had been open a long time, a shown session that ended and came back through Resume could leave the right side empty. If its conversation does not come, it is asked for again, and then a note offers "View in terminal · Read again".
@@ -979,6 +987,10 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.16
+- チャットでモデルを切り替えた直後にメッセージを送ると「先にターミナルで答えてください」と止められる問題を修正しました。チャットで確認に答えれば、すぐに送れます。
+- 右側の画面全体がまれに黒く空になる問題を調べるため、その状態になるとログに記録するようにしました（セッション名や会話の内容は記録しません）。
 
 ### 1.10.15
 - spawnを終了してすぐ開き直しても「The spawn server did not start on port 3334」が出なくなりました。終了時にサーバーが止まるまで待ち、起動時にポートがまだ使われていれば少し待って再試行します。
