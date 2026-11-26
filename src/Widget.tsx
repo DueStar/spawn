@@ -84,6 +84,7 @@ import { appShortcut, wheelFontStep } from './keys'
 import { isMac, modCombo, platformWord } from './platform'
 import { termDim, termText } from './termMetrics'
 import { promptRow, renameReady } from './chat/promptRow'
+import { blankLine, readBlankDom, type BlankState } from './blankWatch'
 
 
 type Mood = 'working' | 'idle' | 'needs-you' | 'error' | 'ended'
@@ -1103,6 +1104,22 @@ const Widget: React.FC = () => {
     })
   }
   const chPanel = panelOn && !split
+  // (the right side gone black until a restart, 2026-11-26: one line in spawn.log when the page sees it; src/blankWatch.ts)
+  const blankState = useRef<BlankState | null>(null)
+  blankState.current = { view, mode, lensMode, rows: rows.length, withTerminal: withTerminal.length, targetHasTerm: withTerminal.some(r => r.sessionId === target), shownHasTerm: !!shown?.terminal, split, panes: paneSids.length }
+  useEffect(() => {
+    let logged = false
+    const look = () => {
+      if (document.visibilityState !== 'visible' || !blankState.current) return
+      const line = blankLine(blankState.current, readBlankDom(termBodyRef.current))
+      if (line && !logged) console.error(line)
+      logged = !!line
+    }
+    const timer = setInterval(look, 15_000)
+    window.addEventListener('focus', look)
+    document.addEventListener('visibilitychange', look)
+    return () => { clearInterval(timer); window.removeEventListener('focus', look); document.removeEventListener('visibilitychange', look) }
+  }, [])
   // each pane's composer handle (멈추기, focus); the session in view uses composerRef (the side panel's pointer uses it)
   const paneRefs = useRef(new Map<string, React.MutableRefObject<ComposerHandle | null>>())
   const paneRef = (sid: string): React.MutableRefObject<ComposerHandle | null> => {
