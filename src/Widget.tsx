@@ -25,6 +25,7 @@ import { isHardNeedsYou } from './mainState'
 import { cloudErrorText, dispatchCloud, useCloud } from './cloudStore'
 import { dispatchPokedex, usePokedex, useViewed, levelOf, restingUids as restingOf, type Mon } from './pokedexStore'
 import PatchNotes, { PatchNotesHistory } from './components/PatchNotes'
+import BrandMenu from './components/BrandMenu'
 import SettingsView, { type Section as SettingsSection } from './components/SettingsView'
 import FeedbackPin from './components/FeedbackPin'
 import { changeSettings, useSettings, useWorkMode } from './settingsStore'
@@ -1406,10 +1407,10 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
         <nav className="w-rail" aria-label={t('왼쪽 패널 (접힘)')}>
           {/* 업무 모드: no ball, its slot kept empty, so nothing below moves when the mode toggles */}
           {workMode ? <span className="w-rail-btn w-rail-brand w-rail-blank" aria-hidden="true" /> : (
-            <button className="w-rail-btn w-rail-brand" onClick={() => setNotesOpen(true)} title={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })}>
+            <BrandMenu className="w-rail-btn w-rail-brand" title={t('spawn {version} · 패치노트와 설정', { version: update?.current ?? '' })} onNotes={() => setNotesOpen(true)} onSettings={() => setSettingsOpen(true)}>
               <PokeBall size={20} />
               <span className={`w-rail-conn${connected ? '' : ' off'}`} />
-            </button>
+            </BrandMenu>
           )}
           {/* The panel's own fold button: here to unfold it, in the panel's header to fold it */}
           <button className="w-rail-btn w-side-toggle" onClick={unfoldSide} title={t('왼쪽 패널 펼치기')} aria-label={t('왼쪽 패널 펼치기')} aria-pressed={false}><SidePanelIcon size={15} /></button>
@@ -1454,7 +1455,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               </div>
             )
           })()}
-          <button className="w-rail-btn" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={15} /></button>
+          {workMode && <button className="w-rail-btn" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={15} /></button>}
           {/* The profile, as in the panel's header: it unfolds the panel onto the account card */}
           {cloud?.enabled && (cloud.user ? (
             <button className="w-rail-btn w-rail-account" onClick={() => { unfoldSide(); setAccountOpen(true) }} title={cloud.user.email ?? ''} aria-label={t('계정')}>
@@ -1472,13 +1473,13 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
                 panel folds; it opens the patch notes (no wordmark beside it) */}
             {/* 업무 모드: no ball and no wordmark; the profile takes their place on the left and the
                 connection dot follows it (on a Mac the window's traffic lights would sit in this corner) */}
-            {!workMode && <button className="w-brand" onClick={() => setNotesOpen(true)} title={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })} aria-label={t('spawn {version} · 눌러서 패치노트 보기', { version: update?.current ?? '' })}><PokeBall size={20} /></button>}
+            {!workMode && <BrandMenu className="w-brand" title={t('spawn {version} · 패치노트와 설정', { version: update?.current ?? '' })} onNotes={() => setNotesOpen(true)} onSettings={() => setSettingsOpen(true)}><PokeBall size={20} /></BrandMenu>}
             {workMode && accountButton}
             <span className={`w-conn${connected ? '' : ' off'}`} title={connected ? t('연결됨') : t('서버 연결 끊김')} />
             {!workMode && accountButton}
             {/* As a window the update button sits in the right bar; the widget has no right side */}
             {!expanded && updateButton}
-            <button className="w-icon" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={14} /></button>
+            {workMode && <button className="w-icon" onClick={() => setSettingsOpen(true)} title={t('설정')} aria-label={t('설정')}><GearIcon size={14} /></button>}
             {expanded && (
               <button className="w-icon w-side-toggle on" onClick={toggleSide} title={t('왼쪽 패널 접기')} aria-label={t('왼쪽 패널 접기')} aria-pressed={true}><SidePanelIcon size={14} /></button>
             )}

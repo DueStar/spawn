@@ -461,6 +461,19 @@
 .w-textsize-ck { display: inline-grid; place-items: center; color: var(--ink); opacity: 0; }
 .w-textsize-item.on .w-textsize-ck { opacity: 1; }
 
+/* The logo's menu (BrandMenu.tsx): 패치노트 · 설정, the text-size menu's look; fixed, under the logo */
+.w-brand-menu {
+  position: fixed; z-index: 60; width: 140px; box-sizing: border-box; padding: 4px;
+  background: var(--card); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: var(--r-l);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45); -webkit-app-region: no-drag;
+}
+.w-brand-item {
+  display: block; width: 100%; padding: 6px 8px; text-align: left; font: inherit; font-size: var(--t-ui); color: var(--ink-2);
+  background: none; border: 0; border-radius: var(--r-s); cursor: pointer;
+}
+.w-brand-item:hover, .w-brand-item:focus-visible { background: var(--sel-bg); color: var(--ink); }
+.w-brand-item:focus-visible { outline: 2px solid var(--ink-2); outline-offset: -2px; }
+
 /* ---------- Patch notes after an update (PatchNotes.tsx) ---------- */
 .w-notes-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 4px 16px 8px; line-height: 1.55; font-size: var(--t-name); }
 /* min-height 0: without it the body grew past the modal and its older releases were cut off, unreachable */
