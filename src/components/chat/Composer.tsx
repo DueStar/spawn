@@ -41,7 +41,7 @@ import { QueueStrip } from './QueueStrip'
 import { AtIcon, PlusIcon, SendUpIcon } from './ChatIcons'
 import { MENU_ROWS, MentionMenu } from './MentionMenu'
 import { SlashMenu } from './SlashMenu'
-import { BUILTIN_COMMANDS, filterCommands, mergeCommands, noteCommand, slashAt, type SlashCommand } from '../../chat/slash'
+import { BUILTIN_COMMANDS, filterCommands, mergeCommands, noteCommand, slashAt, withRemoteName, type SlashCommand } from '../../chat/slash'
 import { useChatContext } from './context'
 import { isTypingTarget } from './ChatList'
 
@@ -367,7 +367,8 @@ export const Composer: React.FC<ComposerProps> = ({ term, who, onTerminal, contr
       // (a `!` command goes alone: the pictures stay in the composer for the next message)
       const r = shell
         ? await sendDraft({ id, text: value, images: [], shell: true }, depsFor())
-        : await sendDraft({ id, text: withRefs(sentRefs, value), images: sentChips.map(c => ({ token: c.token, url: c.url })) }, depsFor())
+        // (/remote-control with no name: the session's name after it, so the phone shows the name spawn shows)
+        : await sendDraft({ id, text: withRefs(sentRefs, withRemoteName(value, term.title)), images: sentChips.map(c => ({ token: c.token, url: c.url })) }, depsFor())
       if (r.ok && shell) {
         setDraft(rest(value))
         setShell(false)

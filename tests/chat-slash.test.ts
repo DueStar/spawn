@@ -146,3 +146,20 @@ describe('a panel a command opened: its card', () => {
     expect(src).not.toMatch(/if \(r\.command\) say\(/)
   })
 })
+
+describe('withRemoteName: /remote-control with no name takes the session\'s name (2026-11-27)', () => {
+  it('a bare /remote-control or /rc gets the name; one given a name, another command or no name stays', async () => {
+    const { withRemoteName } = await import('../src/chat/slash')
+    expect(withRemoteName('/remote-control', 'spawn 작업')).toBe('/remote-control spawn 작업')
+    expect(withRemoteName('  /rc  ', 'spawn')).toBe('/rc spawn')
+    expect(withRemoteName('/rc 폰용', 'spawn')).toBe('/rc 폰용')
+    expect(withRemoteName('/rename x', 'spawn')).toBe('/rename x')
+    expect(withRemoteName('/remote-control', null)).toBe('/remote-control')
+    expect(withRemoteName('/remote-control', '   ')).toBe('/remote-control')
+    expect(withRemoteName('/rcx', 'spawn')).toBe('/rcx')
+  })
+  it('the composer sends it through withRemoteName with the terminal\'s title', () => {
+    const src = readFileSync(join(__dirname, '..', 'src', 'components', 'chat', 'Composer.tsx'), 'utf8')
+    expect(src).toMatch(/withRemoteName\(value, term\.title\)/)
+  })
+})

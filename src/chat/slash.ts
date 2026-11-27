@@ -120,3 +120,15 @@ export function commandRecent(id: string, now: number): boolean {
   const at = commandAt.get(id)
   return at !== undefined && now - at >= 0 && now - at <= COMMAND_PANEL_MS
 }
+
+/**
+ * /remote-control (or /rc) sent with no name: the session's own name after it, so the phone and claude.ai show the
+ * name spawn shows. Claude Code takes a name given here before the /rename title, which it can miss (a resumed
+ * session, a /rename still waiting for Claude to be free) and then shows a made-up one (2026-11-27). Anything else,
+ * or no name to give, is sent as typed.
+ */
+export function withRemoteName(text: string, name: string | null | undefined): string {
+  const m = /^\s*\/(remote-control|rc)\s*$/.exec(text)
+  const n = (name ?? '').trim()
+  return m && n ? `/${m[1]} ${n}` : text
+}
