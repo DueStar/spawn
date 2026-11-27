@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.10.18
+- 칸을 나란히 띄웠을 때 경계를 끌면 절반(2칸)이나 3분의 1(3칸) 지점에 살짝 걸려서, 칸 폭을 정확히 똑같이 맞출 수 있어요. 걸려 있는 동안 경계선이 밝아져요.
+- 보조 에이전트의 보고가 내가 보낸 메시지처럼 채팅에 뜨던 문제를 고쳤어요. 이제 "보조 에이전트가 끝났어요" 한 줄로만 보여요.
+- 채팅에서 이름 없이 /remote-control(또는 /rc)을 보내면 세션 이름을 붙여 보내요. 폰과 claude.ai에서도 spawn과 같은 이름이 보여요.
+
 ### 1.10.17
 - 로고를 누르면 "패치노트 · 설정" 메뉴가 떠요. 왼쪽 위 기어 아이콘은 없앴어요(업무 모드에서는 로고가 없어서 기어가 그대로 있어요).
 - 칸을 나란히 띄웠을 때 Ctrl+F를 누르면 지금 켜진 칸에서 검색해요. 검색창은 그림자와 테두리로 대화 위에 떠 있는 게 잘 보여요.
@@ -570,6 +575,11 @@
 
 ## spawn (English)
 
+### 1.10.18
+- With panes side by side, a dragged edge catches gently at the half (two panes) or the thirds (three panes), so you can make the panes exactly even. The edge lights while it holds there.
+- A sub-agent's report no longer shows in the chat as if you had sent it. It now shows as one line, "A sub-agent finished".
+- Sending /remote-control (or /rc) from the chat with no name adds the session's name, so your phone and claude.ai show the same name as spawn.
+
 ### 1.10.17
 - Clicking the logo opens a menu with Patch notes and Settings. The gear icon at the top left is gone (in work mode, where there is no logo, the gear stays).
 - With panes side by side, Ctrl+F searches the pane that is on. The find bar now floats clearly over the conversation, with a shadow and a firmer border.
@@ -997,6 +1007,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.18
+- ペインを並べているとき、境界をドラッグすると半分（2つ）や3分の1（3つ）の位置で軽く止まるので、幅をぴったり揃えられます。止まっている間は境界線が明るくなります。
+- サブエージェントの報告が、自分が送ったメッセージのようにチャットに出る問題を修正しました。今は「サブエージェントが完了しました」の1行だけになります。
+- チャットから名前なしで /remote-control（または /rc）を送ると、セッション名を付けて送ります。スマホやclaude.aiでもspawnと同じ名前が表示されます。
 
 ### 1.10.17
 - ロゴを押すと「パッチノート・設定」のメニューが開きます。左上の歯車アイコンはなくしました（ロゴのない業務モードでは歯車が残ります）。
