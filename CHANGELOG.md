@@ -2,6 +2,11 @@
 
 ## spawn
 
+### 1.10.17
+- 로고를 누르면 "패치노트 · 설정" 메뉴가 떠요. 왼쪽 위 기어 아이콘은 없앴어요(업무 모드에서는 로고가 없어서 기어가 그대로 있어요).
+- 칸을 나란히 띄웠을 때 Ctrl+F를 누르면 지금 켜진 칸에서 검색해요. 검색창은 그림자와 테두리로 대화 위에 떠 있는 게 잘 보여요.
+- 새 Claude Code(2.1.332)로 오래 쓴 세션을 열면 "세션 기록의 모양이 예상과 달라요"가 뜨며 채팅으로 못 보던 문제를 고쳤어요.
+
 ### 1.10.16
 - 채팅에서 모델을 바꾼 뒤 바로 메시지를 보내면 "터미널에서 먼저 답해 주세요"라며 막히던 문제를 고쳤어요. 채팅에서 확인 창에 답하면 이제 바로 보낼 수 있어요.
 - 가끔 오른쪽 화면이 통째로 검게 비는 문제를 찾기 위해, 그런 상태가 되면 기록을 남기도록 했어요(세션 이름이나 대화 내용은 남기지 않아요).
@@ -565,6 +570,11 @@
 
 ## spawn (English)
 
+### 1.10.17
+- Clicking the logo opens a menu with Patch notes and Settings. The gear icon at the top left is gone (in work mode, where there is no logo, the gear stays).
+- With panes side by side, Ctrl+F searches the pane that is on. The find bar now floats clearly over the conversation, with a shadow and a firmer border.
+- Fixed long sessions from the new Claude Code (2.1.332) showing "The session record doesn't look as expected" and not opening as a chat.
+
 ### 1.10.16
 - After switching the model from the chat, the next message is no longer refused with "Answer it in the terminal first". A confirmation answered in the chat now lets you send right away.
 - To track down the rare case where the whole right side goes black, spawn now writes a note to its log when that happens (no session names or conversation text).
@@ -987,6 +997,11 @@
 - Data: see your cloud sync status and export your Pokédex as a backup file.
 
 ## spawn (日本語)
+
+### 1.10.17
+- ロゴを押すと「パッチノート・設定」のメニューが開きます。左上の歯車アイコンはなくしました（ロゴのない業務モードでは歯車が残ります）。
+- ペインを並べて表示しているとき、Ctrl+Fは今アクティブなペインを検索します。検索バーは影と枠線で会話の上に浮いて見えます。
+- 新しいClaude Code（2.1.332）で長く使ったセッションを開くと「セッション記録の形式が想定と違います」と出てチャットで見られなかった問題を修正しました。
 
 ### 1.10.16
 - チャットでモデルを切り替えた直後にメッセージを送ると「先にターミナルで答えてください」と止められる問題を修正しました。チャットで確認に答えれば、すぐに送れます。
