@@ -352,6 +352,11 @@ function createItemBuilder({ cwd, caps = CAPS, parent } = {}) {
       return said ? { id, order, at, kind: 'notice', notice: 'command-output', text: cut(said, caps.field) } : null
     }
     if (t.startsWith('<task-notification>')) return { id, order, at, kind: 'notice', notice: 'agent-done' }
+    // a sub-agent's report handed back (its UserPromptSubmit carries it as a prompt; its line is isMeta): the agent's
+    // words, never the user's message (2026-11-27)
+    // (checked on the raw words: a report the user pastes on purpose comes in <pasted_content> and stays theirs)
+    const r = String(raw ?? '').trimStart()
+    if (/^Another Claude session sent a message:\s*<agent-message\b/.test(r) || r.startsWith('<agent-message ')) return { id, order, at, kind: 'notice', notice: 'agent-done' }
     if (!text && !images) return null
     const capped = cut(text, caps.text)
     return clean({ id, order, at, kind: 'user', text: capped, images, truncated: capped.length < text.length ? true : undefined })

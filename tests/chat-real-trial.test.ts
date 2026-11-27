@@ -278,3 +278,16 @@ describe('4. a /compact typed between turns', () => {
     expect(s.view(T1).status).toMatchObject({ state: 'working', label: null })
   })
 })
+
+describe('2c. a sub-agent\'s report handed back is never the user\'s message (2026-11-27)', () => {
+  const userLine = (content: string, n: number) => ({ type: 'user', uuid: U(n), timestamp: '2026-11-27T09:00:00.000Z', message: { role: 'user', content } })
+  const report = 'Another Claude session sent a message:\n<agent-message from="a6bc">\n[Subagent hand-back] report\n</agent-message>'
+  it('as a prompt line: a quiet notice', () => {
+    const items = createItemBuilder({ cwd: CWD }).line(userLine(report, 90), 10)
+    expect(items.map((i: any) => `${i.kind}:${i.notice ?? ''}`)).toEqual(['notice:agent-done'])
+  })
+  it('pasted by the user on purpose: still the user\'s own message', () => {
+    const items = createItemBuilder({ cwd: CWD }).line(userLine(`<pasted_content id="9b72">\n${report}\n</pasted_content id="9b72">\n\n이거 해결해줘`, 91), 20)
+    expect(items.map((i: any) => i.kind)).toEqual(['user'])
+  })
+})
