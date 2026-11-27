@@ -173,6 +173,28 @@ describe('2. bridge-session lines are bookkeeping', () => {
   })
 })
 
+describe('2b. 2.1.332 bookkeeping lines (data-flow-records, data-flow-incomplete, agent-name)', () => {
+  // (2026-11-27: a session full of them showed "세션 기록의 모양이 예상과 달라요" and could not be read as a chat)
+  const lines = [
+    '{"type":"data-flow-records","v":1,"sessionId":"REDACTED","records":[],"snapshot":{}}',
+    '{"type":"data-flow-incomplete","v":1,"sessionId":"REDACTED","codes":[]}',
+    '{"type":"agent-name","agentName":"REDACTED","sessionId":"REDACTED"}',
+  ]
+  it('skipped unparsed', () => {
+    for (const l of lines) expect(quickSkip(l)).toBe(true)
+  })
+  it('a session where they outnumber the conversation raises no schema banner', async () => {
+    const s = setup()
+    let text = ''
+    for (let n = 0; n < 30; n++) text += lines.join('\n') + '\n' + lines[0] + '\n' + user(U(n), `prompt ${n}`)
+    writeFileSync(s.transcript(T1), text)
+    s.lens.setTerminals([term(T1)])
+    s.lens.open(T1)
+    await s.run(50)
+    expect(s.view(T1).status.banner).toBeNull()
+  })
+})
+
 describe('3. /clear: the chat follows the terminal at once', () => {
   const clearLines = () => fixture('commands.jsonl').split('\n').filter(Boolean).slice(0, 2).join('\n') + '\n'
 

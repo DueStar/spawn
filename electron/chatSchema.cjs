@@ -23,6 +23,8 @@ const NOISE_TYPES = [
   'api-request-blob', 'custom-title', 'summary',
   // (2.1.325, seen in the first real session: one per request, account ids only)
   'bridge-session',
+  // (2.1.332: a session full of them read as "unknown lines" and showed the schema banner, 2026-11-27)
+  'data-flow-records', 'data-flow-incomplete', 'agent-name',
 ]
 
 /**
