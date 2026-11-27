@@ -723,6 +723,8 @@
 .w-pane-edge { position: absolute; top: 0; bottom: 0; width: 7px; margin-left: -3px; z-index: 3; cursor: col-resize; touch-action: none; -webkit-app-region: no-drag; }
 .w-pane-edge::after { content: ''; position: absolute; top: 0; bottom: 0; left: 3px; width: 1px; background: var(--line); }
 .w-pane-edge:hover::after, .widget.resizing .w-pane-edge::after { background: rgba(255, 255, 255, 0.3); }
+/* caught on the even split (snapEdge): a firmer line while it holds there */
+.widget.resizing .w-pane-edge.snapped::after { background: var(--ink-2); }
 .w-split-tools { flex: none; display: inline-flex; align-items: center; gap: 4px; margin-right: 6px; -webkit-app-region: no-drag; }
 .w-split-tools .w-lens { margin-right: 0; }
 .w-pane-more { flex: none; align-self: center; margin: 0 6px; min-width: 26px; height: 22px; padding: 0 6px; border: 1px solid var(--line); border-radius: var(--r-s); background: none; color: var(--ink-2); font: inherit; font-size: var(--t-meta); cursor: pointer; -webkit-app-region: no-drag; }

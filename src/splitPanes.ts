@@ -54,6 +54,21 @@ export function moveEdge(fracs: readonly number[], edge: number, at: number, min
   return next
 }
 
+/** How near (px) a dragged edge comes to an even split before it catches there */
+export const SNAP_PX = 8
+
+/**
+ * A dragged edge at `at` (0–1 of an area `width` px wide) with `n` panes: within SNAP_PX of k/n (the half for two,
+ * a third and two thirds for three) it is held there, so the panes can be lined up exactly; dragged on, it lets go
+ */
+export function snapEdge(at: number, n: number, width: number): { at: number; snapped: boolean } {
+  if (n < 2 || !(width > 0)) return { at, snapped: false }
+  for (let k = 1; k < n; k++) {
+    if (Math.abs(at - k / n) * width <= SNAP_PX + 1e-9) return { at: k / n, snapped: true }
+  }
+  return { at, snapped: false }
+}
+
 /**
  * The widths for the room there is now: kept ones while every pane still gets MIN_PANE_W, else even (a window made
  * narrower, the left panel opened: a pane dragged narrow would fall under the least)

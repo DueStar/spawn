@@ -3,7 +3,7 @@
  */
 
 import { describe, expect, it } from 'vitest'
-import { evenFracs, fracsFor, MIN_PANE_W, moveEdge, paneBox, paneStyle, panesFor } from '../src/splitPanes'
+import { evenFracs, fracsFor, MIN_PANE_W, moveEdge, paneBox, paneStyle, panesFor, SNAP_PX, snapEdge } from '../src/splitPanes'
 
 describe('panesFor', () => {
   it('shows nothing split with fewer than two tabs', () => {
@@ -54,5 +54,40 @@ describe('the panes\' widths (dragged edges)', () => {
 
   it('places panes by the widths', () => {
     expect(paneStyle(1, 2, [0.6, 0.4])).toEqual({ left: '60.0000%', width: '40.0000%' })
+  })
+})
+
+describe('snapEdge: a dragged edge catches on the even split (2026-11-27)', () => {
+  it('two panes: within SNAP_PX of the half, the half; past it, where the pointer is', () => {
+    expect(SNAP_PX).toBe(8)
+    const w = 1000
+    expect(snapEdge(0.505, 2, w)).toEqual({ at: 0.5, snapped: true })
+    expect(snapEdge(0.492, 2, w)).toEqual({ at: 0.5, snapped: true })
+    expect(snapEdge(0.509, 2, w)).toEqual({ at: 0.509, snapped: false })
+  })
+  it('three panes: a third and two thirds, for either edge', () => {
+    const w = 1200
+    expect(snapEdge(1 / 3 + 5 / w, 3, w)).toEqual({ at: 1 / 3, snapped: true })
+    expect(snapEdge(2 / 3 - 7 / w, 3, w)).toEqual({ at: 2 / 3, snapped: true })
+    expect(snapEdge(0.5, 3, w)).toEqual({ at: 0.5, snapped: false })
+  })
+  it('the range is pixels: a wider area catches a smaller fraction', () => {
+    expect(snapEdge(0.505, 2, 2000).snapped).toBe(false)
+    expect(snapEdge(0.505, 2, 1000).snapped).toBe(true)
+  })
+  it('one pane or no width: nothing to catch on', () => {
+    expect(snapEdge(0.5, 1, 1000)).toEqual({ at: 0.5, snapped: false })
+    expect(snapEdge(0.5, 2, 0)).toEqual({ at: 0.5, snapped: false })
+  })
+})
+
+describe('PaneEdge uses snapEdge', () => {
+  it('the edge passes the pane count and lights while caught', async () => {
+    const { readFileSync } = await import('node:fs')
+    const w = readFileSync(new URL('../src/Widget.tsx', import.meta.url), 'utf8')
+    expect(w).toMatch(/snapEdge\(\(e\.clientX - b\.left\) \/ Math\.max\(1, b\.width\), panes, b\.width\)/)
+    expect(w).toMatch(/<PaneEdge [^\n]*panes=\{paneSids\.length\}/)
+    const css = readFileSync(new URL('../src/styles/widget-expanded.css', import.meta.url), 'utf8')
+    expect(css).toMatch(/\.w-pane-edge\.snapped::after \{ background: var\(--ink-2\); \}/)
   })
 })

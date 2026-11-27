@@ -41,7 +41,7 @@ import { askChatFocus, chatWho, effectiveMode, forgetChatTerminal, lensAvailabil
 import { closeTab, MAX_TABS, openTab, pruneTabs, showIn } from './sessionTabs'
 import { addSpot, dropSpot, placeTab } from './paneDrop'
 import { numbered } from './sameNames'
-import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle } from './splitPanes'
+import { fitFracs, fracsFor, MIN_PANE_W, moveEdge, panesFor, paneStyle, snapEdge } from './splitPanes'
 import { noteMount, useWarm, warmNeeded } from './chat/termWarm'
 import type { ComposerControl, ComposerHandle } from './components/chat/Composer'
 import { ChatBoundary } from './components/ChatBoundary'
@@ -264,11 +264,19 @@ const SideResize: React.FC<{ width: number; min: number; max: number; onWidth: (
  * An edge between two panes of the split view (as the left panel's edge): drag it to give one pane's width
  * to the other (neither below MIN_PANE_W), double-click for even widths; the widths are kept per pane count.
  */
-const PaneEdge: React.FC<{ left: string; onAt: (at: number, done: boolean) => void; onEven: () => void; onDragging: (on: boolean) => void }> = ({ left, onAt, onEven, onDragging }) => {
+const PaneEdge: React.FC<{ left: string; panes: number; onAt: (at: number, done: boolean) => void; onEven: () => void; onDragging: (on: boolean) => void }> = ({ left, panes, onAt, onEven, onDragging }) => {
   const box = useRef<DOMRect | null>(null)
-  const at = (e: React.PointerEvent) => { const b = box.current!; return (e.clientX - b.left) / Math.max(1, b.width) }
+  // (it catches on the even split — the half, a third — within SNAP_PX, lit while it holds there: src/splitPanes.ts snapEdge)
+  const [snapped, setSnapped] = useState(false)
+  const at = (e: React.PointerEvent) => {
+    const b = box.current!
+    const s = snapEdge((e.clientX - b.left) / Math.max(1, b.width), panes, b.width)
+    setSnapped(s.snapped)
+    return s.at
+  }
+  const end = () => { box.current = null; setSnapped(false); onDragging(false) }
   return (
-    <div className="w-pane-edge" role="separator" aria-orientation="vertical" style={{ left }}
+    <div className={`w-pane-edge${snapped ? ' snapped' : ''}`} role="separator" aria-orientation="vertical" style={{ left }}
       title={t('끌어서 폭 조절 · 두 번 누르면 같게')} aria-label={t('칸 폭')}
       onPointerDown={e => {
         if (e.button !== 0) return
@@ -278,9 +286,9 @@ const PaneEdge: React.FC<{ left: string; onAt: (at: number, done: boolean) => vo
         onDragging(true)
       }}
       onPointerMove={e => { if (box.current) onAt(at(e), false) }}
-      onPointerUp={e => { if (!box.current) return; onAt(at(e), true); box.current = null; onDragging(false) }}
-      onPointerCancel={() => { if (!box.current) return; box.current = null; onDragging(false) }}
-      onLostPointerCapture={() => { if (!box.current) return; box.current = null; onDragging(false) }}
+      onPointerUp={e => { if (!box.current) return; onAt(at(e), true); end() }}
+      onPointerCancel={() => { if (!box.current) return; end() }}
+      onLostPointerCapture={() => { if (!box.current) return; end() }}
       onDoubleClick={onEven} />
   )
 }
@@ -2015,7 +2023,7 @@ ${t('오류: {error}', { error: update.error })}` : ''}`}
               )
             })}
             {split && paneSids.slice(1).map((sid, i) => (
-              <PaneEdge key={sid} left={paneStyle(i + 1, paneSids.length, fracs).left} onDragging={setSideDragging} onEven={() => setFracs(null, true)}
+              <PaneEdge key={sid} left={paneStyle(i + 1, paneSids.length, fracs).left} panes={paneSids.length} onDragging={setSideDragging} onEven={() => setFracs(null, true)}
                 onAt={(at, done) => setFracs(moveEdge(fracs, i, at, MIN_PANE_W / Math.max(1, chRoom)), done)} />
             ))}
             {!split && lensMode === 'chat' && view === 'terminal' && shown?.terminal && (
