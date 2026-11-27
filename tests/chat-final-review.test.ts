@@ -634,7 +634,8 @@ describe('M7: Ctrl/⌘+F does nothing for the chat while a dialog, 설정 or the
     const src = code(read('src', 'components', 'ChatView.tsx'))
     const at = src.indexOf('const onFindKey')
     const body = src.slice(at, src.indexOf('openFind()', at))
-    expect(body).toMatch(/if \(overlayOpen\(document\)\) return\s*\n\s*e\.preventDefault\(\)/)
+    // (then the split view's pane check, also before it: 2026-11-27)
+    expect(body).toMatch(/if \(overlayOpen\(document\)\) return\s*\n(?:\s*\/\/[^\n]*\n)?(?:\s*if \(!findOwner\([^\n]*\) return\s*\n)?\s*e\.preventDefault\(\)/)
   })
 })
 

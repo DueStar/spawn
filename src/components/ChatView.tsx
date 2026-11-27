@@ -61,7 +61,7 @@ import { FullButton, FullView, type FullState } from './chat/FullView'
 import { FindBar, useFind } from './chat/FindBar'
 import { AgentPanel, AgentStrip, useAgentChips, useAgentWidth } from './chat/AgentPanel'
 import { cardNote, screenDialogs, shownCard } from '../chat/answer'
-import { noticeText, overlayOpen } from '../chat/find'
+import { findOwner, noticeText, overlayOpen } from '../chat/find'
 import { appShortcut } from '../keys'
 
 export interface ChatViewProps {
@@ -615,6 +615,8 @@ export const ChatView: React.FC<ChatViewProps> = ({ term, who, project, branch, 
       const el = e.target instanceof Element ? e.target : null
       if (el?.closest?.('.term-view')) return
       if (overlayOpen(document)) return
+      // (the split view: only the pane that is on)
+      if (!findOwner(rootRef.current?.closest('.w-chat-pane') ?? null)) return
       e.preventDefault()
       openFind()
     }

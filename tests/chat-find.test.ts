@@ -13,7 +13,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
 import { buildRows } from '../src/chat/rows'
 import type { ChatItem, DiffLine, NoticeItem, TextItem, ThinkingItem, ToolItem, UserItem } from '../src/chat/types'
-import { DIFF_PREVIEW_LINES, FIND_LIMIT, findMatches, fold, markdownText, openFor, plainOf } from '../src/chat/find'
+import { DIFF_PREVIEW_LINES, FIND_LIMIT, findMatches, findOwner, fold, markdownText, openFor, plainOf } from '../src/chat/find'
 import { ChatContext, setRowOpen, useRowOpen } from '../src/components/chat/context'
 import { GAME_WORDS } from './helpers'
 import chat from '../src/locales/chat'
@@ -199,6 +199,26 @@ describe('setRowOpen: a row opened from outside it', () => {
     setRowOpen('t-find', 'group:x', true)
     expect(html('t-find')).toBe('<i>open</i>')
     expect(html('t-other')).toBe('<i>closed</i>')
+  })
+})
+
+describe('findOwner: in the split view only the pane that is on answers Ctrl/⌘+F', () => {
+  const pane = (...cls: string[]) => ({ classList: { contains: (c: string) => cls.includes(c) } })
+  it('a pane of the split view: only the one on; one chat alone or no pane: always', () => {
+    expect(findOwner(pane('w-chat-pane', 'split', 'on'))).toBe(true)
+    expect(findOwner(pane('w-chat-pane', 'split'))).toBe(false)
+    expect(findOwner(pane('w-chat-pane'))).toBe(true)
+    expect(findOwner(null)).toBe(true)
+  })
+  it('ChatView asks it before opening the bar (2026-11-27: every pane opened its bar, the first took the focus)', () => {
+    const src = code(read('src', 'components', 'ChatView.tsx'))
+    expect(src).toMatch(/findOwner\(rootRef\.current\?\.closest\('\.w-chat-pane'\) \?\? null\)/)
+  })
+  it('the bar floats over the conversation: a shadow and a firmer border', () => {
+    const css = read('src', 'styles', 'chat.css').replace(/\/\*[\s\S]*?\*\//g, '')
+    const rule = /\.chat-find \{([^}]*)\}/.exec(css)![1]
+    expect(rule).toMatch(/box-shadow:/)
+    expect(rule).toMatch(/border: 1px solid var\(--line-hover\)/)
   })
 })
 

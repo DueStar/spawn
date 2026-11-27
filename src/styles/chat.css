@@ -476,7 +476,7 @@ span.chat-diff-file { display: inline-block; line-height: 24px; cursor: default;
 /* find in the conversation: the terminal's .term-search place and size, in the chat's greys; the matches are
    painted with the Custom Highlight API (no markup touched), every one a light grey, the current one a stronger grey
    with the body ink (tests/tokens.test.ts: the contrast over prose, bubbles, code and diff rows). Never yellow. */
-.chat-find { position: absolute; top: 10px; right: 18px; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 4px 8px; border-radius: var(--r-m); border: 1px solid rgba(255, 255, 255, 0.1); background: var(--card-2); -webkit-app-region: no-drag; }
+.chat-find { position: absolute; top: 10px; right: 18px; z-index: 5; display: flex; flex-direction: column; gap: 2px; padding: 4px 4px 4px 8px; border-radius: var(--r-m); border: 1px solid var(--line-hover); background: var(--card-2); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5); -webkit-app-region: no-drag; }
 .chat-find:focus-within { border-color: var(--line-hover); }
 .chat-find-main { display: flex; align-items: center; gap: 4px; }
 .chat-find input { width: 200px; height: 24px; padding: 0; font: inherit; font-size: var(--t-ui); color: var(--ink); background: transparent; border: 0; outline: none; }

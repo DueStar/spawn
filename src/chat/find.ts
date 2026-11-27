@@ -32,6 +32,16 @@ export const DIFF_PREVIEW_LINES = 8
 /** The most matches counted */
 export const FIND_LIMIT = 1000
 
+/**
+ * Whether this chat answers Ctrl/⌘+F: in the split view every pane listens, and only the pane that is on (the
+ * one lit) opens its bar — before, every pane opened one and the first took the focus (2026-11-27). A chat shown
+ * alone, or outside a pane (the design pages), always does.
+ */
+export function findOwner(pane: { classList: { contains(c: string): boolean } } | null): boolean {
+  if (!pane || !pane.classList.contains('split')) return true
+  return pane.classList.contains('on')
+}
+
 export interface FindField {
   /** user · text · thinking · notice · command · file · pattern · path · query · url · description · question ·
    *  option · plan · output · diff-file · diff:<n> (n: the line's place in the diff as drawn, gaps between hunks counted) */
